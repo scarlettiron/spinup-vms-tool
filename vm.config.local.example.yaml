@@ -1,0 +1,367 @@
+# Per-developer overrides. Copy to vm.config.local.yaml (git-ignored) and keep
+# only the lines you change - everything else falls back to vm.config.yaml.
+#
+# Every setting from vm.config.yaml appears below, so you never have to go
+# looking for the spelling of one. Most are commented out on purpose: a key that is
+# ACTIVE here overrides the team standard, so uncommenting everything would make
+# vm.config.yaml decorative and would silently mask any change the team makes to it
+# later. Uncomment only what you actually want to differ.
+#
+# The comments here are deliberately short. The long explanation of any setting is
+# next to it in vm.config.yaml, and the full reference is
+# docs/configuration.md.
+#
+# Check a change without building anything:  .\vm.ps1 render
+
+# ---------------------------------------------------------------------------
+#  QUICK SETTINGS                                            @user-editable
+#  Flat shortcuts for the settings people actually change.
+# ---------------------------------------------------------------------------
+
+# ---- which OS -------------------------------------------------------------
+# Only set these to build something other than the team default. osVersion must
+# match the blueprint, and the build refuses a mismatch. Quote an Ubuntu version,
+# or 24.04 parses as a number.
+#   fedora-workstation        osVersion like 43       (no LTS, ~13 months each)
+#   redhat-rocky-workstation  osVersion 9             (RHEL-compatible, to 2032)
+#   redhat-rhel-workstation   osVersion like '9.7'    (real RHEL: needs your own
+#                                                      DVD in isoPath AND a
+#                                                      subscription, see below)
+#   ubuntu-desktop            osVersion like '24.04'  (LTS, to April 2029)
+#   ubuntu-server             same versions as ubuntu-desktop
+# blueprint: ubuntu-desktop
+# osVersion: '24.04'
+
+# ---- identity -------------------------------------------------------------
+# Your own project name; the VM and hostname become <projectName>-<blueprint>.
+# Setting this to your own name is the simplest way to avoid colliding with a
+# teammate on the same switch: the build refuses to start if the VM name or the
+# .local name is already taken.
+projectName: scott
+
+# Set these only to override the derived name. A machines key wins over both.
+# vmName:   scott-testbox
+# hostname: scott-testbox
+
+username: scarlett              # your Linux account
+realName: Scott Scarlett
+password: pick-your-own
+
+cpus:     8
+memoryGB: 16
+diskGB:   25                    # drive C:, the system disk. Others: vm.dataDisks
+
+# timezone: Europe/London
+
+gitName:        Scott Scarlett
+gitEmail:       scott@example.com
+githubUsername: scottscarlett
+
+# Cloned into ~/src on first boot. Drop the whole block to clone nothing.
+repos:
+  - git@github.com:acme/web.git
+  - url: https://github.com/acme/api.git
+    directory: api
+    branch: develop
+    postClone: npm ci
+
+# reposRoot: src                # relative to the user's home
+
+# A GitHub token, read from your laptop at build time so it stays out of the
+# repo. With uploadSshKey (on by default) the guest's key is registered for you.
+# githubTokenFile: C:\Users\you\.secrets\gh-token
+
+# ---- Red Hat subscription --------------------------------------------------
+# ONLY for blueprint: redhat-rhel-workstation. Rocky, Fedora and Ubuntu ignore
+# all of it. THIS is the file for it: the team file is committed.
+#
+# Without a subscription a RHEL VM installs and boots fine with everything on
+# the DVD, but has no package repositories, so bootstrap can add nothing: no
+# EPEL, so no xrdp, so no Enhanced Session Mode.
+#
+# Get both values from console.redhat.com, under Connector then Activation Keys.
+# A no-cost Red Hat Developer subscription is enough. Prefer a key over your
+# username and password: it carries no password and can be revoked on its own.
+# rhsmActivationKey: your-key-here
+# rhsmOrgId:         '12345678'
+#
+# Or keep the key in a file of its own, so it is not in a config file at all:
+# redHat:
+#   activationKeyFile: C:\Users\you\.secrets\rhsm-key
+#   organizationId:    '12345678'
+#
+# RHEL media cannot be downloaded by this repo: get the BINARY DVD (not the boot
+# ISO, which carries no packages) from
+#   https://developers.redhat.com/products/rhel/download
+# isoPath: C:\ISO\rhel-9.7-x86_64-dvd.iso
+
+# ---- database -------------------------------------------------------------
+# Off unless you ask for it. Defaults are postgres 17 on 5432, mysql 8 on 3306.
+# This is the right file for dbAdminPassword: it is git-ignored.
+# dbEngine:        postgres      # '', postgres, mysql
+# dbVersion:       '17'          # blank takes the engine default
+# dbClient:        true          # the psql / mysql client only
+# dbServer:        true          # the server too; implies the client
+# dbAdminPassword: something-only-you-know
+# dbDatabases:     [app_dev]
+# dbAdminer:       true          # browse it at http://<hostname>.local:3800/
+# dbAdminerPort:   3800
+
+# ---- copying files in -----------------------------------------------------
+# A directory on this laptop copied into the guest. Relative to this repo.
+# Over 10 MB warns, over 64 MB fails: it rides in the seed disk.
+# copyFrom: files
+# copyTo:   '~'                 # blank means the primary user's home
+
+# ---- post-start hooks -----------------------------------------------------
+# Your own commands, run once the VM is provisioned.
+# postStart:
+#   - ddev config global --no-bind-mounts
+#   - cd ~/src/web && npm ci
+
+# ---- handy switches -------------------------------------------------------
+# installDesktop:      no
+# installDocker:       no
+# installDdev:         yes
+# installNode:         no
+# installPython:       no
+# installVSCode:       no
+# installChrome:       no
+# installPostman:      yes      # 200 MB Electron app, off by default
+# installRemoteAccess: no
+# enableMdns:          no
+# rebootWhenDone:      no
+# nodeVersion:         '22'      # any nvm alias: lts/*, 22, v20.11.1
+# pythonVersion:       '3.13'    # any uv version; blank = system python only
+# Add your own extensions WITHOUT losing the team's. Setting vscodeExtensions
+# here would replace their list entirely; this one appends to it.
+# extraVscodeExtensions:
+#   - eamodio.gitlens
+#   - charliermarsh.ruff
+# resolution:          2560x1440
+# extraPackages:       [postgresql-client, redis-tools]
+# dotfilesRepo:        git@github.com:you/dotfiles.git
+# passwordHash:        ''        # your own SHA-512 crypt hash instead of password
+# sshKeyMode:          auto      # auto | generate | copy | none
+# isoPath:             C:\ISO\ubuntu-24.04.3-live-server-amd64.iso
+# switch:              'Default Switch'
+# vmPath:              C:\VMs
+# maxMemoryGB:         24
+# enhancedSession:     no
+
+# ---------------------------------------------------------------------------
+#  LONG-HAND                                                 @user-editable
+#  Everything that has no flat shortcut, written out exactly as it appears in
+#  vm.config.yaml. Only the sections tagged @user-editable there are
+#  worth overriding; the rest are included for completeness.
+# ---------------------------------------------------------------------------
+
+# ------------------------------------------------------------------- Hyper-V
+# @advanced except dataDisks. nestedVirtualization forces static memory, so
+# whatever memoryGB says is claimed from the host the whole time it runs.
+# vm:
+#   path:                   C:\VMs
+#   memoryMinimumGB:        4
+#   memoryMaximumGB:        16
+#   dynamicMemory:          true
+#   switchName:             Default Switch
+#   secureBoot:             true
+#   nestedVirtualization:   false
+#   enhancedSession:        true
+#   checkpointAfterInstall: true
+#   automaticCheckpoints:   false
+#
+#   # A disk with a driveLetter is mounted at /mnt/<letter>. Dynamically
+#   # expanding, attached after the install so the installer cannot pick one as
+#   # its target. See docs/disks.md.
+#   dataDisks:
+#     - label: drive-e
+#       driveLetter: E
+#       sizeGB: 100
+#       filesystem: ext4
+#     - label: drive-l
+#       driveLetter: L
+#       sizeGB: 50
+#       filesystem: ext4
+
+# ----------------------------------------------------------------- Guest / OS
+# guest:
+#   locale:         en_US.UTF-8
+#   keyboardLayout: us
+#
+#   primaryUser:
+#     passwordHash: ''            # your own SHA-512 crypt hash instead of password
+#     authorizedKeys: []          # or just drop a .pub file into ssh_keys/
+#
+#   additionalUsers:
+#     - username: qa
+#       realName: QA
+#       password: ubuntu
+#       sudo: true
+#       groups: [docker]
+#
+#   # Password auth is on so you can reach a fresh VM before your key is in
+#   # place. Turn it off once ssh_keys/ or authorizedKeys is set up.
+#   ssh:
+#     installServer:     true
+#     allowPasswordAuth: true
+
+# ---------------------------------------------------- First-boot provisioning
+# What gets installed. Turning something off skips its whole bootstrap step.
+# bootstrap:
+#   enableMdns:          true     # avahi + nss-mdns, gives <hostname>.local
+#   installDesktop:      true
+#   desktopPackage:      ubuntu-desktop   # apt only. dnf wants
+#                                         # '@workstation-product-environment'.
+#                                         # Each blueprint already sets its own,
+#                                         # so only set this to pick a DIFFERENT
+#                                         # desktop, and name it the way your OS
+#                                         # does.
+#   displayResolution:   1920x1080
+#   installDocker:       true
+#   installDdev:         true     # needs installDocker
+#   installNode:         true
+#   nodeVersion:         lts/*
+#   pythonVersion:       '3.14'
+#   nvmVersion:          v0.40.1  # pinned so every build gets the same nvm
+#   installPython:       true
+#   installVSCode:       true
+#   installChrome:       true     # google chrome, from Google's repo
+#   installRemoteAccess: true     # vpn, rdp and ssh tunnelling clients
+#   extraAptPackages:    [postgresql-client, redis-tools]
+#   dotfilesRepo:        ''
+#   rebootWhenDone:      true
+
+# ----------------------------------------------------------------- Database
+# engine, version, installClient and installServer are the dbEngine / dbVersion
+# / dbClient / dbServer shortcuts above. listenAddress '*' also opens the
+# firewall and, on Fedora, labels the port for SELinux; a remote server with no
+# adminPassword is refused at build time. See docs/databases.md.
+# This block is coherent as written: a Postgres server other machines can reach,
+# with Adminer in front of it. Adminer needs an engine named, and a server on '*'
+# needs an adminPassword, or the build refuses at load time.
+# database:
+#   engine:        postgres
+#   version:       '17'
+#   installClient: true
+#   installServer: true
+#   port:          5433           # 0 takes the engine default: 5432 / 3306
+#   listenAddress: '*'            # localhost or '*'
+#   adminPassword: something-only-your-team-knows
+#   databases:     [app_dev, app_test]
+#   adminer:
+#     install: true
+#     port:    3800
+#     version: 4.8.1              # pinned: every build gets the same file
+
+# -------------------------------------------------------------------- Files
+# Directories copied into the guest. Contents are copied, not the directory
+# itself. A destination is absolute or starts with '~' for the primary user's
+# home, and a blank mode means 0644, except .sh which gets 0755.
+# See docs/files-and-hooks.md.
+# The copy entries are left commented inside the block because the build checks
+# each source directory exists: create them, or point these somewhere real, before
+# enabling them.
+# files:
+#   source:      ''               # the copyFrom shortcut above
+#   destination: ''               # the copyTo shortcut above
+#   owner:       ''               # blank means the primary user
+#   mode:        ''
+#   copy:        []
+#   # copy:
+#   #   - from: files/home
+#   #     to: '~'
+#   #   - from: files/certs
+#   #     to: /usr/local/share/ca-certificates
+#   #     owner: root
+#   #     mode: '0644'
+
+# -------------------------------------------------------------------- Hooks
+# runAs user (the default) goes through a login shell, so nvm and ddev are on
+# the path exactly as after logging in. runAtEveryBoot installs a systemd unit
+# as well, so make the commands idempotent if you set it.
+# postStartFile is left commented inside the block because the build checks the
+# file exists: point it at a real script before enabling it.
+# hooks:
+#   postStart:        [ddev config global --no-bind-mounts]
+#   runAs:            user        # user or root
+#   workingDirectory: ~/src/web   # blank means that user's home
+#   runAtEveryBoot:   false
+#   # postStartFile:  files/post-start.sh
+
+# ---------------------------------------------------------------- Git config
+# Applied to the primary user's ~/.gitconfig. Name and email are the gitName
+# and gitEmail shortcuts above.
+# git:
+#   defaultBranch: main
+#   editor:        code --wait
+#   pullRebase:    true
+#   extra:
+#     push.autoSetupRemote: 'true'
+#     rerere.enabled: 'true'
+
+# ------------------------------------------------------------- GitHub access
+# All optional. The easy path needs none of it: drop a key into ssh_keys/ and
+# the build finds it. See ssh_keys/README.md and docs/github-access.md.
+# github:
+#   # sshKey.mode: auto uses a key from ssh_keys/ if there is one, else
+#   # generates one in the guest. 'copy' requires an existing key and writes it
+#   # to the seed disk in plain text on the way in. 'none' does nothing.
+#   sshKey:
+#     mode:           auto        # auto | generate | copy | none
+#     type:           ed25519     # ed25519 | rsa | ecdsa
+#     comment:        ''          # defaults to <user>@<hostname>
+#     name:           ''          # which ssh_keys/ file, if you have several
+#     privateKeyPath: ''          # a path outside ssh_keys/, if you prefer
+#     publicKeyPath:  ''          # defaults to <privateKeyPath>.pub
+#
+#   # A token signs gh in and, with uploadSshKey, registers the guest's public
+#   # key so private clones work unattended. This file is the place for it.
+#   cli:
+#     install:   true
+#     token:     ''               # a PAT
+#     tokenFile: ''               # ...or a file on this laptop holding one
+#     protocol:  ssh
+#
+#   uploadSshKey:         true    # needs a PAT with the admin:public_key scope
+#   knownHosts:           true    # pre-seed github.com host keys
+#   shredSecretsAfterUse: true    # off leaves a private key in /root on the VM
+
+# ------------------------------------------------------------------ Machines
+# A fleet. Each key is the VM name and hostname unless overridden, and all of
+# them share one switch so <hostname>.local resolves between them. Quick
+# settings work in here too. Build with  .\vm.ps1 create -Machine <key>, or -All.
+#
+# This MERGES with the team's machines block rather than replacing it, so adding
+# a key here adds a machine to the fleet. Override an existing one by repeating
+# its key with only the settings you want changed.
+#
+# Each machine names its own blueprint AND osVersion, because the version at the
+# top of a config is only meaningful for its own blueprint.
+# machines:
+#   ubuntu-gui:
+#     vmName:   scott-ubuntu-gui  # so a teammate's fleet does not collide
+#     hostname: scott-ubuntu-gui
+#     cpus:     8
+#     memoryGB: 16
+#   my-extra-box:
+#     blueprint: ubuntu-server
+#     osVersion: '24.04'
+#     cpus:      2
+#     memoryGB:  4
+#     diskGB:    25
+#   my-rocky-box:
+#     blueprint: redhat-rocky-workstation
+#     osVersion: '9'            # 9 only; EPEL 10 has no xrdp yet
+#     cpus:      4
+#     memoryGB:  12
+#     diskGB:    25
+
+# --------------------------------------------------------------------- Media
+# @advanced. The point release and its checksum are read from the vendor's
+# published checksum file at build time, so nothing here needs updating when a
+# new one ships.
+# iso:
+#   directory:      C:\ISO        # where downloaded ISOs are cached
+#   path:           ''            # explicit .iso path; skips download + lookup
+#   verifyChecksum: true          # leave on: a bad download is deleted, not used

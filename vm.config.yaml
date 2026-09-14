@@ -1,0 +1,418 @@
+# The team standard. Committed, and shared by everyone.
+#
+# Per-developer changes do NOT belong here: copy vm.config.local.example.yaml to
+# vm.config.local.yaml, which is git-ignored, and put them there. That layer
+# overrides this one key by key, so your local file only names what you change.
+#
+# Every section is tagged so you can tell at a glance what is yours to change:
+#
+#   @user-editable   Change these freely. This is what they are here for.
+#   @advanced        The default is right for almost everyone. Changing it is
+#                    supported, but read the note next to it first.
+#
+# Full reference for every setting: docs/configuration.md
+# Check a change without building anything:  .\vm.ps1 render
+
+# ===========================================================================
+#  QUICK SETTINGS                                            @user-editable
+#
+#  The things people actually change. Each is a shortcut for a setting further
+#  down (cpus is vm.cpuCount, and so on). Every setting appears in exactly one
+#  place - if it is up here, it is not repeated down there.
+# ===========================================================================
+
+# ---- which OS --------------------------------------------------------------
+# blueprint picks the OS and how it installs; osVersion picks the release. They
+# belong together: a version is only meaningful for its own blueprint, and a
+# mismatch fails the build rather than chasing a nonexistent ISO.
+#
+#   fedora-workstation        Fedora + GNOME, kickstart.  osVersion like 43
+#                             No LTS: ~13 months a release. 43 is current. When
+#                             a release retires Fedora takes it off the mirrors,
+#                             so a stale osVersion here fails on a 404.
+#   redhat-rocky-workstation  Rocky Linux + GNOME, kickstart.  osVersion 9
+#                             Rocky is a free rebuild of Red Hat Enterprise
+#                             Linux, so this is the one that matches a RHEL,
+#                             CentOS, Rocky or Alma server. Maintained to 2032,
+#                             so no yearly version bump. 9 only: EPEL 10 has no
+#                             xrdp yet, and without it there is no Enhanced
+#                             Session.
+#   redhat-rhel-workstation   Red Hat Enterprise Linux itself + GNOME.
+#                             osVersion is a full minor release, like 9.7.
+#                             Needs TWO things the others do not, both because
+#                             RHEL is a subscription product:
+#                               - you download the binary DVD yourself and set
+#                                 isoPath; Red Hat's media is behind an account
+#                                 so nothing here can fetch it
+#                               - a subscription, set in the redHat section, or
+#                                 the VM has no package repositories at all
+#                             Use Rocky instead unless you specifically need
+#                             Red Hat's own build.
+#   ubuntu-desktop            Ubuntu + GNOME, autoinstall. osVersion like '24.04'
+#                             24.04 is LTS, supported to April 2029. 26.04 is
+#                             the newer LTS.
+#   ubuntu-server             Ubuntu, headless. Same versions as ubuntu-desktop.
+#
+# Leave osVersion blank to take whatever the blueprint declares. Quote an Ubuntu
+# version, or 24.04 parses as the number 24.04.
+blueprint:      redhat-rocky-workstation
+osVersion:      9
+
+# ---- identity --------------------------------------------------------------
+# projectName names the work, not the OS. The VM and the guest hostname default
+# to <projectName>-<blueprint>, so with the values here that is
+#
+#     acme-fedora-workstation
+#
+# and because avahi publishes the hostname, that is also the address a browser
+# uses:  http://acme-fedora-workstation.local
+#
+# Change projectName per project and every machine in it is renamed together. The
+# build refuses to start if that VM name or that .local name is already taken, so
+# two projects cannot quietly collide.
+projectName:    testvm1
+
+
+cpus:           6
+memoryGB:       8
+diskGB:         25            # drive C:, the system disk. Others: vm.dataDisks
+
+timezone:       America/New_York
+
+
+# Cloned on first boot. A bare URL, or a mapping for branch/depth/etc.
+repos:          [git@github.com:myCedarCreek/Sheetz_Findlay-Middleware.git]            # example: [git@github.com:acme/web.git]
+reposRoot:      src           # relative to the user's home
+
+# ---- database -------------------------------------------------------------
+# Off by default: nothing is installed unless you ask for it.
+#
+#   dbEngine    postgres or mysql. Blank installs neither.
+#   dbVersion   major version. Blank takes the engine default below.
+#   dbClient    the command line client only (psql / mysql)
+#   dbServer    the server too, running as a service
+#
+# Defaults per engine, used when dbVersion is blank:
+#
+#   postgres   17   on port 5432
+#   mysql      8    on port 3306
+#
+# Client and server are separate on purpose: an app VM usually wants the client
+# so it can talk to a database elsewhere, and only the database VM itself needs
+# the server. Asking for the server implies the client.
+#
+# A server reachable from your other VMs needs database.listenAddress and
+# database.port below, which also open the firewall and, on Fedora, label the
+# port for SELinux. See docs/databases.md.
+dbEngine:       'postgres'            # '', postgres, mysql
+dbVersion:      '17'            # example: 17 for postgres, 8 for mysql
+dbClient:       true
+dbServer:       true
+
+# Adminer, the single-file database browser. Needs dbEngine set so it knows which
+# driver to load. Served by PHP directly, not in a container, and reachable at
+#   http://<hostname>.local:<dbAdminerPort>
+dbAdminer:      true
+dbAdminerPort:  3800
+
+
+# ===========================================================================
+#  Everything below has a sensible default. Tags say which parts are meant to
+#  be edited and which are better left alone.
+# ===========================================================================
+
+# ------------------------------------------------------------------- Hyper-V
+#  @advanced except for dataDisks, which is marked below.
+vm:
+  path:                   C:\VMs
+  memoryMinimumGB:        4
+  memoryMaximumGB:        16
+  dynamicMemory:          true
+  switchName:             Default Switch
+  secureBoot:             true
+  nestedVirtualization:   false
+  enhancedSession:        true
+  checkpointAfterInstall: true
+  automaticCheckpoints:   false
+
+  # dataDisks                                                  @user-editable
+  #
+  # Extra disks beyond the system one, named by the drive letters production
+  # uses. Linux has no drive letters, so a disk with a driveLetter is mounted
+  # at /mnt/<letter>: production has no mount points, so nothing assumes
+  # /var/log or /opt is its own volume. Set mountPoint to override.
+  #
+  #   C:   the system disk, 25 GB (diskGB above)
+  #   E:   50 GB
+  #   L:   25 GB
+  #
+  # Dynamically expanding, so each costs only what is written to it. Attached
+  # after the install finishes, so the installer cannot pick one as its target.
+  # Add, resize, or drop entries freely. See docs/disks.md.
+  dataDisks:
+    - label: drive-e
+      driveLetter: E
+      sizeGB: 50
+      filesystem: ext4
+    - label: drive-l
+      driveLetter: L
+      sizeGB: 25
+      filesystem: ext4
+
+# ----------------------------------------------------------------- Guest / OS
+guest:
+  # @advanced - the name and password of the account are in QUICK SETTINGS.
+  locale:         en_US.UTF-8
+  keyboardLayout: us
+
+  # primaryUser                                                @user-editable
+  primaryUser:
+    passwordHash: ''            # your own SHA-512 crypt hash instead of password
+    authorizedKeys: []          # or just drop a .pub file into ssh_keys/
+
+  # additionalUsers                                            @user-editable
+  additionalUsers: []
+  # additionalUsers:
+  #   - username: qa
+  #     realName: QA
+  #     password: ubuntu
+  #     sudo: true
+  #     groups: [docker]
+
+  # ssh                                                             @advanced
+  # Password auth is on so you can reach a fresh VM before your key is in
+  # place. Turn it off once ssh_keys/ or authorizedKeys is set up.
+  ssh:
+    installServer:     true
+    allowPasswordAuth: true
+
+# ---------------------------------------------------- First-boot provisioning
+#  bootstrap                                                  @user-editable
+#  What gets installed. Consumed by the blueprint's bootstrap steps through
+#  /etc/vm-bootstrap.env. Turning something off here skips its whole step.
+bootstrap:
+  enableMdns:        true       # avahi + nss-mdns, gives <hostname>.local
+  installDesktop:    true
+  # desktopPackage is deliberately NOT set here. It is the one setting whose
+  # value only means something to one OS: 'ubuntu-desktop' is an apt
+  # metapackage, and dnf wants '@workstation-product-environment'. Setting it at
+  # this layer sends one OS's name to every blueprint, which is what used to
+  # happen - a Fedora or Rocky build would go looking for 'ubuntu-desktop'.
+  # Each blueprint now supplies its own. Override it in a machines block if you
+  # want a different desktop on one machine, naming it the way that OS does.
+  displayResolution: 1920x1080
+  installDocker:     true
+  installDdev:       true       # needs installDocker
+  installNode:       true
+  nodeVersion:       lts/*
+
+  # The Python the developer builds against, installed with uv and owned by the
+  # user. The system python is left exactly as the distro shipped it, because
+  # dnf and friends are written against it.
+  #
+  # uv rather than a distro package because no package answers it everywhere:
+  # Rocky 9 and RHEL 9 carry python3.14, Ubuntu 24.04 stops at 3.12. uv gives
+  # the same interpreter on all of them.
+  #
+  # Any version uv knows: 3.14, 3.13, 3.12.7, pypy@3.10. Blank installs none and
+  # leaves only the system python. See:  uv python list --all-versions
+  pythonVersion:     '3.14'
+  nvmVersion:        v0.40.1    # pinned so every build gets the same nvm
+  installPython:     true
+  installVSCode:     true
+  installChrome:     true       # google chrome, from Google's repo
+
+  # Postman. Off by default: a 200 MB Electron app, and plenty of people use
+  # curl or the VS Code REST client instead. Installed from the vendor tarball,
+  # which is the only artefact that exists for every blueprint.
+  installPostman:    false
+
+  # VS Code extensions, by Marketplace id (publisher.name), installed as the
+  # developer. A bad id costs you that extension, not the build.
+  #
+  # This is the TEAM list. Setting it in vm.config.local.yaml REPLACES it,
+  # because a config layer overrides an array rather than merging into it - so
+  # to add your own without losing these, use extraVscodeExtensions below.
+  vscodeExtensions:
+    - ms-python.python              # language support; pulls in Pylance
+    - ms-python.black-formatter     # formatter
+    - frhtylcn.pythonsnippets       # snippets
+    - rangav.vscode-thunder-client  # API client, in the editor
+  # Using ruff instead of black? 31-python.sh already installs the ruff binary,
+  # so charliermarsh.ruff is the matching extension - it lints and formats.
+
+  # Your own additions, APPENDED to the list above rather than replacing it.
+  # This is the one to set in vm.config.local.yaml. Duplicates are ignored.
+  extraVscodeExtensions: []
+  installRemoteAccess: true    # vpn, rdp and ssh tunnelling clients
+  extraAptPackages:  []
+  dotfilesRepo:      ''
+  rebootWhenDone:    true
+
+# ----------------------------------------------------------------- Database
+#  database                                                   @user-editable
+#
+#  All optional. engine, version, installClient and installServer are in QUICK
+#  SETTINGS as dbEngine / dbVersion / dbClient / dbServer; the rest is here.
+#
+#  Engine and version are validated at build time, so a typo or an unsupported
+#  version fails before anything is created rather than half way through a
+#  first boot.
+#
+#  Postgres is installed from the PostgreSQL project's own repository (PGDG),
+#  which is what makes a specific major version available on both Fedora and
+#  Ubuntu rather than whatever that release happens to ship. MySQL comes from
+#  the distribution, so the requested major version is checked after install
+#  and a mismatch is reported in the bootstrap report rather than passing
+#  silently.
+#
+#  listenAddress decides who can connect:
+#
+#    localhost  the default. Only this machine. Nothing exposed to the switch.
+#    '*'        any address, so other VMs and the Windows host can connect as
+#               <hostname>.local. This also opens the port in firewalld and,
+#               because Fedora runs SELinux enforcing, labels a non-default
+#               port so the server is allowed to bind it.
+#
+#  adminPassword is the postgres superuser or the MySQL root password. It is
+#  required for a server on '*', and is staged as a file and shredded after use
+#  rather than written into the rendered seed in plain text.
+#
+#  databases are created empty after the server starts, owned by the primary
+#  user, so an app has somewhere to connect to on first boot.
+database:
+  # engine, version, installClient and installServer are NOT repeated here.
+  # They live in QUICK SETTINGS as dbEngine, dbVersion, dbClient and dbServer.
+  # Only what has no shortcut is below.
+  port:          0              # 0 takes the engine default: 5432 / 3306
+  listenAddress: localhost      # localhost or '*'
+  adminPassword: ''             # postgres superuser / mysql root
+  databases:     []             # example: [app_dev, app_test]
+
+  #  Adminer: one PHP file that gives you a database browser in the browser.
+  #  install and port are in QUICK SETTINGS as dbAdminer and dbAdminerPort.
+  #
+  #  Deliberately not the Docker image. It is served by PHP's own built-in web
+  #  server behind a systemd unit, which means no nginx, no php-fpm socket paths
+  #  that differ per distro, and no dependency on Docker being up. That server is
+  #  single threaded and not meant for production traffic, which is the right
+  #  trade for a single-user database GUI on a dev VM.
+  #
+  #  It binds all addresses so the route works from your laptop and from the other
+  #  VMs, and the firewall is opened for its port. Adminer has no login of its
+  #  own: it asks for database credentials, so it is only as protected as the
+  #  database behind it. On a shared switch, treat the route as internal.
+  adminer:
+    version: 4.8.1              # pinned: every build gets the same file
+
+git:
+  defaultBranch: main
+  editor:        ''             # example: code --wait
+  pullRebase:    true
+  extra:         {}
+  # extra:
+  #   push.autoSetupRemote: 'true'
+  #   rerere.enabled: 'true'
+
+# ------------------------------------------------------------- GitHub access
+#  github                                                     @user-editable
+#
+#  All optional. Nothing here is required to build a working VM, and the easy
+#  path needs no config at all: drop a key file into ssh_keys/ and the build
+#  finds it. See ssh_keys/README.md and docs/github-access.md.
+github:
+  # username is in QUICK SETTINGS as githubUsername. It is optional: gh gets the
+  # account from the token, and the SSH key does not need it. It is used to set
+  # github.user in the guest's git config, and to check that
+  # `ssh -T git@github.com` greets the account you expected rather than a stale
+  # key belonging to someone else.
+
+  # sshKey                                                     @user-editable
+  # Leave mode as 'auto' and just drop a key into ssh_keys/ - the rest of these
+  # only matter if you want to name a specific file or path.
+  #
+  #   auto      use a private key from ssh_keys/ if one is there, otherwise
+  #             generate one in the guest. This is what makes the drop
+  #             directory work.
+  #   generate  always make a fresh keypair inside the guest, even if ssh_keys/
+  #             has one. No private key ever leaves your laptop or touches the
+  #             seed disk.
+  #   copy      require an existing key and fail if there is none. The private
+  #             key is written to the seed disk in plain text on the way in;
+  #             the build warns and tells you how to detach it afterwards.
+  #   none      do nothing.
+  sshKey:
+    mode:           auto
+    type:           ed25519     # ed25519 | rsa | ecdsa
+    comment:        ''          # defaults to <user>@<hostname>
+    name:           ''          # which ssh_keys/ file, if you have several
+    privateKeyPath: ''          # a path outside ssh_keys/, if you prefer
+    publicKeyPath:  ''          # defaults to <privateKeyPath>.pub
+
+  # cli                                                        @user-editable
+  # A token here does two things: signs gh in, and (with uploadSshKey)
+  # registers the guest's public key so private clones work unattended.
+  cli:
+    install:   true
+    token:     ''               # a PAT; put this in vm.config.local.yaml only
+    tokenFile: ''               # ...or a file on this laptop holding one
+    protocol:  ssh
+
+  # uploadSshKey                                               @user-editable
+  # Needs a PAT with the 'admin:public_key' scope.
+  uploadSshKey: true
+
+  # @advanced from here down.
+
+  # Pre-seed github.com's host keys so the first clone does not prompt.
+  knownHosts: true
+
+  # Wipe staged secrets from the guest once they have been installed. Turning
+  # this off leaves a private key sitting in /root on the VM. Also governs the
+  # Red Hat credential below.
+  shredSecretsAfterUse: true
+
+# ------------------------------------------------------------- Red Hat
+#  redHat                                                     @user-editable
+#
+#  Only redhat-rhel-workstation uses any of this. Every other blueprint ignores
+#  it, including redhat-rocky-workstation: Rocky is the same software with
+#  public repositories and needs no account.
+#
+#  Red Hat Enterprise Linux has NO usable package repositories until
+#  subscription-manager registers the machine. Without a subscription the VM
+#  still installs and boots with everything on the DVD, but bootstrap can add
+#  nothing to it: no EPEL, so no xrdp, so no Enhanced Session Mode.
+#
+#  THE CREDENTIAL DOES NOT BELONG IN THIS FILE. This one is committed. Put it in
+#  vm.config.local.yaml, which is git-ignored:
+#
+#      redHat:
+#        activationKey:  your-key-here
+#        organizationId: '12345678'
+#
+#  Both come from console.redhat.com, under Connector then Activation Keys. A
+#  key is the right credential for this: it carries no password and can be
+#  revoked on its own. Username and password also work and are a worse idea on a
+#  seed disk. A no-cost Red Hat Developer subscription is enough.
+redHat:
+  activationKey:     ''         # LOCAL FILE ONLY
+  activationKeyFile: ''         # or a path on this laptop holding just the key
+  organizationId:    ''         # the org the key belongs to
+  username:          ''         # alternative to a key; LOCAL FILE ONLY
+  password:          ''         # LOCAL FILE ONLY
+  autoAttach:        true       # attach a subscription after registering
+  # Pin dnf to the minor release in osVersion, so a first-boot upgrade does not
+  # move a machine built as 9.7 onto 9.8. Someone naming a minor means it.
+  pinRelease:        true
+
+
+# --------------------------------------------------------------------- Media
+#  iso                                                             @advanced
+#  The release is in QUICK SETTINGS as osVersion. The exact point release and its
+#  checksum are read from the vendor's published checksum file at build time, so
+#  nothing here needs updating when a new one ships.
+iso:
+  directory:      C:\ISO        # where downloaded ISOs are cached
+  path:           ''            # explicit .iso path; skips download + lookup
+  verifyChecksum: true          # leave on: a bad download is deleted, not used

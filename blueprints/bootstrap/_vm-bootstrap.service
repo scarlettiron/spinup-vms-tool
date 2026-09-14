@@ -1,0 +1,17 @@
+[Unit]
+Description=Developer workstation bootstrap (first boot)
+Documentation=file:///var/log/vm-bootstrap.log
+After=network-online.target cloud-init.service
+Wants=network-online.target
+ConditionPathExists=!/var/lib/vm-bootstrap/complete
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=0
+ExecStart=/usr/local/sbin/vm-bootstrap
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

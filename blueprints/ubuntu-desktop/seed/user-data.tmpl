@@ -1,0 +1,68 @@
+#cloud-config
+# GENERATED FILE - rendered from this template by scripts/lib/Seed.psm1.
+# Edit the template, not build/<vm>/seed/user-data.
+#
+# Delivered to the Ubuntu installer as a cloud-init NoCloud datasource on a
+# FAT32 disk labelled CIDATA. Canonical's documented shape for that delivery
+# is a #cloud-config file with a top-level `autoinstall:` key.
+autoinstall:
+  version: 1
+
+  # No section may fall back to the interactive installer - a prompt would
+  # stall the automated build forever.
+  interactive-sections: []
+
+  locale: {{LOCALE}}
+  timezone: {{TIMEZONE}}
+  keyboard:
+    layout: {{KEYBOARD_LAYOUT}}
+
+  source:
+    id: {{SOURCE_ID}}
+    search_drivers: false
+
+  # 'direct' = one ext4 root filling the disk (plus the UEFI ESP). Deliberately
+  # not 'lvm': subiquity's lvm layout has a habit of leaving most of a large
+  # disk unallocated, which is exactly the kind of silent misconfiguration this
+  # repo exists to avoid.
+  # 'size: largest' is only unambiguous because the host attaches the data disks
+  # AFTER the install (see Add-DevVMDataDisks). During the install the only disks
+  # present are the system disk and the tiny seed volume, so the largest is the
+  # right one. Attach a 50 GB data disk here and this would install onto it.
+  storage:
+    layout:
+      name: direct
+      match:
+        size: largest
+
+  identity:
+    hostname: {{HOSTNAME}}
+    realname: "{{REALNAME}}"
+    username: {{USERNAME}}
+    password: "{{PASSWORD_HASH}}"
+
+  ssh:
+    install-server: {{SSH_INSTALL_SERVER}}
+    allow-pw: {{SSH_ALLOW_PW}}
+{{SSH_AUTHORIZED_KEYS}}
+
+  packages:
+{{PACKAGES}}
+
+  updates: security
+
+  # Power off rather than reboot so the host can eject the install ISO and fix
+  # the boot order before the guest's first real boot.
+  shutdown: {{SHUTDOWN_MODE}}
+
+  # Everything below is plain cloud-init, applied on the installed system's
+  # first boot. The bootstrap scripts are embedded here so the finished VM is
+  # self-contained and the seed disk can be detached afterwards.
+  user-data:
+    timezone: {{TIMEZONE}}
+    package_update: false
+    write_files:
+{{WRITE_FILES}}
+    runcmd:
+      - [ systemctl, daemon-reload ]
+      - [ systemctl, enable, --now, vm-bootstrap.service ]

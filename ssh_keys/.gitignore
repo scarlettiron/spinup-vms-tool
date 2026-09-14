@@ -1,0 +1,6 @@
+# Nothing in this directory is ever committed except these two files.
+# A private key in git history is a bad day; this is belt and braces on top of
+# the root .gitignore.
+*
+!.gitignore
+!README.md

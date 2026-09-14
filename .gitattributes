@@ -1,0 +1,51 @@
+# Line endings.
+#
+# This matters more than it looks. Git for Windows ships with core.autocrlf=true,
+# so without this file every .sh in the repo is checked out with CRLF - and the
+# seed builder embeds those files with ReadAllBytes, byte for byte, straight into
+# the guest. The VM then boots and dies on the first line:
+#
+#     /usr/local/lib/vm-bootstrap/_lib.sh: line 2: $'\r': command not found
+#
+# base64 in the seed protects a script in transit, but it faithfully preserves a
+# CRLF that was already there. The repo works on the machine that wrote the files
+# with LF and breaks on every machine that clones it, which is the worst way for
+# this to fail.
+#
+# So: anything the GUEST reads or executes is pinned to LF. PowerShell and
+# Markdown are left to Git's normal handling, since they only ever run on the
+# host.
+
+# Sensible default: normalise text in the repo, decide checkout per-pattern.
+* text=auto
+
+# ---- everything that ends up inside the VM ---------------------------------
+*.sh            text eol=lf
+*.tmpl          text eol=lf
+*.service       text eol=lf
+*.rules         text eol=lf
+*.pkla          text eol=lf
+*.cfg           text eol=lf
+*.env           text eol=lf
+
+# The bootstrap runner and the systemd unit have no extension between them, so
+# name them outright.
+blueprints/bootstrap/_runner.sh             text eol=lf
+blueprints/bootstrap/_lib.sh                text eol=lf
+blueprints/bootstrap/_vm-bootstrap.service  text eol=lf
+
+# Config is read by the PowerShell YAML reader on the host, but it is also the
+# file people paste between machines. LF keeps it identical everywhere.
+*.yaml          text eol=lf
+*.yml           text eol=lf
+
+# ---- host-side only --------------------------------------------------------
+*.ps1           text
+*.psm1          text
+*.psd1          text
+*.md            text
+
+# ---- never touch -----------------------------------------------------------
+*.iso           binary
+*.vhdx          binary
+*.png           binary

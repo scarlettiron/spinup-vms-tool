@@ -1,0 +1,92 @@
+# GENERATED FILE - rendered from this template by scripts/lib/Seed.psm1.
+# Edit the template, not build/<vm>/seed/ks.cfg.
+#
+# Delivered to Anaconda on a FAT32 disk labelled OEMDRV. Anaconda automatically
+# loads a kickstart named ks.cfg from a volume with that label, which is the
+# exact counterpart of cloud-init's CIDATA: no ISO repacking, no HTTP server,
+# and no keystrokes at the boot menu.
+#
+# Nearly identical to the Fedora kickstart, because Anaconda is the same
+# installer. The one real difference is the install source, which expands to two
+# lines here: RHEL splits the OS across BaseOS and AppStream.
+#
+# Do not name a template token in a comment. Substitution is a plain text
+# replace with no idea what a comment is, so writing one here would expand it
+# and leave a live kickstart directive sitting in the header.
+
+# Non-interactive text install.
+text
+eula --agreed
+firstboot --disable
+
+# Locale and input.
+keyboard --xlayouts='{{KEYBOARD_LAYOUT}}'
+lang {{LOCALE}}
+timezone {{TIMEZONE}} --utc
+
+# Networking. DHCP on the Hyper-V switch; the hostname is what mDNS publishes.
+network --bootproto=dhcp --activate --hostname={{HOSTNAME}}
+
+# Accounts. Root is locked: the primary user has sudo through wheel, which is
+# how a RHEL-family workstation expects to be set up.
+rootpw --lock
+user --name={{USERNAME}} --gecos="{{REALNAME}}" --groups=wheel --password="{{PASSWORD_HASH}}" --iscrypted
+{{SSH_AUTHORIZED_KEYS}}
+
+# Storage.
+#
+# The host attaches the data disks only AFTER this install finishes, so the only
+# disks visible here are the system disk and the tiny OEMDRV seed volume. That is
+# what makes 'clearpart --all' safe: there is nothing else to wipe. Never attach
+# a data disk during the install.
+#
+# ignoredisk keeps the seed volume out of it regardless, so a mistake on the host
+# side cannot turn into a reformatted data drive.
+#
+# --type=plain --fstype=ext4 rather than the RHEL default of LVM on xfs: a dev VM
+# gets its extra space from separate virtual disks (Vm.DataDisks), not from
+# growing a volume group, and a plain partition is the one a rescue shell on any
+# machine can read.
+ignoredisk --only-use={{SYSTEM_DISK}}
+clearpart --all --initlabel --disklabel=gpt --drives={{SYSTEM_DISK}}
+autopart --type=plain --nohome --fstype=ext4
+bootloader --location=mbr --boot-drive={{SYSTEM_DISK}}
+
+# Installation source: the boot image carries only the installer, so packages
+# come from the mirror. This is also what keeps the ISO download to about 1.4 GB
+# instead of the DVD's 15 GB. Two lines on Rocky, one on Fedora.
+{{INSTALL_SOURCE}}
+
+# Power off rather than reboot so the host can eject the ISO, attach the data
+# disks, and fix the boot order before the guest's first real boot.
+{{SHUTDOWN_MODE}}
+
+%packages
+{{PACKAGES}}
+%end
+
+# ---------------------------------------------------------------------------
+# Provisioning payload.
+#
+# Anaconda has no equivalent of cloud-init's write_files, so the bootstrap tree
+# is written here as base64 heredocs. Same result: the finished VM carries its
+# own provisioning and the seed disk can be detached afterwards.
+#
+# Note what is NOT here: EPEL. It is not reachable as an install source and half
+# the dev tooling lives in it, so enabling it is the first thing 01-base.sh does
+# on the first boot rather than anything this file tries to arrange.
+# ---------------------------------------------------------------------------
+%post --erroronfail --log=/var/log/vm-bootstrap-post.log
+set -euo pipefail
+
+{{WRITE_FILES}}
+
+# SELinux is enforcing: files created in %post carry the wrong label until
+# relabelled, and an unlabelled unit file is one systemd will refuse to load.
+if command -v restorecon >/dev/null 2>&1; then
+    restorecon -R /usr/local/sbin/vm-bootstrap /usr/local/lib/vm-bootstrap \
+                  /etc/systemd/system/vm-bootstrap.service /etc/vm-bootstrap.env 2>/dev/null || true
+fi
+
+systemctl enable vm-bootstrap.service
+%end

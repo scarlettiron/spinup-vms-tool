@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Scarlett A. Scott
+# Created 2026-09-15
+
 #
 # Installed as /usr/local/sbin/vm-bootstrap and run once by
 # vm-bootstrap.service on first boot. Safe to re-run by hand:

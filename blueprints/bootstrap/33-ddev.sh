@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # DDEV - container-based local dev environments (Drupal/WordPress/PHP and friends).
 if ! is_true "${VM_INSTALL_DDEV:-false}"; then
     log "ddev install disabled"

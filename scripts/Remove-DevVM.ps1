@@ -1,10 +1,11 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
-    [string]$Machine,
     [string]$Name,
-    [switch]$All,
     [switch]$DeleteDisks
 )
 
@@ -21,20 +22,13 @@ try {
 
     $targets = New-Object System.Collections.Generic.List[object]
 
-    if ($All) {
-        $machines = Get-MachineNames -RepoRoot $repoRoot
-        if ($machines.Count -eq 0) { throw '-All was given but vm.config.yaml defines no Machines block.' }
-        foreach ($m in $machines) {
-            $targets.Add((Get-DevVMPaths -Config (Get-DevVMConfig -RepoRoot $repoRoot -Machine $m)))
-        }
-    }
-    elseif ($Name) {
+    if ($Name) {
 
-        $config = Get-DevVMConfig -RepoRoot $repoRoot -Machine $Machine -Override @{ VM = @{ Name = $Name } }
+        $config = Get-DevVMConfig -RepoRoot $repoRoot -Override @{ VM = @{ Name = $Name } }
         $targets.Add((Get-DevVMPaths -Config $config))
     }
     else {
-        $targets.Add((Get-DevVMPaths -Config (Get-DevVMConfig -RepoRoot $repoRoot -Machine $Machine)))
+        $targets.Add((Get-DevVMPaths -Config (Get-DevVMConfig -RepoRoot $repoRoot)))
     }
 
     foreach ($t in $targets) {

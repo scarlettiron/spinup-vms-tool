@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 Set-StrictMode -Version Latest
 

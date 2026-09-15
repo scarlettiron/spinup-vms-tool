@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Node via nvm, installed for the primary user (not root).
 if ! is_true "${VM_INSTALL_NODE:-true}"; then
     log "node install disabled"

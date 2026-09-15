@@ -1,10 +1,11 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 
 [CmdletBinding()]
 param(
-    [string]$Machine,
     [string]$Name,
-    [switch]$All,
     [switch]$Wait,
     [switch]$Console,
     [int]$TimeoutSeconds = 180
@@ -20,7 +21,7 @@ Import-Module (Join-Path $libDir 'HyperV.psm1') -Force -DisableNameChecking
 try {
     Assert-Prerequisites -RequireHyperV
     $repoRoot = Get-RepoRoot
-    $targets = @(Get-DevVMTargets -RepoRoot $repoRoot -Machine $Machine -Name $Name -All:$All)
+    $targets = @(Get-DevVMTargets -RepoRoot $repoRoot -Name $Name)
 
     Reset-BuildSteps -Total $targets.Count
     $results = New-Object System.Collections.Generic.List[object]
@@ -35,8 +36,7 @@ try {
 
             Write-Warn "no VM named '$($t.Name)' exists on this host"
             Write-Warn '  this script only starts a machine that is already built. To build it:'
-            $buildArgs = if ($t.Machine) { " -Machine $($t.Machine)" } else { '' }
-            Write-Warn "      .\vm.ps1 create$buildArgs"
+            Write-Warn "      .\vm.ps1 create''"
         }
         elseif ($Console) {
             Write-Detail "opening the console"

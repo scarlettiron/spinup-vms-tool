@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Optional dotfiles checkout. Runs whatever the repo calls its installer, if
 # any - otherwise it just leaves the clone in place for the user to wire up.
 REPO="${VM_DOTFILES_REPO:-}"

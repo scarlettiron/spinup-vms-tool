@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Create the additional accounts listed in Guest.AdditionalUsers.
 # Format of /etc/vm-bootstrap.users (tab separated, one line per user):
 #   username <TAB> realname <TAB> sha512-hash <TAB> sudo(0|1) <TAB> extra,groups <TAB> base64(authorized_keys)

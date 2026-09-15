@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Adminer: a database browser in a single PHP file.
 #
 # Deliberately not the Docker image. It is served by PHP's own built-in web

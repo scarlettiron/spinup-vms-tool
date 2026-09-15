@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Postman, from the vendor's own tarball.
 #
 # Off by default: it is a 200 MB Electron app and plenty of people use curl, the

@@ -1,4 +1,7 @@
 #!/bin/sh
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Installed as /etc/xrdp/startwm.sh by bootstrap step 20-hyperv.sh.
 if [ -r /etc/locale.conf ]; then
   . /etc/locale.conf

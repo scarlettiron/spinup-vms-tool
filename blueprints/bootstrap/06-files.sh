@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Move the files that were copied in from the host into place.
 #
 # The seed staged each directory under /var/lib/vm-bootstrap/files/<n>/ with its

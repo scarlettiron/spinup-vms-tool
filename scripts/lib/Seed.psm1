@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 Set-StrictMode -Version Latest
 
@@ -722,8 +725,7 @@ function New-SeedDisk {
 function New-DevVMSeed {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]$Config,
-        [switch]$SkipDisk
+        [Parameter(Mandatory)]$Config
     )
 
     $vmName = [string]$Config.VM['Name']
@@ -812,7 +814,7 @@ function New-DevVMSeed {
         }
     }
     if ($embeddedSecret) {
-        Write-Warn 'the seed disk holds it in plain text until bootstrap shreds it - see docs/github-access.md or docs/databases.md'
+        Write-Warn 'the seed disk holds it in plain text until bootstrap shreds it'
     }
 
     $bootstrapDirs = @($Config.Blueprint.Paths['BootstrapDirs'])
@@ -997,12 +999,9 @@ function New-DevVMSeed {
 
     $seedLabel = $(if ($prov.Contains('SeedLabel') -and $prov['SeedLabel']) { [string]$prov['SeedLabel'] } else { 'CIDATA' })
 
-    $seedVhd = $null
-    if (-not $SkipDisk) {
-        $vmDir = Join-Path ([string]$Config.VM['Path']) $vmName
-        $seedVhd = New-SeedDisk -VhdPath (Join-Path $vmDir "$vmName-seed.vhdx") `
-            -SourceDir $seedDir -Label $seedLabel
-    }
+    $vmDir = Join-Path ([string]$Config.VM['Path']) $vmName
+    $seedVhd = New-SeedDisk -VhdPath (Join-Path $vmDir "$vmName-seed.vhdx") `
+        -SourceDir $seedDir -Label $seedLabel
 
     return [pscustomobject]@{
         BuildDir     = $buildDir

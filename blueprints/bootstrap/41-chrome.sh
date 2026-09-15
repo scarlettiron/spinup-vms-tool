@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Google Chrome, from Google's own repository.
 #
 # Chrome rather than Chromium on purpose: it is what the team tests against, and

@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Clone the repositories listed in Repos.Items.
 #
 # Runs after 55-github.sh so the SSH key, known_hosts, and gh credential helper

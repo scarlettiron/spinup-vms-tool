@@ -1,3 +1,6 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 Set-StrictMode -Version Latest
 
@@ -145,44 +148,22 @@ function Get-DevVMTargets {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$RepoRoot,
-        [string]$Machine,
-        [string]$Name,
-        [switch]$All
+        [string]$Name
     )
 
-    $machineNames = @()
-    if ($All) {
-        $machineNames = @(Get-MachineNames -RepoRoot $RepoRoot)
-    }
-    elseif ($Machine) {
-        $machineNames = @($Machine)
-    }
-    elseif ($Name) {
+    $cfg = Get-DevVMConfig -RepoRoot $RepoRoot
 
-        $machineNames = @($null) + @(Get-MachineNames -RepoRoot $RepoRoot)
-    }
-
-    if ($machineNames.Count -eq 0) { $machineNames = @($null) }
-
-    $out = New-Object System.Collections.Generic.List[object]
-    foreach ($m in $machineNames) {
-        $cfg = Get-DevVMConfig -RepoRoot $RepoRoot -Machine $m
-        $out.Add([pscustomobject]@{
-            Machine  = $m
-            Name     = [string]$cfg.VM['Name']
-            Hostname = [string]$cfg.Guest['Hostname']
-            User     = [string]$cfg.Guest['PrimaryUser']['Username']
-            Config   = $cfg
+    if ($Name -and $Name -ne [string]$cfg.VM['Name']) {
+        return @([pscustomobject]@{
+            Name = $Name; Hostname = $Name; User = $null; Config = $null
         })
     }
 
-    if (-not $Name) { return $out.ToArray() }
-
-    $match = @($out.ToArray() | Where-Object { $_.Name -eq $Name })
-    if ($match.Count -gt 0) { return @($match[0]) }
-
     return @([pscustomobject]@{
-        Machine = $null; Name = $Name; Hostname = $Name; User = $null; Config = $null
+        Name     = [string]$cfg.VM['Name']
+        Hostname = [string]$cfg.Guest['Hostname']
+        User     = [string]$cfg.Guest['PrimaryUser']['Username']
+        Config   = $cfg
     })
 }
 
@@ -248,7 +229,7 @@ function Import-Psd {
 
 $script:ConfigSections = @(
     'Blueprint', 'ProjectName', 'VM', 'Guest', 'Bootstrap', 'Database', 'Files', 'Hooks',
-    'Git', 'GitHub', 'Repos', 'Iso', 'Machines', 'RedHat'
+    'Git', 'GitHub', 'Repos', 'Iso', 'RedHat'
 )
 
 $script:ConfigAliases = @{
@@ -390,15 +371,6 @@ function Expand-ConfigAliases {
     foreach ($name in @($quick.Keys)) {
         $target = [string]$script:ConfigAliases[$name]
         Set-ConfigPath -Root $result -Path $target -Value (Copy-Deep $quick[$name])
-    }
-
-    if ($result.Contains('Machines') -and $result['Machines'] -is [System.Collections.IDictionary]) {
-        $machines = @{}
-        foreach ($machineName in @($result['Machines'].Keys)) {
-            $machines[$machineName] = Expand-ConfigAliases -Layer $result['Machines'][$machineName] `
-                -Source "$Source (machine '$machineName')"
-        }
-        $result['Machines'] = $machines
     }
 
     return $result
@@ -547,7 +519,6 @@ function Get-DevVMConfig {
     [CmdletBinding()]
     param(
         [string]$RepoRoot,
-        [string]$Machine,
         $Override = @{},
         [string]$BlueprintName
     )
@@ -566,19 +537,8 @@ function Get-DevVMConfig {
 
     if ($null -eq $Override) { $Override = @{} }
 
-    $machines = @{}
     $withLocal = Merge-Config -Base $base -Override $local
-    if ($withLocal.Contains('Machines') -and $withLocal['Machines']) { $machines = $withLocal['Machines'] }
-
     $block = @{}
-    if ($Machine) {
-        if (-not $machines.Contains($Machine)) {
-            $known = (@($machines.Keys) | Sort-Object) -join ', '
-            if (-not $known) { $known = '(none defined)' }
-            throw "Unknown machine '$Machine'. Defined machines: $known"
-        }
-        $block = Copy-Deep $machines[$Machine]
-    }
 
     $probe = Merge-Config -Base $withLocal -Override $block
     $probe = Merge-Config -Base $probe -Override $Override
@@ -607,30 +567,8 @@ function Get-DevVMConfig {
     $effective = Merge-Config -Base $effective -Override $Override
     $effective['Blueprint'] = $selected
 
-    if ($Machine) {
-
-        $named = {
-            param($section, $key)
-            foreach ($layer in @($block, $Override)) {
-                if ($layer.Contains($section) -and $layer[$section].Contains($key)) { return $true }
-            }
-            return $false
-        }
-        if (-not (& $named 'VM' 'Name')) { $effective['VM']['Name'] = $Machine }
-        if (-not (& $named 'Guest' 'Hostname')) { $effective['Guest']['Hostname'] = $Machine }
-    }
-
     $peers = New-Object System.Collections.Generic.List[string]
-    foreach ($key in (@($machines.Keys) | Sort-Object)) {
-        $mBlock = $machines[$key]
-        if ($mBlock -is [System.Collections.IDictionary] -and
-            $mBlock.Contains('Guest') -and
-            $mBlock['Guest'].Contains('Hostname')) {
-            $peers.Add([string]$mBlock['Guest']['Hostname'])
-        }
-        else { $peers.Add([string]$key) }
-    }
-    if ($peers.Count -eq 0) { $peers.Add([string]$effective['Guest']['Hostname']) }
+    $peers.Add([string]$effective['Guest']['Hostname'])
 
     if (-not $effective.Contains('Iso') -or -not $effective['Iso']) { $effective['Iso'] = @{} }
 
@@ -688,7 +626,6 @@ function Get-DevVMConfig {
 
     $config = [pscustomobject]@{
         RepoRoot  = $RepoRoot
-        Machine   = $Machine
         Blueprint   = $blueprint
         VM        = $effective['VM']
         Guest     = $effective['Guest']
@@ -1548,24 +1485,6 @@ function Get-DevVMSshKeyMaterial {
     return $result
 }
 
-function Get-MachineNames {
-    [CmdletBinding()] param([string]$RepoRoot)
-
-    if (-not $RepoRoot) { $RepoRoot = Get-RepoRoot }
-
-    $basePath = Resolve-ConfigLayerPath -RepoRoot $RepoRoot -BaseName 'vm.config'
-    if (-not $basePath) { return @() }
-    $user = Import-ConfigLayer -Path $basePath
-
-    $localPath = Resolve-ConfigLayerPath -RepoRoot $RepoRoot -BaseName 'vm.config.local'
-    if ($localPath) {
-        $user = Merge-Config -Base $user -Override (Import-ConfigLayer -Path $localPath)
-    }
-    if ($user.Contains('Machines') -and $user['Machines']) {
-        return @(@($user['Machines'].Keys) | Sort-Object)
-    }
-    return @()
-}
 
 function Get-OpenSslPath {
     [CmdletBinding()] param()
@@ -2112,7 +2031,7 @@ Export-ModuleMember -Function Write-Step, Write-Detail, Write-Warn, Get-RepoRoot
     Reset-BuildSteps, Start-BuildStep, Complete-BuildStep, Write-BuildReport, Get-DevVMTargets,
     Copy-Deep, Merge-Config, Import-Psd, Import-ConfigLayer, Resolve-ConfigLayerPath,
     Expand-ConfigAliases, Set-ConfigPath, Get-ConfigAliasTable, Resolve-Blueprint, Get-DevVMConfig,
-    Get-MachineNames, Get-OpenSslPath, New-Sha512Crypt, Resolve-PasswordHash, Get-DevVMRedHatPlan,
+    Get-OpenSslPath, New-Sha512Crypt, Resolve-PasswordHash, Get-DevVMRedHatPlan,
     Test-Elevated, Assert-Prerequisites, Write-UnixText, ConvertTo-Array,
     Get-DevVMDiskLocations, Get-DevVMDataDiskLayout, Get-DevVMRepoLayout, Get-DevVMRepoRoot,
     Get-DevVMDatabasePlan, Get-DevVMDatabaseEngineNames,

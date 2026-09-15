@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Docker Engine from Docker's own repository, rather than the distro's docker.io
 # or moby-engine, so the team gets current Engine + Compose v2 + Buildx and the
 # same versions on every OS.

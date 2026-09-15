@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Extra virtual disks: partition-free filesystems, labelled, mounted, in fstab.
 #
 # Runs first so every data volume is in place before the rest of bootstrap

@@ -1,0 +1,156 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
+# Every setting, with its default. Copy what you need into vm.config.yaml for
+# team-wide changes, or vm.config.local.yaml for your own.
+
+blueprint:      redhat-rocky-workstation
+osVersion:      9
+
+projectName:    acme
+vmName:         ''
+hostname:       ''
+
+username:       dev
+realName:       Developer
+password:       ubuntu
+
+cpus:           6
+memoryGB:       12
+diskGB:         25
+
+timezone:       America/New_York
+
+gitName:        ''
+gitEmail:       ''
+githubUsername: ''
+
+repos:          []
+reposRoot:      src
+
+dbEngine:       ''
+dbVersion:      ''
+dbClient:       false
+dbServer:       false
+dbAdminer:      false
+dbAdminerPort:  3800
+
+copyFrom:       ''
+copyTo:         ''
+postStart:      []
+
+vm:
+  path:                   C:\VMs
+  memoryMinimumGB:        4
+  memoryMaximumGB:        16
+  dynamicMemory:          true
+  switchName:             Default Switch
+  secureBoot:             true
+  nestedVirtualization:   false
+  enhancedSession:        true
+  checkpointAfterInstall: true
+  automaticCheckpoints:   false
+
+  # Mounted at /mnt/<letter>. Attached after the install, so the installer
+  # can't pick one as its target.
+  dataDisks:
+    - label: drive-e
+      driveLetter: E
+      sizeGB: 50
+      filesystem: ext4
+    - label: drive-l
+      driveLetter: L
+      sizeGB: 25
+      filesystem: ext4
+
+guest:
+  locale:         en_US.UTF-8
+  keyboardLayout: us
+
+  primaryUser:
+    passwordHash: ''
+    authorizedKeys: []
+
+  additionalUsers: []
+
+  ssh:
+    installServer:     true
+    allowPasswordAuth: true
+
+bootstrap:
+  enableMdns:        true
+  installDesktop:    true
+  displayResolution: 1920x1080
+  installDocker:     true
+  installDdev:       true
+  installNode:       true
+  nodeVersion:       lts/*
+  pythonVersion:     '3.14'
+  nvmVersion:        v0.40.1
+  installPython:     true
+  installVSCode:     true
+  installChrome:     true
+  installPostman:    false
+
+  # Setting vscodeExtensions in a later layer replaces this list.
+  # extraVscodeExtensions adds to it instead.
+  vscodeExtensions:      []
+  extraVscodeExtensions: []
+
+  installRemoteAccess: true
+  extraAptPackages:  []
+  dotfilesRepo:      ''
+  rebootWhenDone:    true
+
+# engine, version, installClient, installServer, adminer.install and
+# adminer.port have shortcuts above (dbEngine, dbVersion). Set them there.
+database:
+  port:          0
+  listenAddress: localhost
+  adminPassword: ''
+  databases:     []
+
+  adminer:
+    version: 4.8.1
+
+files:
+  owner: ''
+  mode:  ''
+  copy:  []
+
+hooks:
+  postStartFile:    ''
+  runAs:            user
+  workingDirectory: ''
+  runAtEveryBoot:   false
+
+git:
+  defaultBranch: main
+  editor:        ''
+  pullRebase:    true
+  extra:         {}
+
+github:
+  sshKey:
+    mode:           auto
+    type:           ed25519
+    comment:        ''
+    name:           ''
+    privateKeyPath: ''
+    publicKeyPath:  ''
+
+  cli:
+    install:   true
+    token:     ''
+    tokenFile: ''
+    protocol:  ssh
+
+  uploadSshKey: true
+  knownHosts:   true
+  shredSecretsAfterUse: true
+
+
+iso:
+  directory:      C:\ISO
+  path:           ''
+  verifyChecksum: true

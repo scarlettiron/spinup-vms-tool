@@ -1,8 +1,10 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 
 [CmdletBinding()]
 param(
-    [string]$Machine,
     [string]$Name,
     [switch]$NoWait,
     [int]$TimeoutSeconds = 240
@@ -34,7 +36,7 @@ function Test-GuestReady {
 try {
     Assert-Prerequisites -RequireHyperV
     $repoRoot = Get-RepoRoot
-    $targets = @(Get-DevVMTargets -RepoRoot $repoRoot -Machine $Machine -Name $Name)
+    $targets = @(Get-DevVMTargets -RepoRoot $repoRoot -Name $Name)
     $t = $targets[0]
 
     Reset-BuildSteps -Total 3
@@ -42,12 +44,11 @@ try {
     Start-BuildStep "Finding $($t.Name)"
     $vm = Get-VM -Name $t.Name -ErrorAction SilentlyContinue
     if (-not $vm) {
-        $buildArgs = if ($t.Machine) { " -Machine $($t.Machine)" } else { '' }
         throw @"
 No VM named '$($t.Name)' exists on this host.
 
 This script only opens a machine that is already built. To build it:
-    .\scripts\New-DevVM.ps1$buildArgs
+    .\scripts\New-DevVM.ps1''
 
 That takes 30 to 40 minutes, most of it unattended.
 "@
@@ -136,7 +137,7 @@ The management tools are a separate Windows feature from the hypervisor itself:
     Write-Host '  clipboard, it opened too early: close it and run this again.' -ForegroundColor Gray
     Write-Host ''
     Write-Host '  Shut it down when you are done, to get the RAM back:' -ForegroundColor Gray
-    $stopArgs = if ($Machine) { " -Machine $Machine" } elseif ($Name) { " -Name $Name" } else { '' }
+    $stopArgs = if ($Name) { " -Name $Name" } else { '' }
     Write-Host "      .\vm.ps1 stop$stopArgs"
     Write-Host ''
 }

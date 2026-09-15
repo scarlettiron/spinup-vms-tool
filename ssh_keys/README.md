@@ -1,3 +1,8 @@
+<!--
+  Scarlett A. Scott
+  Created 2026-09-15
+-->
+
 # ssh_keys
 
 Drop key files in here and the build picks them up. No config editing.
@@ -25,13 +30,7 @@ Copy-Item $HOME\.ssh\id_ed25519.pub .\ssh_keys\
 Then build. `GitHub.SshKey.Mode` defaults to `auto`, which means: use a private
 key from here if there is one, otherwise generate a fresh one inside the guest.
 
-Check what the build made of it before committing to a 30-minute install:
-
-```powershell
-.\scripts\New-DevVM.ps1 -RenderOnly
-```
-
-It prints the key it chose, for example
+The build prints the key it chose as it plans, for example
 `github  ssh key: ssh_keys/id_ed25519, gh cli`.
 
 ## Notes
@@ -50,5 +49,4 @@ It prints the key it chose, for example
   harmless.
 - A private key dropped here is written to the VM's seed disk in plain text on
   the way in. The build says so, and bootstrap shreds the staged copy. If that
-  matters, leave this directory empty and let the guest generate its own key -
-  see [../docs/github-access.md](../docs/github-access.md).
+  matters, leave this directory empty and let the guest generate its own key.

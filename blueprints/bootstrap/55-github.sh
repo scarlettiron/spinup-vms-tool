@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # GitHub access: SSH key, known_hosts, and optionally the gh CLI.
 #
 # VM_GITHUB_SSH_KEY_MODE:

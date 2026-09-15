@@ -1,10 +1,11 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 
 [CmdletBinding()]
 param(
-    [string]$Machine,
     [string]$Name,
-    [switch]$All,
     [switch]$Save,
     [switch]$TurnOff,
     [int]$TimeoutSeconds = 120
@@ -24,7 +25,7 @@ try {
 
     Assert-Prerequisites -RequireHyperV
     $repoRoot = Get-RepoRoot
-    $targets = @(Get-DevVMTargets -RepoRoot $repoRoot -Machine $Machine -Name $Name -All:$All)
+    $targets = @(Get-DevVMTargets -RepoRoot $repoRoot -Name $Name)
 
     Reset-BuildSteps -Total $targets.Count
     $results = New-Object System.Collections.Generic.List[object]
@@ -62,9 +63,7 @@ try {
     Write-Host ''
     Write-Host '  Nothing was deleted. Start it again with:' -ForegroundColor Gray
     $startArgs = ''
-    if ($Machine) { $startArgs = " -Machine $Machine" }
-    elseif ($All) { $startArgs = ' -All' }
-    elseif ($Name) { $startArgs = " -Name $Name" }
+    if ($Name) { $startArgs = " -Name $Name" }
     Write-Host "      .\vm.ps1 start$startArgs"
     Write-Host ''
 }

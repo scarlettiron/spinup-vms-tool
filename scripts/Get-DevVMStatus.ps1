@@ -1,9 +1,11 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 
 [CmdletBinding()]
 param(
     [string]$Name,
-    [string]$Machine,
     [switch]$Follow,
     [switch]$NoSsh,
     [switch]$Report
@@ -20,8 +22,7 @@ $repoRoot = Get-RepoRoot
 
 function Resolve-Targets {
 
-    $wantAll = -not $Machine
-    return @(Get-DevVMTargets -RepoRoot $repoRoot -Machine $Machine -Name $Name -All:$wantAll)
+    return @(Get-DevVMTargets -RepoRoot $repoRoot -Name $Name)
 }
 
 $script:GuestProbe = @'
@@ -261,7 +262,7 @@ function Show-NotCreated {
         }) -join ',  '
         Write-Field 'data disks' $text
     }
-    Write-Field 'build it' (".\vm.ps1 create" + $(if ($Machine) { " -Machine $Machine" } else { '' }))
+    Write-Field 'build it' '.\vm.ps1 create'
 }
 
 function Show-One {

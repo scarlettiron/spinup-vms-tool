@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Copy this to vm.config.local.yaml and edit it. That file is git-ignored, so
 # it's the right place for your password, tokens, and anything you don't want
 # shared. Anything you leave out falls back to vm.config.yaml.
@@ -56,13 +59,3 @@ githubUsername: yourhandle
 # copyFrom: files
 # copyTo:   '~'
 
-# Several VMs at once. Each key becomes the VM name and the hostname, and they
-# share one switch, so they reach each other at <name>.local.
-# machines:
-#   web:
-#     cpus: 4
-#     memoryGB: 8
-#   db:
-#     cpus: 2
-#     memoryGB: 4
-#     dbServer: true

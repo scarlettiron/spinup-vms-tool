@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Hyper-V integration services + Enhanced Session Mode.
 #
 # Enhanced Session gives the VM a resizable desktop, a shared clipboard, and drive

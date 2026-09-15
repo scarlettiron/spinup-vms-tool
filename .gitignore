@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # per-developer overrides. The .psd1 forms are here too because the loader still
 # accepts that format for a layer, so an accidental one should not be committed.
 vm.config.local.yaml

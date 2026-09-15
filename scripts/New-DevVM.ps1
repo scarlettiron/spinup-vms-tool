@@ -1,12 +1,10 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 
-[CmdletBinding(DefaultParameterSetName = 'Single')]
+[CmdletBinding()]
 param(
-    [Parameter(ParameterSetName = 'Single')]
-    [string]$Machine,
-
-    [Parameter(ParameterSetName = 'Fleet')]
-    [switch]$All,
 
     [string]$Blueprint,
 
@@ -19,7 +17,6 @@ param(
     [int]$DiskSizeGB,
     [string]$IsoPath,
 
-    [switch]$RenderOnly,
     [switch]$Force,
     [switch]$SkipCheckpoint
 )
@@ -218,7 +215,7 @@ function Show-Plan {
             $uploads = ($gh.Contains('UploadSshKey') -and $gh['UploadSshKey'] -and
                         $gh.Contains('Cli') -and ($gh['Cli']['Token'] -or $gh['Cli']['TokenFile']))
             if (-not $uploads) {
-                Write-Warn "$($needsSsh.Count) repo(s) use an ssh remote and the key is generated inside the guest, so it is not on GitHub yet - private clones will fail on the first boot. Supply GitHub.Cli.TokenFile with UploadSshKey, or use an https:// remote. See docs/repos.md."
+                Write-Warn "$($needsSsh.Count) repo(s) use an ssh remote and the key is generated inside the guest, so it is not on GitHub yet - private clones will fail on the first boot. Supply GitHub.Cli.TokenFile with UploadSshKey, or use an https:// remote."
             }
         }
     }
@@ -232,7 +229,6 @@ function Show-Summary {
     $user = [string]$Config.Guest['PrimaryUser']['Username']
 
     $for = ''
-    if ($Config.Machine) { $for = " -Machine $($Config.Machine)" }
 
     Write-Host ''
     Write-Host '--------------------------------------------------------------' -ForegroundColor DarkGray
@@ -261,40 +257,17 @@ function Show-Summary {
 }
 
 function Invoke-Build {
-    param([string]$MachineName)
 
-    $config = Get-DevVMConfig -RepoRoot $repoRoot -Machine $MachineName `
+    $config = Get-DevVMConfig -RepoRoot $repoRoot `
         -Override (Get-CliOverride) -BlueprintName $Blueprint
 
-    if ($RenderOnly) {
-        $stepCount = 2
-    }
-    else {
-        $stepCount = 7
-        if (-not $SkipCheckpoint -and $config.VM.Contains('CheckpointAfterInstall') `
-            -and $config.VM['CheckpointAfterInstall']) { $stepCount++ }
-    }
+    $stepCount = 7
+    if (-not $SkipCheckpoint -and $config.VM.Contains('CheckpointAfterInstall') `
+        -and $config.VM['CheckpointAfterInstall']) { $stepCount++ }
     Reset-BuildSteps -Total $stepCount
 
     Start-BuildStep "Planning $($config.VM['Name'])"
     Show-Plan -Config $config
-
-    if ($RenderOnly) {
-
-        $taken = Test-DevVMHostnameResolvable -Hostname ([string]$config.Guest['Hostname'])
-        if ($taken) {
-            Write-Warn "$($config.Guest['Hostname']).local already resolves to $taken - a real build would refuse this name."
-        }
-
-        Start-BuildStep 'Rendering the seed (no Hyper-V changes)'
-        $seed = New-DevVMSeed -Config $config -SkipDisk
-        Write-Detail "seed:        $($seed.SeedPath) ($($seed.Method), label $($seed.SeedLabel))"
-        Write-Detail "bootstrap:   $($seed.Files.Count) file(s) embedded"
-        Write-BuildReport -Title "render report: $($config.VM['Name'])"
-        Write-Host ''
-        Write-Host '  Render complete. Review the files above, then re-run without -RenderOnly.' -ForegroundColor Green
-        return
-    }
 
     Start-BuildStep 'Checking the name is free'
     Assert-DevVMNameAvailable -Config $config -Force:$Force
@@ -321,7 +294,6 @@ function Invoke-Build {
     Start-BuildStep 'Running the unattended install'
 
     $watchFor = ''
-    if ($config.Machine) { $watchFor = " -Machine $($config.Machine)" }
 
     $source = ''
     if ($prov.Contains('InstallSource')) { $source = [string]$prov['InstallSource'] }
@@ -354,66 +326,18 @@ function Invoke-Build {
     Show-Summary -Config $config -Seed $seed
 }
 
-$script:BuiltMachines = New-Object System.Collections.Generic.List[string]
-
 try {
-    if (-not $RenderOnly) {
-        Assert-Prerequisites -RequireHyperV
-    }
+    Assert-Prerequisites -RequireHyperV
 
-    if ($All) {
-        $machines = Get-MachineNames -RepoRoot $repoRoot
-        if ($machines.Count -eq 0) {
-            throw '-All was given but vm.config.yaml defines no Machines block.'
-        }
-
-        $seenNames = @{}
-        $seenHosts = @{}
-        foreach ($m in $machines) {
-            $peek = Get-DevVMConfig -RepoRoot $repoRoot -Machine $m -Override (Get-CliOverride) -BlueprintName $Blueprint
-
-            $vmName = [string]$peek.VM['Name']
-            if ($seenNames.ContainsKey($vmName)) {
-                throw "Machines '$($seenNames[$vmName])' and '$m' both resolve to the VM name '$vmName'. Give each machine its own VmName inside its Machines block."
-            }
-            $seenNames[$vmName] = $m
-
-            $machineHostname = [string]$peek.Guest['Hostname']
-            if ($seenHosts.ContainsKey($machineHostname)) {
-                throw "Machines '$($seenHosts[$machineHostname])' and '$m' both resolve to the hostname '$machineHostname'. They would fight over $machineHostname.local - give each its own Hostname."
-            }
-            $seenHosts[$machineHostname] = $m
-        }
-
-        Write-Step "Building $($machines.Count) machine(s): $($machines -join ', ')"
-
-        foreach ($m in $machines) {
-            Invoke-Build -MachineName $m
-            $script:BuiltMachines.Add($m)
-        }
-
-        Write-Host ''
-        Write-Host "  Built $($script:BuiltMachines.Count) of $($machines.Count) machine(s): $($script:BuiltMachines -join ', ')" -ForegroundColor Green
-        Write-Host ''
-        Write-Host '  All machines share one virtual switch, so once both are up they' -ForegroundColor Gray
-        Write-Host '  resolve each other by name, for example  ping ubuntu-middleware-db.local' -ForegroundColor Gray
-    }
-    else {
-        Invoke-Build -MachineName $Machine
-    }
+    Invoke-Build
 }
 catch {
 
     Write-BuildReport -Title 'host build report (FAILED)' -FailureMessage $_.Exception.Message
-    if ($script:BuiltMachines.Count -gt 0) {
-        Write-Host ''
-        Write-Host "  Already built before this failure: $($script:BuiltMachines -join ', ')" -ForegroundColor Yellow
-        Write-Host '  Those machines are left in place. Re-run with -Machine to build the rest.' -ForegroundColor Yellow
-    }
     if ($_.ScriptStackTrace) {
         Write-Verbose $_.ScriptStackTrace
     }
     Write-Host ''
-    Write-Host 'See docs/troubleshooting.md, or re-run with -Verbose for a stack trace.' -ForegroundColor Yellow
+    Write-Host 'Re-run with -Verbose for a stack trace.' -ForegroundColor Yellow
     exit 1
 }

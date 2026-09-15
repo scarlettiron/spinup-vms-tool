@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 [Unit]
 Description=Developer workstation bootstrap (first boot)
 Documentation=file:///var/log/vm-bootstrap.log

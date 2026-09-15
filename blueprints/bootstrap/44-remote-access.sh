@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Remote access tooling, for reaching client infrastructure from this machine.
 #
 # Four families, because different clients hand you different things:

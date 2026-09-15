@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 Set-StrictMode -Version Latest
 
@@ -332,7 +335,7 @@ function Wait-DevVMInstall {
     }
 
     Write-Progress -Activity 'Unattended install' -Completed
-    throw "The install did not finish within $TimeoutMinutes minutes. Open the console with '.\vm.ps1 open -NoWait' to see where it stopped; if it is sitting at an installer prompt, the seed disk was not picked up - see docs/troubleshooting.md."
+    throw "The install did not finish within $TimeoutMinutes minutes. Open the console with '.\vm.ps1 open -NoWait' to see where it stopped; if it is sitting at an installer prompt, the seed disk was not picked up."
 }
 
 function Stop-DevVMMachine {

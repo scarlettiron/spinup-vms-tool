@@ -1,3 +1,6 @@
+﻿# Scarlett A. Scott
+# Created 2026-09-15
+
 #requires -Version 5.1
 
 param([string]$Command)
@@ -8,24 +11,23 @@ $ErrorActionPreference = 'Stop'
 $Rest = @($args)
 
 $commands = [ordered]@{
-    'create'  = @{ Script = 'New-DevVM.ps1';       Implied = @{};                     Help = 'build a VM from config' }
-    'new'     = @{ Script = 'New-DevVM.ps1';       Implied = @{};                     Help = $null }
-    'build'   = @{ Script = 'New-DevVM.ps1';       Implied = @{};                     Help = $null }
-    'render'  = @{ Script = 'New-DevVM.ps1';       Implied = @{ RenderOnly = $true }; Help = 'show what a build would do, no Hyper-V, no elevation' }
-    'open'    = @{ Script = 'Open-DevVM.ps1';      Implied = @{};                     Help = 'start if needed, then open the desktop' }
-    'desktop' = @{ Script = 'Open-DevVM.ps1';      Implied = @{};                     Help = $null }
-    'console' = @{ Script = 'Open-DevVM.ps1';      Implied = @{};                     Help = $null }
-    'start'   = @{ Script = 'Start-DevVM.ps1';     Implied = @{};                     Help = 'start or resume; never provisions' }
-    'up'      = @{ Script = 'Start-DevVM.ps1';     Implied = @{};                     Help = $null }
-    'stop'    = @{ Script = 'Stop-DevVM.ps1';      Implied = @{};                     Help = 'shut down and free the RAM; keeps the disks' }
-    'halt'    = @{ Script = 'Stop-DevVM.ps1';      Implied = @{};                     Help = $null }
-    'down'    = @{ Script = 'Stop-DevVM.ps1';      Implied = @{};                     Help = $null }
-    'status'  = @{ Script = 'Get-DevVMStatus.ps1'; Implied = @{};                     Help = 'what each machine is, and how it is doing' }
-    'info'    = @{ Script = 'Get-DevVMStatus.ps1'; Implied = @{};                     Help = $null }
-    'remove'  = @{ Script = 'Remove-DevVM.ps1';    Implied = @{};                     Help = 'delete the VM; needs -DeleteDisks to touch the disks' }
-    'destroy' = @{ Script = 'Remove-DevVM.ps1';    Implied = @{};                     Help = $null }
-    'rm'      = @{ Script = 'Remove-DevVM.ps1';    Implied = @{};                     Help = $null }
-    'hash'    = @{ Script = 'New-PasswordHash.ps1';Implied = @{};                     Help = 'make a SHA-512 crypt hash for PasswordHash' }
+    'create'  = @{ Script = 'New-DevVM.ps1';       Help = 'build a VM from config' }
+    'new'     = @{ Script = 'New-DevVM.ps1';       Help = $null }
+    'build'   = @{ Script = 'New-DevVM.ps1';       Help = $null }
+    'open'    = @{ Script = 'Open-DevVM.ps1';      Help = 'start if needed, then open the desktop' }
+    'desktop' = @{ Script = 'Open-DevVM.ps1';      Help = $null }
+    'console' = @{ Script = 'Open-DevVM.ps1';      Help = $null }
+    'start'   = @{ Script = 'Start-DevVM.ps1';     Help = 'start or resume; never provisions' }
+    'up'      = @{ Script = 'Start-DevVM.ps1';     Help = $null }
+    'stop'    = @{ Script = 'Stop-DevVM.ps1';      Help = 'shut down and free the RAM; keeps the disks' }
+    'halt'    = @{ Script = 'Stop-DevVM.ps1';      Help = $null }
+    'down'    = @{ Script = 'Stop-DevVM.ps1';      Help = $null }
+    'status'  = @{ Script = 'Get-DevVMStatus.ps1'; Help = 'what the VM is, and how it is doing' }
+    'info'    = @{ Script = 'Get-DevVMStatus.ps1'; Help = $null }
+    'remove'  = @{ Script = 'Remove-DevVM.ps1';    Help = 'delete the VM; needs -DeleteDisks to touch the disks' }
+    'destroy' = @{ Script = 'Remove-DevVM.ps1';    Help = $null }
+    'rm'      = @{ Script = 'Remove-DevVM.ps1';    Help = $null }
+    'hash'    = @{ Script = 'New-PasswordHash.ps1';Help = 'make a SHA-512 crypt hash for PasswordHash' }
 }
 
 function Show-Usage {
@@ -45,9 +47,6 @@ function Show-Usage {
             $candidate = $commands[$other]
             if ($candidate.Help) { continue }
             if ($candidate.Script -ne $entry.Script) { continue }
-            $a = (($candidate.Implied.Keys | Sort-Object) -join ',')
-            $b = (($entry.Implied.Keys | Sort-Object) -join ',')
-            if ($a -ne $b) { continue }
             $aliases.Add($other)
         }
 
@@ -65,18 +64,13 @@ function Show-Usage {
     Write-Host '  Arguments are passed straight through, so anything the underlying' -ForegroundColor Gray
     Write-Host '  script accepts works here:' -ForegroundColor Gray
     Write-Host ''
-    Write-Host '    .\vm.ps1 create -Machine rocky'
-    Write-Host '    .\vm.ps1 create -All'
-    Write-Host '    .\vm.ps1 render'
-    Write-Host '    .\vm.ps1 open -Machine rocky'
+    Write-Host '    .\vm.ps1 open'
     Write-Host '    .\vm.ps1 stop -Save'
     Write-Host '    .\vm.ps1 status -Report'
-    Write-Host '    .\vm.ps1 remove -Machine rocky -DeleteDisks'
+    Write-Host '    .\vm.ps1 remove -DeleteDisks'
     Write-Host ''
     Write-Host '  Most commands need an elevated PowerShell, because the Hyper-V' -ForegroundColor Gray
-    Write-Host '  cmdlets do. "render" and "hash" do not.' -ForegroundColor Gray
-    Write-Host ''
-    Write-Host '  Full documentation: README.md and docs/' -ForegroundColor DarkGray
+    Write-Host '  cmdlets do. "hash" does not.' -ForegroundColor Gray
     Write-Host ''
 }
 
@@ -105,8 +99,7 @@ if (-not (Test-Path -LiteralPath $target)) {
     exit 1
 }
 
-$implied = $entry.Implied
-& $target @implied @args
+& $target @args
 
 if (Test-Path variable:LASTEXITCODE) {
     if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

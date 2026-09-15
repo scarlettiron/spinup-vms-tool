@@ -1,3 +1,6 @@
+// Scarlett A. Scott
+// Created 2026-09-15
+
 // Installed as /etc/polkit-1/rules.d/45-allow-colord.rules by 20-hyperv.sh.
 // Stops GNOME asking for authentication the moment an xrdp session starts.
 // RHEL-family polkit uses this JS format rather than the older .pkla files the

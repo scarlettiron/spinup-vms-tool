@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Sourced by every bootstrap step. Not a step itself.
 # shellcheck shell=bash
 

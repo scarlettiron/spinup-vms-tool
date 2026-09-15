@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Run the post-start hooks from config.
 #
 # The script itself was rendered on the host from Hooks.PostStart and

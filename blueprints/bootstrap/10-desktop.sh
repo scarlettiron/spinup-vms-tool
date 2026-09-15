@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # GNOME desktop.
 #
 # On Fedora the kickstart already selects the Workstation environment, so this

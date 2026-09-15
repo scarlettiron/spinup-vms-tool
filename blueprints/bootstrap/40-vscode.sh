@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # VS Code from Microsoft's own repository, so it updates with the rest of the
 # system rather than being a one-off download.
 if ! is_true "${VM_INSTALL_VSCODE:-true}"; then

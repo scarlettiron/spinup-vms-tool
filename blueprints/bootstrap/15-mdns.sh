@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # mDNS / zeroconf so the VMs on this virtual switch can reach each other by name
 # without static IPs or hand-maintained hosts files.
 #

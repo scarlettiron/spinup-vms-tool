@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Tidy up, record what we built, and reboot into the desktop if asked.
 pkg_cleanup
 

@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Global git configuration for the primary user.
 set_git() {
     local key="$1" value="$2"

@@ -1,3 +1,6 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Base packages, locale, timezone, and a full upgrade.
 
 # Before anything else on a RHEL rebuild: half the list below is in EPEL, not in

@@ -1,6 +1,8 @@
+# Scarlett A. Scott
+# Created 2026-09-15
+
 # Team defaults. Committed.
 # Your own settings go in vm.config.local.yaml, which is git-ignored.
-# Check a change without building anything:  .\vm.ps1 render
 
 blueprint:      redhat-rocky-workstation
 osVersion:      9

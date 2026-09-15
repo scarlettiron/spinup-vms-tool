@@ -1,25 +1,6 @@
 #requires -Version 5.1
 Set-StrictMode -Version Latest
 
-<#
-    Install-media acquisition and verification.
-
-    A blueprint can describe its media three ways, checked in this order:
-
-      1. Iso.Path                       - an explicit local .iso, used as-is
-      2. Media.IsoUrl + Media.IsoSha256 - a pinned download (any OS)
-      3. Media.IsoBaseUrl + ChecksumFile + IsoNamePattern
-                                        - resolve the current point release from
-                                          the vendor's published checksum file
-
-    Option 3 is how the Ubuntu blueprints work: rather than hard-coding
-    'ubuntu-24.04.1-live-server-amd64.iso' and its hash - which rots at every
-    point release - we read SHA256SUMS and take the filename and hash from it.
-    That keeps the repo correct over time and makes verification automatic.
-#>
-
-# No -Force here: re-importing Common would unload it from the caller's
-# session state, taking its functions with it.
 Import-Module (Join-Path $PSScriptRoot 'Common.psm1') -DisableNameChecking
 
 function Initialize-Tls {
@@ -35,35 +16,21 @@ function Get-WebText {
     Initialize-Tls
     $content = $null
     try {
-        # -UseBasicParsing keeps this working on hosts with no IE engine.
+
         $content = (Invoke-WebRequest -Uri $Uri -UseBasicParsing -ErrorAction Stop).Content
     }
     catch {
         throw "Could not fetch $Uri : $($_.Exception.Message)"
     }
 
-    # .Content is a string only when the server called it text. Whether a
-    # checksum file counts as text is up to the mirror, not the vendor: Rocky's
-    # serves .CHECKSUM as application/octet-stream, and Invoke-WebRequest hands
-    # back a byte[] for that. Without this the bytes reach Select-ChecksumEntry,
-    # which is typed [string], and the build dies on a type conversion instead of
-    # saying anything about a mirror.
-    #
-    # Mirrors differ for the same vendor, so this is not a Rocky quirk to fix in
-    # the Rocky blueprint. It belongs here.
     if ($content -is [byte[]]) {
-        # UTF8Encoding rather than [Text.Encoding]::UTF8 so no byte order mark is
-        # emitted, and a leading BOM in the response is stripped either way.
+
         $text = (New-Object System.Text.UTF8Encoding($false)).GetString($content)
         return $text.TrimStart([char]0xFEFF)
     }
     return [string]$content
 }
 
-<#
-    Download with progress. BITS first (resumable, and it survives a dropped
-    Wi-Fi link mid-way through a 3 GB ISO); a plain streamed copy otherwise.
-#>
 function Invoke-FileDownload {
     [CmdletBinding()]
     param(
@@ -142,10 +109,6 @@ function Test-FileHashMatch {
     return ($actual -eq $Sha256.Trim().ToUpperInvariant())
 }
 
-<#
-    Parse a vendor SHA256SUMS file and pick the entry matching a wildcard.
-    Lines look like:  <hash> *ubuntu-24.04.3-live-server-amd64.iso
-#>
 function Select-ChecksumEntry {
     [CmdletBinding()]
     param(
@@ -153,8 +116,6 @@ function Select-ChecksumEntry {
         [Parameter(Mandatory)][string]$NamePattern
     )
 
-    # Deliberately not named $matches - that collides with the automatic
-    # $Matches variable that -match populates on the very next line.
     $found = New-Object System.Collections.Generic.List[object]
     foreach ($line in ($Content -split "`r?`n")) {
         $trimmed = $line.Trim()
@@ -163,9 +124,6 @@ function Select-ChecksumEntry {
         $hash = ''
         $name = ''
 
-        # Two formats in the wild, and vendors do not agree:
-        #   coreutils   <hash>  *<file>          Ubuntu's SHA256SUMS
-        #   BSD tags    SHA256 (<file>) = <hash> Fedora's *-CHECKSUM
         if ($trimmed -match '^([0-9a-fA-F]{64})\s+\*?(.+)$') {
             $hash = $Matches[1].ToUpperInvariant()
             $name = $Matches[2].Trim()
@@ -184,17 +142,10 @@ function Select-ChecksumEntry {
     if ($found.Count -eq 0) {
         throw "No entry matching '$NamePattern' in the vendor checksum file. Check Iso.Release and the blueprint's Media.IsoNamePattern."
     }
-    # Newest-looking name wins if a release directory lists several.
+
     return ($found | Sort-Object -Property Name -Descending | Select-Object -First 1)
 }
 
-<#
-    Find the checksum file in a release directory when its name is not fixed.
-
-    Ubuntu's is simply 'SHA256SUMS'. Fedora's carries the build number, as in
-    'Fedora-Everything-42-1.1-x86_64-CHECKSUM', which cannot be constructed
-    without already knowing the build - so scrape the directory index for it.
-#>
 function Resolve-ChecksumFileName {
     [CmdletBinding()]
     param(
@@ -202,7 +153,6 @@ function Resolve-ChecksumFileName {
         [Parameter(Mandatory)][string]$Pattern
     )
 
-    # No wildcard means it is a literal filename, so nothing to resolve.
     if ($Pattern -notmatch '[*?]') { return $Pattern }
 
     Write-Detail "looking for '$Pattern' in the release directory"
@@ -211,7 +161,7 @@ function Resolve-ChecksumFileName {
     $candidates = New-Object System.Collections.Generic.List[string]
     foreach ($m in [regex]::Matches($html, 'href\s*=\s*["'']([^"'']+)["'']')) {
         $href = $m.Groups[1].Value
-        # Directory indexes give relative links; keep just the file name.
+
         $leaf = ($href -split '[/\\]')[-1]
         if ($leaf -and $leaf -like $Pattern) { $candidates.Add($leaf) }
     }
@@ -220,14 +170,10 @@ function Resolve-ChecksumFileName {
     if ($unique.Count -eq 0) {
         throw "No file matching '$Pattern' listed at $BaseUrl. Check Iso.Release, or pin Media.IsoUrl and Media.IsoSha256 instead."
     }
-    # Highest-sorting name is the newest build of a given release.
+
     return (@($unique | Sort-Object -Descending)[0])
 }
 
-<#
-    Ensure the install media for $Config is present locally and verified.
-    Returns the full path to the .iso.
-#>
 function Resolve-DevVMIso {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -241,7 +187,6 @@ function Resolve-DevVMIso {
     $verify = $true
     if ($iso.Contains('VerifyChecksum')) { $verify = [bool]$iso['VerifyChecksum'] }
 
-    # 1. Explicit local file.
     if ($iso.Contains('Path') -and $iso['Path']) {
         $explicit = [string]$iso['Path']
         if (-not (Test-Path -LiteralPath $explicit)) {
@@ -249,11 +194,6 @@ function Resolve-DevVMIso {
         }
         Write-Detail "using the ISO named in config: $explicit"
 
-        # For a blueprint that can only ever use a hand-downloaded ISO, check the
-        # name looks like the right edition. RHEL publishes a boot ISO and a
-        # binary DVD; the boot ISO carries no packages and expects to pull them
-        # from an entitled CDN, so an unattended install from it fails well into
-        # the run with something that reads like a network fault.
         if ($media.Contains('RequiresManualDownload') -and $media['RequiresManualDownload'] -and
             $media.Contains('IsoNamePattern') -and $media['IsoNamePattern']) {
             $leaf = [System.IO.Path]::GetFileName($explicit)
@@ -267,9 +207,6 @@ function Resolve-DevVMIso {
         return (Resolve-Path -LiteralPath $explicit).Path
     }
 
-    # A blueprint whose media cannot be fetched at all says so itself, rather
-    # than falling through to a message about setting Media.IsoUrl on a vendor
-    # that publishes no anonymous URL to set it to.
     if ($media.Contains('RequiresManualDownload') -and $media['RequiresManualDownload']) {
         $page = ''
         if ($media.Contains('DownloadPage') -and $media['DownloadPage']) {
@@ -290,12 +227,11 @@ function Resolve-DevVMIso {
     $url = $null
     $sha = $null
 
-    # 2. Pinned URL + hash.
     if ($media.Contains('IsoUrl') -and $media['IsoUrl']) {
         $url = [string]$media['IsoUrl']
         if ($media.Contains('IsoSha256') -and $media['IsoSha256']) { $sha = [string]$media['IsoSha256'] }
     }
-    # 3. Resolve the current point release from the vendor checksum file.
+
     elseif ($media.Contains('IsoBaseUrl') -and $media['IsoBaseUrl']) {
         $release = ''
         if ($iso.Contains('Release')) { $release = [string]$iso['Release'] }

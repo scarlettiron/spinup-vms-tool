@@ -1,28 +1,8 @@
-﻿#requires -Version 5.1
+#requires -Version 5.1
 Set-StrictMode -Version Latest
 
-<#
-    Turns the effective config into unattended-install media.
-
-    The autoinstall config reaches the Ubuntu installer as a cloud-init NoCloud
-    datasource: a small FAT32 disk labelled CIDATA holding user-data and
-    meta-data. That is the only delivery mechanism here that needs no ISO
-    repacking, no HTTP server, and no keystrokes at the boot menu - which is
-    what makes 'clone the repo and run one script' actually true on Windows.
-
-    The bootstrap scripts are base64-embedded into the autoinstall payload's
-    user-data section (plain cloud-init, applied on the installed system's first
-    boot), so the finished VM carries its own provisioning and the seed disk can
-    be detached afterwards.
-#>
-
-# No -Force here: re-importing Common would unload it from the caller's
-# session state, taking its functions with it.
 Import-Module (Join-Path $PSScriptRoot 'Common.psm1') -DisableNameChecking
 
-# Where staged secrets land in the guest. Under /root, which is 0700, and every
-# file inside is written 0600 - bootstrap step 55 installs them and then shreds
-# them unless GitHub.ShredSecretsAfterUse says otherwise.
 $script:SecretsDir = '/root/vm-bootstrap-secrets'
 
 function ConvertTo-YamlBool {
@@ -59,10 +39,6 @@ function ConvertTo-Base64Lines {
     return $lines
 }
 
-<#
-    One cloud-init write_files entry, base64-encoded so shell quoting, YAML
-    escaping, and CRLF can never corrupt a script in transit.
-#>
 function New-WriteFileEntry {
     [CmdletBinding()]
     param(
@@ -89,14 +65,6 @@ function New-WriteFileEntry {
     return $sb.ToString().TrimEnd("`r", "`n")
 }
 
-<#
-    One file, as a shell command that recreates it from base64.
-
-    Kickstart's %post is a shell script with no equivalent of cloud-init's
-    write_files, so the payload is delivered as heredocs. base64 for the same
-    reason cloud-init entries use it: shell quoting, and CRLF, cannot corrupt a
-    script in transit.
-#>
 function New-ShellWriteFileCommand {
     [CmdletBinding()]
     param(
@@ -108,7 +76,7 @@ function New-ShellWriteFileCommand {
 
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine("install -d -m 0755 '$([System.IO.Path]::GetDirectoryName($TargetPath) -replace '\\', '/')'")
-    # A quoted heredoc delimiter, so nothing inside is expanded.
+
     [void]$sb.AppendLine("base64 -d > '$TargetPath' <<'VMBOOTSTRAP_B64'")
     foreach ($line in (ConvertTo-Base64Lines -Path $SourcePath)) {
         [void]$sb.AppendLine($line)
@@ -119,11 +87,6 @@ function New-ShellWriteFileCommand {
     return $sb.ToString().TrimEnd("`r", "`n")
 }
 
-<#
-    Render /etc/vm-bootstrap.env - the single interface between the PowerShell
-    config and the bash bootstrap steps. Every knob a step reads is set here, so
-    adding a step means adding one variable, not touching the plumbing.
-#>
 function New-BootstrapEnv {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -150,28 +113,12 @@ function New-BootstrapEnv {
     $ghCli = @{}
     if ($gh.Contains('Cli') -and $gh['Cli']) { $ghCli = $gh['Cli'] }
 
-    # The guest is told the *resolved* mode, never the literal 'auto' - the drop
-    # directory is inspected here on the host, so 55-github.sh only ever sees a
-    # concrete instruction.
     $keySource = Resolve-SshKeySource -Config $Config
     $keyType = [string](Get-Or $sshKey 'Type' 'ed25519')
     if ($keySource.KeyType) { $keyType = $keySource.KeyType }
 
     $extraPackages = @(Get-Or $b 'ExtraAptPackages' @()) -join ' '
-    # Extension ids are space separated for the shell loop that installs them.
-    # Whitespace is impossible in a Marketplace id (publisher.name), so a plain
-    # join is safe and keeps the guest side to a `for` over $VM_VSCODE_EXTENSIONS.
-    #
-    # Two lists, because a config layer REPLACES an array rather than merging it
-    # (see Merge-Config). Without a second key, one developer adding a favourite
-    # extension to their local file would silently drop every extension the team
-    # standard set. So:
-    #
-    #   VSCodeExtensions       the team list. Replace it to take full control.
-    #   ExtraVSCodeExtensions  appended to it. This is the one to use locally.
-    #
-    # De-duplicated, first occurrence wins, so listing something in both is
-    # harmless rather than installing it twice.
+
     $vscodeSeen = @{}
     $vscodeList = New-Object System.Collections.Generic.List[string]
     foreach ($ext in (@(Get-Or $b 'VSCodeExtensions' @()) + @(Get-Or $b 'ExtraVSCodeExtensions' @()))) {
@@ -184,11 +131,6 @@ function New-BootstrapEnv {
     $vscodeExtensions = ($vscodeList.ToArray()) -join ' '
     $peers = @($Config.Peers) -join ' '
 
-    # The resolved plan, not the raw config: the guest is told a concrete engine,
-    # version and port, so 35-database.sh never has to work out a default. A blank
-    # engine is the signal that there is nothing to do. The admin password is
-    # deliberately absent here - it goes through the secrets channel below, so it
-    # never lands in /etc/vm-bootstrap.env, which is world readable.
     $dbPlan = Get-DevVMDatabasePlan -Config $Config
     $dbEngine = ''; $dbVersion = ''; $dbSource = ''
     $dbPort = ''; $dbListen = ''; $dbSELinuxType = ''; $dbDatabases = ''
@@ -215,8 +157,6 @@ function New-BootstrapEnv {
         $adminerPhpDnf = $dbPlan.PhpDriverDnf
     }
 
-    # Red Hat subscription. Resolved for every blueprint because the config is
-    # shared, but only redhat-rhel-workstation has a step that reads it.
     $rhPlan = Get-DevVMRedHatPlan -Config $Config
     $rhsmMode = 'none'; $rhsmOrgId = ''; $rhsmUsername = ''
     $rhsmAutoAttach = ConvertTo-ShellBool $true
@@ -226,16 +166,12 @@ function New-BootstrapEnv {
         $rhsmOrgId = $rhPlan.OrganizationId
         $rhsmUsername = $rhPlan.Username
         $rhsmAutoAttach = ConvertTo-ShellBool $rhPlan.AutoAttach
-        # Only a minor release can be pinned: 'subscription-manager release'
-        # takes 9.7, not 9. A rebuild's version is a bare major, so this stays
-        # empty there and the step skips the pin.
+
         if ($rhPlan.PinRelease -and [string]$Config.Iso['Release'] -match '^\d+\.\d+$') {
             $rhsmRelease = [string]$Config.Iso['Release']
         }
     }
 
-    # The hook script is rendered as a file and embedded like any other, so the
-    # guest is handed a script rather than a string it has to reassemble.
     $hookPlan = Get-DevVMHookPlan -Config $Config
     $hooksRunAs = ''; $hooksWorkingDir = ''; $hooksScriptPath = ''
     $hooksEveryBoot = ConvertTo-ShellBool $false
@@ -264,12 +200,7 @@ function New-BootstrapEnv {
         VM_ENHANCED_SESSION         = ConvertTo-ShellBool (Get-Or $vm 'EnhancedSession' $true)
 
         VM_INSTALL_DESKTOP          = ConvertTo-ShellBool (Get-Or $b 'InstallDesktop' $true)
-        # No default here on purpose. The desktop package is the one setting
-        # whose value is meaningless outside its own OS - 'ubuntu-desktop' means
-        # nothing to dnf, and '@workstation-product-environment' means nothing to
-        # apt - so each blueprint supplies its own in Defaults.Bootstrap, and
-        # 10-desktop.sh keeps a per-package-manager fallback for the rest.
-        # Defaulting it here once sent 'ubuntu-desktop' to every OS.
+
         VM_DESKTOP_PACKAGE          = [string](Get-Or $b 'DesktopPackage' '')
         VM_DISPLAY_RESOLUTION       = [string](Get-Or $b 'DisplayResolution' '1920x1080')
 
@@ -313,10 +244,6 @@ function New-BootstrapEnv {
         VM_ADMINER_PHP_DRIVER_APT   = $adminerPhpApt
         VM_ADMINER_PHP_DRIVER_DNF   = $adminerPhpDnf
 
-        # Red Hat subscription. Only the RHEL blueprint acts on these. The key
-        # or password itself is NOT here: it is staged as a 0600 file so it
-        # stays out of /etc/vm-bootstrap.env, which is world-readable, and out
-        # of the process list.
         VM_RHSM_MODE                = $rhsmMode
         VM_RHSM_ORG_ID              = $rhsmOrgId
         VM_RHSM_USERNAME            = $rhsmUsername
@@ -349,9 +276,6 @@ function New-BootstrapEnv {
     return $sb.ToString()
 }
 
-<#
-    Render /etc/vm-bootstrap.users - tab separated, consumed by 05-users.sh.
-#>
 function New-AdditionalUsersFile {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -393,10 +317,6 @@ function New-AdditionalUsersFile {
     return $sb.ToString()
 }
 
-<#
-    Render /etc/vm-bootstrap.gitconfig-extra - tab separated 'section.key<TAB>value'
-    pairs from Git.Extra, applied verbatim by 52-git.sh.
-#>
 function New-GitExtraFile {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -420,18 +340,6 @@ function New-GitExtraFile {
     return $sb.ToString()
 }
 
-<#
-    Render /etc/vm-bootstrap.repos - the repositories to clone on first boot.
-    Consumed by 70-repos.sh. PostClone is base64-encoded so a command containing
-    tabs, quotes, or newlines survives the tab-separated format.
-#>
-<#
-    Render /etc/vm-bootstrap.files - tab separated, consumed by 06-files.sh.
-
-    One line per directory being copied, naming where the seed staged it and where
-    it belongs. The staging indirection is what lets a destination be '~': only
-    the guest knows where a home directory is and which uid owns it.
-#>
 function New-FilesManifest {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -441,10 +349,7 @@ function New-FilesManifest {
     [void]$sb.AppendLine('# mode is "-" when no explicit Mode was given: see the note below.')
 
     foreach ($entry in @(Get-DevVMFileCopyLayout -Config $Config)) {
-        # A literal '-' rather than an empty field, because `IFS=$'\t' read` in the
-        # guest collapses runs of tabs: tab is whitespace to the shell, so an empty
-        # middle field silently shifts every field after it. That produced
-        # `chmod 3` on every copied file before this was caught.
+
         $mode = if ($entry.Mode) { $entry.Mode } else { '-' }
         [void]$sb.AppendLine(("{0}`t{1}`t{2}`t{3}`t{4}" -f `
             $entry.StageRoot, $entry.To, $entry.Owner, $mode, $entry.Files.Count))
@@ -452,15 +357,6 @@ function New-FilesManifest {
     return $sb.ToString()
 }
 
-<#
-    Render the post-start hook script.
-
-    Config supplies commands; this turns them into one script with the same
-    failure semantics as every bootstrap step, so a broken hook is reported rather
-    than silently ignored. A script file named in config is appended verbatim after
-    the inline commands, with its shebang stripped so it does not sit in the middle
-    of the file.
-#>
 function New-HookScript {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -476,8 +372,7 @@ function New-HookScript {
     [void]$sb.AppendLine('#')
     [void]$sb.AppendLine('#     sudo vm-bootstrap --only 80-hooks --force')
     [void]$sb.AppendLine('#')
-    # The same discipline as a bootstrap step: stop at the first failure so the
-    # step is reported failed rather than half-run and called a success.
+
     [void]$sb.AppendLine('set -euo pipefail')
     [void]$sb.AppendLine('')
 
@@ -494,7 +389,7 @@ function New-HookScript {
         [void]$sb.AppendLine("# ---- Hooks.PostStartFile: $name ----")
         $lines = [System.IO.File]::ReadAllLines($plan.ScriptFile)
         for ($i = 0; $i -lt $lines.Count; $i++) {
-            # Drop a leading shebang: this is being appended, not launched.
+
             if ($i -eq 0 -and $lines[$i] -match '^#!') { continue }
             [void]$sb.AppendLine($lines[$i])
         }
@@ -527,10 +422,6 @@ function New-ReposFile {
     return $sb.ToString()
 }
 
-<#
-    Render /etc/vm-bootstrap.disks - the extra virtual disks and where they go.
-    Consumed by 00-disks.sh, which resolves each one by its SCSI location.
-#>
 function New-DataDiskFile {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -544,10 +435,6 @@ function New-DataDiskFile {
     return $sb.ToString()
 }
 
-<#
-    Name the key's algorithm from its public half, so a dropped-in RSA key is
-    installed as ~/.ssh/id_rsa rather than an id_ed25519 that lies about itself.
-#>
 function ConvertTo-SshKeyType {
     [CmdletBinding()] param([AllowEmptyString()][string]$PublicText)
 
@@ -563,16 +450,6 @@ function ConvertTo-SshKeyType {
     }
 }
 
-<#
-    Work out where the guest's SSH identity comes from.
-
-    Mode 'auto' - the default - is what makes ssh_keys/ a drop directory: a key
-    file in there is used, and if the directory is empty the guest generates its
-    own. Nobody has to edit a path in config to switch between the two.
-
-    Returns the effective mode ('none' | 'generate' | 'copy') plus, for 'copy',
-    the resolved key paths.
-#>
 function Resolve-SshKeySource {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -599,15 +476,11 @@ function Resolve-SshKeySource {
     $preferName = ''
     if ($sshKey.Contains('Name') -and $sshKey['Name']) { $preferName = [string]$sshKey['Name'] }
 
-    # Always inspect the drop directory, whatever the mode: standalone public
-    # keys there feed the guest's authorized_keys, which is a separate concern
-    # from the GitHub identity and should work even with Mode = 'none'.
     $material = Get-DevVMSshKeyMaterial -RepoRoot $Config.RepoRoot -PreferName $preferName
     $result.Material = $material
 
     if ($mode -eq 'none') { $result.Source = 'disabled'; return $result }
 
-    # An explicit path wins over the drop directory.
     $explicit = ''
     if ($sshKey.Contains('PrivateKeyPath') -and $sshKey['PrivateKeyPath']) {
         $explicit = [System.Environment]::ExpandEnvironmentVariables([string]$sshKey['PrivateKeyPath'])
@@ -638,14 +511,12 @@ function Resolve-SshKeySource {
         return $result
     }
 
-    # An explicit 'generate' means generate, even with a key sitting in ssh_keys/.
     if ($mode -eq 'generate') {
         $result.Mode = 'generate'
         $result.Source = 'generated in the guest'
         return $result
     }
 
-    # 'auto' or 'copy' - we need an identity, so ambiguity is now fatal.
     if ($material.Ambiguous) { throw $material.AmbiguityMessage }
 
     if ($material.Identity) {
@@ -667,24 +538,12 @@ function Resolve-SshKeySource {
     return $result
 }
 
-<#
-    Stage any optional secrets (an existing SSH key, a GitHub token) into the
-    build directory and return write_files descriptors for them.
-
-    These are the only things this tooling puts on the seed disk that are worth
-    protecting, so the caller warns about each one. GitHub.SshKey.Mode
-    'generate' - the default - produces no secret here at all: the keypair is
-    made inside the guest and only the public half ever comes back out.
-#>
 function New-SecretDescriptors {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]$Config,
         [Parameter(Mandatory)][string]$StageDir,
-        # Pass the already-resolved source so the drop directory is only
-        # inspected once per build - a second Resolve with different arguments
-        # can reach a different conclusion, which is a great way to print a plan
-        # that disagrees with what gets built.
+
         $KeySource
     )
 
@@ -694,9 +553,6 @@ function New-SecretDescriptors {
         New-Item -ItemType Directory -Path $StageDir -Force | Out-Null
     }
 
-    # The database admin password, staged as a file rather than an environment
-    # variable so it stays out of /etc/vm-bootstrap.env and out of the process
-    # list. 35-database.sh shreds it once it has been used.
     $dbPlan = Get-DevVMDatabasePlan -Config $Config
     if ($dbPlan -and $dbPlan.AdminPassword) {
         $stagedDbPassword = Join-Path $StageDir 'db-admin-password'
@@ -710,11 +566,6 @@ function New-SecretDescriptors {
         })
     }
 
-    # The Red Hat activation key, or the account password when that is what was
-    # given. Staged as a file for the same reason as the database password: an
-    # environment variable would land in /etc/vm-bootstrap.env, which is
-    # world-readable, and would show in the process list of every command that
-    # inherited it. 00-subscription.sh shreds it after registering.
     $rhPlan = Get-DevVMRedHatPlan -Config $Config
     if ($rhPlan -and $rhPlan.Secret) {
         $stagedRhsm = Join-Path $StageDir 'redhat-subscription-secret'
@@ -740,23 +591,18 @@ function New-SecretDescriptors {
         $publicPath = $KeySource.PublicKeyPath
 
         if (-not $publicPath -or -not (Test-Path -LiteralPath $publicPath)) {
-            # A derived public key is written into the staging directory so the
-            # rest of the pipeline sees a normal pair of files.
+
             if ($KeySource.PublicText) {
                 $publicPath = Join-Path $StageDir 'github-ssh-key.derived.pub'
                 Write-UnixText -Path $publicPath -Content ($KeySource.PublicText + "`n")
             }
             else {
-                # No public half available - almost always a passphrase-protected
-                # key. Not fatal: the private key still works for git, it just
-                # cannot be displayed or uploaded, and it will prompt.
+
                 Write-Warn "no public key available for $privatePath (passphrase-protected?). The key is still installed, but it cannot be uploaded to GitHub and git will prompt for the passphrase."
                 $publicPath = ''
             }
         }
 
-        # Copy rather than reference, so the build is reproducible from the
-        # staged artefacts and never re-reads a key that moved.
         $stagedPrivate = Join-Path $StageDir 'github-ssh-key'
         Copy-Item -LiteralPath $privatePath -Destination $stagedPrivate -Force
 
@@ -781,7 +627,6 @@ function New-SecretDescriptors {
         }
     }
 
-    # GitHub token, from a file on this machine or inline in local config.
     $ghCli = @{}
     if ($gh.Contains('Cli') -and $gh['Cli']) { $ghCli = $gh['Cli'] }
 
@@ -819,14 +664,6 @@ function New-SecretDescriptors {
     return $descriptors
 }
 
-<#
-    Build the seed disk: a small FAT32 VHDX that the installer finds by its
-    filesystem label.
-
-    The label is the entire contract, and both installers work the same way:
-        CIDATA   cloud-init's NoCloud datasource, which reads user-data
-        OEMDRV   Anaconda, which reads ks.cfg
-#>
 function New-SeedDisk {
     [CmdletBinding()]
     param(
@@ -856,7 +693,6 @@ function New-SeedDisk {
         Initialize-Disk -Number $diskNumber -PartitionStyle MBR -Confirm:$false -ErrorAction Stop | Out-Null
         $partition = New-Partition -DiskNumber $diskNumber -UseMaximumSize -AssignDriveLetter -ErrorAction Stop
 
-        # The volume can take a moment to surface after the partition appears.
         $letter = $null
         foreach ($attempt in 1..20) {
             $partition = Get-Partition -DiskNumber $diskNumber -PartitionNumber $partition.PartitionNumber
@@ -868,8 +704,6 @@ function New-SeedDisk {
         }
         if (-not $letter) { throw 'Windows did not assign a drive letter to the seed partition.' }
 
-        # The label is the contract: cloud-init's NoCloud datasource looks for a
-        # vfat or iso9660 filesystem labelled CIDATA and reads user-data from it.
         Format-Volume -DriveLetter $letter -FileSystem FAT32 -NewFileSystemLabel $Label `
             -Confirm:$false -Force -ErrorAction Stop | Out-Null
 
@@ -885,10 +719,6 @@ function New-SeedDisk {
     return $VhdPath
 }
 
-<#
-    Render everything and build the seed disk.
-    Returns the build directory and the seed VHDX path.
-#>
 function New-DevVMSeed {
     [CmdletBinding()]
     param(
@@ -901,9 +731,6 @@ function New-DevVMSeed {
     $seedDir = Join-Path $buildDir 'seed'
     $bootstrapStage = Join-Path $seedDir 'bootstrap'
 
-    # Clear stale output without insisting on deleting the directory itself - a
-    # terminal or Explorer window sitting in build/<vm> holds a lock on it, and
-    # that is not a reason to fail a build.
     if (Test-Path -LiteralPath $buildDir) {
         Get-ChildItem -LiteralPath $buildDir -Force | ForEach-Object {
             try { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop }
@@ -918,7 +745,6 @@ function New-DevVMSeed {
         $bootstrapRoot = [string]$prov['BootstrapRoot']
     }
 
-    # --- generated files that ride along with the bootstrap tree -------------
     $envPath = Join-Path $buildDir 'vm-bootstrap.env'
     Write-UnixText -Path $envPath -Content (New-BootstrapEnv -Config $Config)
 
@@ -937,11 +763,6 @@ function New-DevVMSeed {
     $reposPath = Join-Path $buildDir 'vm-bootstrap.repos'
     Write-UnixText -Path $reposPath -Content (New-ReposFile -Config $Config)
 
-    # --- provisioning payload ----------------------------------------------
-    # Collected as method-neutral descriptors and rendered at the very end,
-    # because cloud-init wants YAML write_files entries while kickstart wants
-    # shell heredocs inside a %post block. Everything between here and there is
-    # identical for both.
     $payload = New-Object System.Collections.Generic.List[object]
     function Add-Payload([string]$Source, [string]$Target, [string]$Permissions) {
         $payload.Add([pscustomobject]@{
@@ -956,9 +777,6 @@ function New-DevVMSeed {
     Add-Payload $reposPath     '/etc/vm-bootstrap.repos'            '0644'
     Add-Payload $filesPath     '/etc/vm-bootstrap.files'            '0644'
 
-    # --- files copied in from this laptop -----------------------------------
-    # Staged under /var/lib/vm-bootstrap/files/<n>/ with their layout intact;
-    # 06-files.sh moves each tree to its destination with the right owner.
     $copyLayout = @(Get-DevVMFileCopyLayout -Config $Config)
     $copiedCount = 0
     foreach ($entry in $copyLayout) {
@@ -973,7 +791,6 @@ function New-DevVMSeed {
             $copiedCount, $copyLayout.Count, $totalMb)
     }
 
-    # --- post-start hooks ---------------------------------------------------
     $hookScript = New-HookScript -Config $Config
     if ($hookScript) {
         $hookPath = Join-Path $buildDir 'post-start.sh'
@@ -983,11 +800,6 @@ function New-DevVMSeed {
         Write-Detail "post-start hook script: $hookLines command line(s)"
     }
 
-    # --- optional secrets ---------------------------------------------------
-    # Staged outside the seed directory so they are never copied onto the plain
-    # bootstrap tree that also lands on the CIDATA volume.
-    # Resolved once here and threaded through, so the plan, the env file, and the
-    # staged secrets can never disagree about which key is being used.
     $keySource = Resolve-SshKeySource -Config $Config
     $secrets = New-SecretDescriptors -Config $Config -KeySource $keySource `
         -StageDir (Join-Path $buildDir 'secrets')
@@ -1003,11 +815,8 @@ function New-DevVMSeed {
         Write-Warn 'the seed disk holds it in plain text until bootstrap shreds it - see docs/github-access.md or docs/databases.md'
     }
 
-    # Layer the bootstrap trees. Later directories win, so blueprints/bootstrap
-    # supplies the distro-agnostic steps and a blueprint overrides only the ones
-    # whose package names differ.
     $bootstrapDirs = @($Config.Blueprint.Paths['BootstrapDirs'])
-    $merged = [ordered]@{}          # keyed by relative path, valued by source file
+    $merged = [ordered]@{}
     foreach ($dir in $bootstrapDirs) {
         if (-not (Test-Path -LiteralPath $dir)) { throw "Bootstrap directory not found: $dir" }
         $prefix = (Resolve-Path -LiteralPath $dir).Path.TrimEnd('\')
@@ -1026,8 +835,6 @@ function New-DevVMSeed {
     Add-Payload $merged['_runner.sh'] '/usr/local/sbin/vm-bootstrap' '0755'
     Add-Payload $merged['_vm-bootstrap.service'] '/etc/systemd/system/vm-bootstrap.service' '0644'
 
-    # Everything else lands under $bootstrapRoot with its relative layout intact,
-    # so steps can reference assets/ predictably.
     $staged = New-Object System.Collections.Generic.List[string]
     foreach ($relative in @($merged.Keys)) {
         if ($relative -eq '_runner.sh' -or $relative -eq '_vm-bootstrap.service') { continue }
@@ -1041,8 +848,6 @@ function New-DevVMSeed {
         Add-Payload $source $target $perm
         $staged.Add($relative)
 
-        # A plain copy on the seed disk as well - handy for debugging from the
-        # guest (`sudo mount -L <label> /mnt`) without unpicking base64.
         $stageTarget = Join-Path $bootstrapStage $relative
         $stageParent = Split-Path -Parent $stageTarget
         if (-not (Test-Path -LiteralPath $stageParent)) {
@@ -1051,7 +856,6 @@ function New-DevVMSeed {
         Copy-Item -LiteralPath $source -Destination $stageTarget -Force
     }
 
-    # --- password -----------------------------------------------------------
     $primary = $Config.Guest['PrimaryUser']
     if (-not $primary.Contains('Username') -or -not $primary['Username']) {
         throw 'Guest.PrimaryUser.Username must be set.'
@@ -1061,17 +865,11 @@ function New-DevVMSeed {
         throw 'Guest.PrimaryUser needs either Password or PasswordHash - the Ubuntu installer will not create a passwordless account.'
     }
 
-    # --- authorized keys ----------------------------------------------------
-    # Blank entries are filtered out: autoinstall rejects an empty item under
-    # authorized-keys, and a commented-out example in config reads as one.
     $keys = @()
     if ($primary.Contains('AuthorizedKeys') -and $primary['AuthorizedKeys']) {
         $keys = @(@($primary['AuthorizedKeys']) | Where-Object { $_ -and ([string]$_).Trim() })
     }
 
-    # Public keys dropped into ssh_keys/ with no private half are there so you
-    # can ssh in from this laptop - add them alongside anything in config.
-    # Reuses the discovery already done above rather than scanning again.
     if ($keySource.Material) {
         $material = $keySource.Material
         foreach ($warning in (ConvertTo-Array $material.Warnings)) { Write-Warn "ssh_keys: $warning" }
@@ -1084,7 +882,6 @@ function New-DevVMSeed {
     }
     $keys = @($keys | Select-Object -Unique)
 
-    # --- method -------------------------------------------------------------
     $method = 'cloud-init-nocloud'
     if ($prov.Contains('Method') -and $prov['Method']) { $method = [string]$prov['Method'] }
     if ($method -notin @('cloud-init-nocloud', 'kickstart-oemdrv')) {
@@ -1098,8 +895,7 @@ function New-DevVMSeed {
     }
 
     if ($isKickstart) {
-        # Kickstart: %packages is a bare list, sshd keys go in an sshkey line, and
-        # the payload is shell rather than YAML.
+
         $packageBlock = (@($packages) -join "`n")
 
         $keyLines = New-Object System.Collections.Generic.List[string]
@@ -1133,7 +929,6 @@ function New-DevVMSeed {
         }) -join "`n")
     }
 
-    # --- render -------------------------------------------------------------
     $sshCfg = $Config.Guest['Ssh']
     $sshInstall = $true
     if ($sshCfg.Contains('InstallServer')) { $sshInstall = [bool]$sshCfg['InstallServer'] }
@@ -1143,8 +938,6 @@ function New-DevVMSeed {
     $sourceId = 'ubuntu-server'
     if ($prov.Contains('SourceId') -and $prov['SourceId']) { $sourceId = [string]$prov['SourceId'] }
 
-    # Both formats happen to use the same two words: 'shutdown: poweroff' in
-    # autoinstall, and a bare 'poweroff' directive in kickstart.
     $shutdownMode = 'poweroff'
     if ($prov.Contains('PowerOffAfterInstall') -and -not $prov['PowerOffAfterInstall']) { $shutdownMode = 'reboot' }
 
@@ -1168,10 +961,7 @@ function New-DevVMSeed {
         SHUTDOWN_MODE        = $shutdownMode
         INSTANCE_ID          = ('iid-{0}-{1}' -f $vmName, (Get-Date -Format 'yyyyMMddHHmmss'))
         SYSTEM_DISK          = $(if ($prov.Contains('SystemDisk') -and $prov['SystemDisk']) { [string]$prov['SystemDisk'] } else { 'sda' })
-        # {Release} is substituted the same way Media.IsoBaseUrl does it, so a
-        # blueprint whose package repositories are keyed on the version can name
-        # them once instead of hard-coding a number that a version bump forgets.
-        # Rocky needs it: its BaseOS and AppStream mirrorlists take repo=...-9.
+
         INSTALL_SOURCE       = $(if ($prov.Contains('InstallSource')) {
                                     ([string]$prov['InstallSource']).Replace('{Release}', [string]$Config.Iso['Release'])
                                 } else { '' })
@@ -1201,9 +991,6 @@ function New-DevVMSeed {
         }
         Write-UnixText -Path (Join-Path $seedDir $file.Name) -Content $text
     }
-
-    # No network config is written on purpose: without one the guest keeps its
-    # installer's DHCP default, which is what we want on a NAT switch.
 
     Write-Detail "rendered $method seed: $(Join-Path $seedDir $seedFileName)"
     Write-Detail "embedded $($payload.Count) provisioning file(s)"

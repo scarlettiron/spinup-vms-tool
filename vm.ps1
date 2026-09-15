@@ -1,66 +1,12 @@
 #requires -Version 5.1
-<#
-.SYNOPSIS
-    One entry point for everything. Dispatches to the scripts under scripts/.
 
-.DESCRIPTION
-    A thin front door, so there is one command to remember instead of seven paths:
-
-        .\vm.ps1 create -Machine ubuntu-gui
-        .\vm.ps1 open   -Machine ubuntu-gui
-        .\vm.ps1 stop
-
-    Every argument after the command is passed straight through to the script that
-    handles it, so anything documented for those scripts works here unchanged. This
-    file deliberately does no work of its own: it holds no defaults, validates no
-    config, and requires no elevation. Whatever the target script does, it does.
-
-.PARAMETER Command
-    What to do. Run .\vm.ps1 with no arguments for the list.
-
-    Everything after the command is collected by $args and forwarded verbatim.
-    Note the deliberate absence of [CmdletBinding()] and [Parameter()] here: either
-    one makes this an advanced script, and an advanced script tries to bind a
-    leading-dash token like -RenderOnly to a parameter of its own and fails.
-    ValueFromRemainingArguments does not help, since it only gathers positional
-    leftovers. A plain script puts every unbound token in $args, dashes and all,
-    which is exactly what a pass-through wrapper needs.
-
-.EXAMPLE
-    .\vm.ps1
-    List the commands.
-
-.EXAMPLE
-    .\vm.ps1 create -Machine ubuntu-gui
-    Build the Ubuntu desktop VM.
-
-.EXAMPLE
-    .\vm.ps1 render
-    Show what a build would produce, without touching Hyper-V. Needs no elevation.
-
-.EXAMPLE
-    .\vm.ps1 open
-    Start the VM if needed and open its desktop.
-
-.EXAMPLE
-    .\vm.ps1 stop -Save
-    Hibernate it.
-#>
 param([string]$Command)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Everything after the command, as written, dashes intact. See the note in the
-# help above for why this is $args rather than a declared parameter.
 $Rest = @($args)
 
-# command -> script, plus any parameters the command itself implies. Aliases sit
-# beside their real name rather than in a second table, so adding one is one line.
-#
-# Implied is a hashtable, not a list of strings, because it is splatted: splatting
-# a hashtable binds by name, while splatting an array of strings passes everything
-# positionally and '-RenderOnly' would arrive as a *value*.
 $commands = [ordered]@{
     'create'  = @{ Script = 'New-DevVM.ps1';       Implied = @{};                     Help = 'build a VM from config' }
     'new'     = @{ Script = 'New-DevVM.ps1';       Implied = @{};                     Help = $null }
@@ -89,10 +35,6 @@ function Show-Usage {
     Write-Host '  Usage:  .\vm.ps1 <command> [arguments]' -ForegroundColor Gray
     Write-Host ''
 
-    # An alias is an entry with no help text. It belongs to the command with the
-    # same script AND the same implied arguments: grouping on the script alone
-    # would file 'render' as an alias of 'create', which it is not, since it adds
-    # -RenderOnly.
     foreach ($key in $commands.Keys) {
         $entry = $commands[$key]
         if (-not $entry.Help) { continue }
@@ -123,13 +65,13 @@ function Show-Usage {
     Write-Host '  Arguments are passed straight through, so anything the underlying' -ForegroundColor Gray
     Write-Host '  script accepts works here:' -ForegroundColor Gray
     Write-Host ''
-    Write-Host '    .\vm.ps1 create -Machine ubuntu-gui'
+    Write-Host '    .\vm.ps1 create -Machine rocky'
     Write-Host '    .\vm.ps1 create -All'
     Write-Host '    .\vm.ps1 render'
-    Write-Host '    .\vm.ps1 open -Machine ubuntu-gui'
+    Write-Host '    .\vm.ps1 open -Machine rocky'
     Write-Host '    .\vm.ps1 stop -Save'
     Write-Host '    .\vm.ps1 status -Report'
-    Write-Host '    .\vm.ps1 remove -Machine ubuntu-gui -DeleteDisks'
+    Write-Host '    .\vm.ps1 remove -Machine rocky -DeleteDisks'
     Write-Host ''
     Write-Host '  Most commands need an elevated PowerShell, because the Hyper-V' -ForegroundColor Gray
     Write-Host '  cmdlets do. "render" and "hash" do not.' -ForegroundColor Gray
@@ -163,32 +105,9 @@ if (-not (Test-Path -LiteralPath $target)) {
     exit 1
 }
 
-# Two splats: the command's implied parameters by name, then the user's arguments
-# exactly as typed.
-#
-# @args MUST be forwarded untouched. It is not interchangeable with an array that
-# happens to hold the same strings: splatting any other array passes its elements
-# positionally, so '-DeleteDisks' arrives as a VALUE and the target says
-# "A positional parameter cannot be found that accepts argument '-DeleteDisks'".
-# Copying $args into a list, editing it, and assigning it back to $args loses it
-# too - all three were measured, and only the original survives. So do not
-# "tidy up" the arguments on the way through; there is nowhere to stand.
-#
-# The known cost of that, and of this script deliberately not being
-# [CmdletBinding()] (an advanced script would try to bind -RenderOnly and friends
-# as its own parameters):
-#
-#     .\vm.ps1 remove -Name web -Confirm:$false
-#
-# A plain script does not get colon-syntax parsed for it, so that arrives as
-# '-Confirm:' and 'False' in separate slots, and the stray 'False' binds to the
-# target's first positional parameter. Call the script under scripts\ directly
-# when you need -Confirm:$false or -Verbose:$false; everything else forwards fine.
 $implied = $entry.Implied
 & $target @implied @args
 
-# Propagate the child's exit code, so a wrapper in CI or a shell chain still sees
-# a failure. `exit` inside the target sets this in our scope.
 if (Test-Path variable:LASTEXITCODE) {
     if ($null -ne $LASTEXITCODE -and $LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }

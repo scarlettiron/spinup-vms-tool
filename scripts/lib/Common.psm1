@@ -1,24 +1,5 @@
-﻿#requires -Version 5.1
+#requires -Version 5.1
 Set-StrictMode -Version Latest
-
-<#
-    Config loading, layered merging, and small shared helpers.
-
-    Precedence, lowest first:
-        1. blueprint.Defaults      what this OS suggests (sizing, nice-to-haves)
-        2. vm.config.*           the team standard
-        3. blueprint.Overrides     what this OS *is* (a server blueprint has no desktop)
-        4. vm.config.local.*     per-developer overrides (git-ignored)
-        5. Machines.<name>       the per-machine block, with -Machine
-        6. -Parameter            one-off command line overrides
-
-    Defaults and Overrides sitting on opposite sides of the team standard is the
-    point: the team gets to pick how big a VM is, but choosing the ubuntu-server
-    blueprint has to actually make it headless rather than being quietly undone by
-    an InstallDesktop = $true two layers down. A human naming a key in their own
-    local config or on the command line still wins over both.
-#>
-
 
 function Write-Step {
     [CmdletBinding()] param([Parameter(Mandatory)][string]$Message)
@@ -36,22 +17,6 @@ function Write-Warn {
     Write-Host "    ! $Message" -ForegroundColor Yellow
 }
 
-<#
-    ---------------------------------------------------------------- step tracking
-
-    Announces each step as it starts, times it, and prints a report of what passed
-    and what did not when the build ends.
-
-    Host steps are not like the guest bootstrap steps: they are strictly
-    dependent, so a failure aborts rather than carrying on. There is no point
-    creating a VM whose seed disk failed to build. That means the report has three
-    outcomes rather than two - ok, FAILED, and 'not reached' for the steps after
-    the failure - and it has to be printed from the catch block, since a build that
-    threw is exactly the build someone needs the report for.
-
-    Starting a step implicitly finishes the previous one, so the caller only has to
-    name its steps and does not have to remember to close each one.
-#>
 $script:BuildSteps = [System.Collections.Generic.List[object]]::new()
 $script:BuildStepTotal = 0
 $script:BuildStepIndex = 0
@@ -107,12 +72,6 @@ function Start-BuildStep {
     }
 }
 
-<#
-    The end-of-run report. Pass -FailureMessage from a catch block: the step that
-    was in flight is recorded as FAILED and every step that never ran is listed as
-    'not reached', so the first thing on screen after a failed build is where it
-    stopped rather than a bare exception.
-#>
 function Write-BuildReport {
     [CmdletBinding()] param(
         [string]$Title = 'build report',
@@ -121,10 +80,6 @@ function Write-BuildReport {
 
     if ($FailureMessage) { Complete-BuildStep -Status 'FAILED' } else { Complete-BuildStep }
 
-    # A config error throws before the first step starts, so there is nothing to
-    # tabulate. Print the failure on its own rather than an empty table. The title
-    # carries the caller's own wording, so a stop or start script does not announce
-    # a failed build.
     if ($script:BuildSteps.Count -eq 0) {
         if ($FailureMessage) {
             Write-Host ''
@@ -158,9 +113,6 @@ function Write-BuildReport {
         Write-Host ('  {0,-3} {1,-40} {2,-10} {3}s' -f $n, $s.Name, $s.Status, $s.Seconds) -ForegroundColor $colour
     }
 
-    # Steps that were planned but never started, because an earlier one aborted.
-    # One line for the lot: which ones they are matters less than the fact that
-    # the build stopped before reaching them.
     $notReached = 0
     if ($FailureMessage -and $script:BuildStepTotal -gt $script:BuildStepIndex) {
         $notReached = $script:BuildStepTotal - $script:BuildStepIndex
@@ -189,25 +141,6 @@ function Get-RepoRoot {
     Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 }
 
-<#
-    Which machines a command should act on, resolved the same way for every script
-    that takes -Machine, -Name and -All.
-
-    Each target carries its own config, so a caller can reach the blueprint, the
-    hostname and the primary user without resolving anything a second time and
-    risking a different answer.
-
-    -Name takes a Hyper-V name rather than a config key, so it is matched back to a
-    configured machine when one resolves to it. That is the difference between a
-    full answer and a bare one for the common case of naming a VM directly. A name
-    config knows nothing about still comes back, with a null Config, because acting
-    on a VM that config does not describe is legitimate.
-
-    -All with no Machines block falls back to the single configured VM rather than
-    failing. A caller that wants "you asked for a fleet and there is no fleet" to be
-    an error should check for itself: for a destructive command that is the right
-    call, and for a status read it is not.
-#>
 function Get-DevVMTargets {
     [CmdletBinding()]
     param(
@@ -225,13 +158,10 @@ function Get-DevVMTargets {
         $machineNames = @($Machine)
     }
     elseif ($Name) {
-        # A name has to be searched for across everything config can produce, or a
-        # VM that is described by a Machines block comes back without its config
-        # and the caller loses the hostname and the user. $null first, so the
-        # no-machine default is a candidate too.
+
         $machineNames = @($null) + @(Get-MachineNames -RepoRoot $RepoRoot)
     }
-    # Neither, or -All with nothing to enumerate: the single default VM.
+
     if ($machineNames.Count -eq 0) { $machineNames = @($null) }
 
     $out = New-Object System.Collections.Generic.List[object]
@@ -256,15 +186,6 @@ function Get-DevVMTargets {
     })
 }
 
-<#
-    Windows PowerShell 5.1 throws 'Argument types do not match' when @() wraps an
-    EMPTY System.Collections.Generic.List[object]. An empty List[string] is fine,
-    and so is any non-empty list, which is exactly why the bug hides until the
-    one run where a collection happens to come back empty.
-
-    So: never write @($someList). Call .ToArray() on it, or pipe it. This helper
-    is for the cases where the value might be a list, an array, or $null.
-#>
 function ConvertTo-Array {
     param($Value)
 
@@ -289,19 +210,12 @@ function Copy-Deep {
     if ($Value -is [System.Array]) {
         $items = New-Object System.Collections.Generic.List[object]
         foreach ($item in $Value) { $items.Add((Copy-Deep $item)) }
-        # The leading comma matters: PowerShell unrolls a returned array, which
-        # would silently turn an empty @() into $null and an @('one') into a
-        # bare string. Both bite hard in config merging.
+
         return , ([object[]]$items.ToArray())
     }
     return $Value
 }
 
-<#
-    Deep-merge $Override onto $Base. Nested dictionaries merge key by key; arrays
-    and scalars replace wholesale, so an override can shorten a package list
-    rather than only ever growing it.
-#>
 function Merge-Config {
     [CmdletBinding()]
     param($Base, $Override)
@@ -332,27 +246,11 @@ function Import-Psd {
     return $data
 }
 
-# ------------------------------------------------------------ config layers
-
-# The sections a config file may contain. Anything else at the top level is
-# either a quick setting (below) or a typo - and a silently ignored typo in a
-# config file is exactly the kind of misconfiguration this repo exists to stop.
 $script:ConfigSections = @(
     'Blueprint', 'ProjectName', 'VM', 'Guest', 'Bootstrap', 'Database', 'Files', 'Hooks',
     'Git', 'GitHub', 'Repos', 'Iso', 'Machines', 'RedHat'
 )
 
-<#
-    Quick settings: flat names that map onto a nested setting, so the handful of
-    things people actually change can live in one block at the top of the file
-    instead of being scattered four levels deep.
-
-        cpus: 8        is exactly       VM: { CpuCount: 8 }
-
-    Resolved per config layer, before the layers are merged, so precedence still
-    works the way it reads: a quick setting in your local file beats a long-hand
-    setting in the shared file, and vice versa.
-#>
 $script:ConfigAliases = @{
     VmName            = 'VM.Name'
     VmPath            = 'VM.Path'
@@ -382,12 +280,10 @@ $script:ConfigAliases = @{
     ReposRoot         = 'Repos.Root'
 
     OsVersion         = 'Iso.Release'
-    Release           = 'Iso.Release'   # synonym
-    UbuntuRelease     = 'Iso.Release'   # synonym, kept so existing configs work
+    Release           = 'Iso.Release'
+    UbuntuRelease     = 'Iso.Release'
     IsoPath           = 'Iso.Path'
 
-    # Red Hat subscription. Only the RHEL blueprint uses these: its rebuilds
-    # (Rocky, Alma) need no subscription at all. Put the key in your LOCAL file.
     RhsmActivationKey = 'RedHat.ActivationKey'
     RhsmOrgId         = 'RedHat.OrganizationId'
     RhsmUsername      = 'RedHat.Username'
@@ -458,10 +354,6 @@ function Set-ConfigPath {
     $node[$parts[$parts.Count - 1]] = $Value
 }
 
-<#
-    Turn one config layer's quick settings into the nested shape, and reject
-    top-level keys that are neither a section nor a known quick setting.
-#>
 function Expand-ConfigAliases {
     [CmdletBinding()]
     param($Layer, [string]$Source = 'config')
@@ -476,8 +368,7 @@ function Expand-ConfigAliases {
         $value = $Layer[$key]
 
         if ($script:ConfigSections -contains $name) {
-            # 'Repos' is both a section and, when given a list, a shorthand for
-            # Repos.Items - which is what someone naturally writes.
+
             if ($name -eq 'Repos' -and $value -is [System.Array]) {
                 $sections['Repos'] = @{ Items = $value }
             }
@@ -501,7 +392,6 @@ function Expand-ConfigAliases {
         Set-ConfigPath -Root $result -Path $target -Value (Copy-Deep $quick[$name])
     }
 
-    # Machine blocks accept the same shorthand.
     if ($result.Contains('Machines') -and $result['Machines'] -is [System.Collections.IDictionary]) {
         $machines = @{}
         foreach ($machineName in @($result['Machines'].Keys)) {
@@ -514,11 +404,6 @@ function Expand-ConfigAliases {
     return $result
 }
 
-<#
-    Find the file backing one config layer. Both formats are accepted, but only
-    one file per layer - two files claiming the same layer is ambiguous, and
-    guessing which wins is how people lose an afternoon.
-#>
 function Resolve-ConfigLayerPath {
     [CmdletBinding()]
     param(
@@ -537,10 +422,6 @@ function Resolve-ConfigLayerPath {
     return $found[0]
 }
 
-<#
-    Load one config layer from either format, expand its quick settings, and
-    validate its top-level keys.
-#>
 function Import-ConfigLayer {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Path)
@@ -560,10 +441,6 @@ function Import-ConfigLayer {
     return (Expand-ConfigAliases -Layer $raw -Source $leaf)
 }
 
-<#
-    Resolve a blueprint plus its inheritance chain into one object, with template
-    and bootstrap paths pointing at the nearest ancestor that actually has them.
-#>
 function Resolve-Blueprint {
     [CmdletBinding()]
     param(
@@ -571,7 +448,7 @@ function Resolve-Blueprint {
         [Parameter(Mandatory)][string]$Name
     )
 
-    $chain = New-Object System.Collections.Generic.List[object]   # child first
+    $chain = New-Object System.Collections.Generic.List[object]
     $seen = @{}
     $current = $Name
     while ($current) {
@@ -583,9 +460,7 @@ function Resolve-Blueprint {
         $dir = Join-Path (Join-Path $RepoRoot 'blueprints') $current
         $psd = Join-Path $dir 'blueprint.psd1'
         if (-not (Test-Path -LiteralPath $psd)) {
-            # Only directories that actually carry a blueprint.psd1 are selectable,
-            # which leaves out blueprints/bootstrap: that holds the steps every
-            # blueprint shares, not a blueprint.
+
             $available = (Get-ChildItem (Join-Path $RepoRoot 'blueprints') -Directory -ErrorAction SilentlyContinue |
                           Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'blueprint.psd1') } |
                           Select-Object -ExpandProperty Name) -join ', '
@@ -599,7 +474,6 @@ function Resolve-Blueprint {
         else { $current = $null }
     }
 
-    # Merge ancestors first so the child wins.
     $merged = @{}
     for ($i = $chain.Count - 1; $i -ge 0; $i--) {
         $merged = Merge-Config -Base $merged -Override $chain[$i].Data
@@ -609,7 +483,6 @@ function Resolve-Blueprint {
     $prov = @{}
     if ($merged.Contains('Provisioning') -and $merged['Provisioning']) { $prov = $merged['Provisioning'] }
 
-    # Locate an asset along the chain, child first.
     $findInChain = {
         param([string]$relative)
         if (-not $relative) { return $null }
@@ -622,8 +495,6 @@ function Resolve-Blueprint {
 
     $paths = @{}
 
-    # SeedTemplate is the unattended-install file (cloud-init user-data, or a
-    # kickstart). MetaTemplate is optional: only cloud-init needs one.
     foreach ($key in @('SeedTemplate')) {
         $rel = ''
         if ($prov.Contains($key)) { $rel = [string]$prov[$key] }
@@ -640,10 +511,6 @@ function Resolve-Blueprint {
         }
     }
 
-    # Bootstrap trees layer: BootstrapDirs lists them lowest-priority first, so a
-    # blueprint can share the steps in blueprints/bootstrap and
-    # add only the ones whose package names differ. A file in a later directory
-    # replaces the same relative path from an earlier one.
     $bootstrapRelatives = @()
     if ($prov.Contains('BootstrapDirs') -and $prov['BootstrapDirs']) {
         $bootstrapRelatives = @($prov['BootstrapDirs'])
@@ -664,7 +531,7 @@ function Resolve-Blueprint {
         $bootstrapDirs.Add($resolved)
     }
     $paths['BootstrapDirs'] = $bootstrapDirs.ToArray()
-    # Kept for anything still asking for a single directory: the last one wins.
+
     $paths['BootstrapDir'] = $bootstrapDirs[$bootstrapDirs.Count - 1]
 
     return [pscustomobject]@{
@@ -676,9 +543,6 @@ function Resolve-Blueprint {
     }
 }
 
-<#
-    Build the effective configuration for one machine.
-#>
 function Get-DevVMConfig {
     [CmdletBinding()]
     param(
@@ -690,9 +554,6 @@ function Get-DevVMConfig {
 
     if (-not $RepoRoot) { $RepoRoot = Get-RepoRoot }
 
-    # The layers stay separate until the very end, so blueprint.Overrides can be
-    # slotted in between the team standard and the developer's own config.
-    # Either layer may be .psd1 or .yaml.
     $basePath = Resolve-ConfigLayerPath -RepoRoot $RepoRoot -BaseName 'vm.config'
     if (-not $basePath) {
         throw "No shared config found. Expected vm.config.yaml in $RepoRoot."
@@ -705,7 +566,6 @@ function Get-DevVMConfig {
 
     if ($null -eq $Override) { $Override = @{} }
 
-    # A fleet may be declared in either the shared or the local config.
     $machines = @{}
     $withLocal = Merge-Config -Base $base -Override $local
     if ($withLocal.Contains('Machines') -and $withLocal['Machines']) { $machines = $withLocal['Machines'] }
@@ -720,7 +580,6 @@ function Get-DevVMConfig {
         $block = Copy-Deep $machines[$Machine]
     }
 
-    # Which blueprint? The highest layer that names one wins.
     $probe = Merge-Config -Base $withLocal -Override $block
     $probe = Merge-Config -Base $probe -Override $Override
     $selected = $BlueprintName
@@ -749,13 +608,7 @@ function Get-DevVMConfig {
     $effective['Blueprint'] = $selected
 
     if ($Machine) {
-        # A machine's key is its identity unless the machine's own block or an
-        # explicit command-line parameter says otherwise.
-        #
-        # vm.config.local.yaml is deliberately NOT consulted here. A developer
-        # setting a single VM.Name locally means 'name my one VM this'; letting
-        # that win would collapse every machine in a fleet onto the same name and
-        # have them overwrite each other on -All.
+
         $named = {
             param($section, $key)
             foreach ($layer in @($block, $Override)) {
@@ -767,7 +620,6 @@ function Get-DevVMConfig {
         if (-not (& $named 'Guest' 'Hostname')) { $effective['Guest']['Hostname'] = $Machine }
     }
 
-    # Every hostname in the fleet, so a guest can sanity-check its mDNS peers.
     $peers = New-Object System.Collections.Generic.List[string]
     foreach ($key in (@($machines.Keys) | Sort-Object)) {
         $mBlock = $machines[$key]
@@ -780,7 +632,6 @@ function Get-DevVMConfig {
     }
     if ($peers.Count -eq 0) { $peers.Add([string]$effective['Guest']['Hostname']) }
 
-    # OsVersion: configured explicitly, or the version the blueprint declares.
     if (-not $effective.Contains('Iso') -or -not $effective['Iso']) { $effective['Iso'] = @{} }
 
     $os = @{}
@@ -795,11 +646,6 @@ function Get-DevVMConfig {
         }
     }
 
-    # One OsVersion setting has to serve every blueprint, and '42' means nothing
-    # to Ubuntu while '24.04' means nothing to Fedora. Each blueprint says what
-    # shape its versions take, so switching blueprint without updating the
-    # version fails here with a readable message rather than 404ing on a
-    # download twenty seconds later.
     $version = [string]$effective['Iso']['Release']
     if ($os.Contains('VersionPattern') -and $os['VersionPattern']) {
         if ($version -notmatch [string]$os['VersionPattern']) {
@@ -809,13 +655,6 @@ function Get-DevVMConfig {
         }
     }
 
-    # Names. Unless something above already set them, the VM and the guest are
-    # called <ProjectName>-<Blueprint>, so the hostname says what the machine is
-    # for and what it runs. That name is what avahi publishes, so it is also the
-    # address a browser uses: http://myproject-fedora-workstation.local
-    #
-    # Precedence, highest first: an explicit VmName or Hostname, then a Machines
-    # key (applied just above), then this.
     $projectName = 'dev'
     if ($effective.Contains('ProjectName') -and $effective['ProjectName']) {
         $projectName = ([string]$effective['ProjectName']).Trim()
@@ -833,9 +672,6 @@ function Get-DevVMConfig {
         $effective['Guest']['Hostname'] = $derivedName
     }
 
-    # A hostname that is not a valid DNS label will not resolve over mDNS, which
-    # is the whole point of publishing it, so reject it here rather than after a
-    # 30-minute build.
     $hostname = [string]$effective['Guest']['Hostname']
     if ($hostname.Length -gt 63) {
         throw "Hostname '$hostname' is $($hostname.Length) characters; DNS labels stop at 63. Shorten ProjectName, or set Hostname explicitly."
@@ -844,7 +680,6 @@ function Get-DevVMConfig {
         throw "Hostname '$hostname' is not a valid DNS label. Use letters, digits and hyphens only, not starting or ending with a hyphen."
     }
 
-    # Optional sections, so an older or trimmed-down config still loads.
     $optional = @{}
     foreach ($section in @('Git', 'GitHub', 'Database', 'RedHat')) {
         if ($effective.Contains($section) -and $effective[$section]) { $optional[$section] = $effective[$section] }
@@ -867,9 +702,6 @@ function Get-DevVMConfig {
         Raw       = $effective
     }
 
-    # Validate now rather than twenty minutes into a first boot: an unknown
-    # database engine, a missing directory to copy, a hook script that is not
-    # there. All three are cheap to check and expensive to discover late.
     Get-DevVMDatabasePlan -Config $config | Out-Null
     Get-DevVMFileCopyLayout -Config $config | Out-Null
     Get-DevVMHookPlan -Config $config | Out-Null
@@ -878,16 +710,6 @@ function Get-DevVMConfig {
     return $config
 }
 
-<#
-    SCSI controller locations. Hyper-V's synthetic SCSI controller reports the
-    ControllerLocation as the LUN inside the guest, which is what lets a
-    bootstrap step identify 'the logs disk' as /dev/disk/by-path/...scsi-0:0:0:3
-    rather than guessing at /dev/sdc. Assigned explicitly here - relying on
-    Hyper-V's automatic placement would renumber things when the DVD is ejected.
-
-    Both the host (which attaches the disks) and the seed generator (which tells
-    the guest where to look) read this one function, so they cannot drift.
-#>
 $script:DiskLocationOs   = 0
 $script:DiskLocationDvd  = 1
 $script:DiskLocationSeed = 2
@@ -903,9 +725,6 @@ function Get-DevVMDiskLocations {
     }
 }
 
-<#
-    Normalise VM.DataDisks into a validated layout, one object per extra disk.
-#>
 function Get-DevVMDataDiskLayout {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -934,8 +753,7 @@ function Get-DevVMDataDiskLayout {
         }
 
         $label = [string]$disk['Label']
-        # ext4 labels cap at 16 characters, and the label is how the guest finds
-        # the volume, so a silently truncated one would break the fstab entry.
+
         if ($label.Length -gt 16) {
             throw "DataDisk label '$label' is longer than 16 characters, which ext4 cannot store."
         }
@@ -945,10 +763,6 @@ function Get-DevVMDataDiskLayout {
         if ($seenLabels.ContainsKey($label)) { throw "Two VM.DataDisks entries share the label '$label'." }
         $seenLabels[$label] = $true
 
-        # A drive letter keeps the production naming, which is how the team talks
-        # about these disks. Linux still needs somewhere to attach the
-        # filesystem, so an unspecified MountPoint becomes /mnt/<letter> rather
-        # than taking over a system directory such as /var/log or /opt.
         $letter = ''
         if ($disk.Contains('DriveLetter') -and $disk['DriveLetter']) {
             $letter = ([string]$disk['DriveLetter']).Trim().TrimEnd(':').ToUpperInvariant()
@@ -997,29 +811,9 @@ function Get-DevVMDataDiskLayout {
         $location++
     }
 
-    # Emitted as individual objects; every caller wraps the call in @(...).
     return $layout.ToArray()
 }
 
-<#
-    ------------------------------------------------------------------ databases
-
-    What each engine is, in one table, so adding a third is an entry here plus a
-    case in 35-database.sh rather than a hunt through both.
-
-    Source says where the packages come from, and it is not a style choice:
-
-      'pgdg'    the PostgreSQL project's own repository. Fedora and Ubuntu each
-                ship whichever major version suited their release, so pinning a
-                version means using the upstream repo. PGDG publishes for both.
-      'distro'  the distribution's own packages. MySQL has no equivalent
-                cross-distro repo that installs unattended without debconf
-                juggling, so the requested major version is verified in the guest
-                after install and reported if it differs.
-
-    Versions lists what we have actually accounted for. It is deliberately a list
-    rather than a range: 'any integer' would accept 99 and fail in the guest.
-#>
 $script:DatabaseEngines = @{
     postgres = @{
         DisplayName    = 'PostgreSQL'
@@ -1028,11 +822,9 @@ $script:DatabaseEngines = @{
         Versions       = @('13', '14', '15', '16', '17', '18')
         Source         = 'pgdg'
         Client         = 'psql'
-        # SELinux confines the server to labelled ports, so a custom port has to
-        # be added to this type or the daemon is denied the bind.
+
         SELinuxType    = 'postgresql_port_t'
-        # The PHP extension Adminer needs to talk to this engine. Named the same
-        # on both distros for Postgres; MySQL differs, hence the two below.
+
         PhpDriverApt   = 'php-pgsql'
         PhpDriverDnf   = 'php-pgsql'
         AdminerDriver  = 'pgsql'
@@ -1051,8 +843,6 @@ $script:DatabaseEngines = @{
     }
 }
 
-# Adminer is a single PHP file, published per release. Pinned so every build gets
-# the same one rather than whatever is current on the day.
 $script:AdminerDefaultVersion = '4.8.1'
 $script:AdminerDefaultPort = 3800
 
@@ -1061,14 +851,6 @@ function Get-DevVMDatabaseEngineNames {
     return ($script:DatabaseEngines.Keys | Sort-Object)
 }
 
-<#
-    Resolve the Database section into a single validated plan, with the engine's
-    defaults filled in. Returns $null when no database was asked for.
-
-    Called from Get-DevVMConfig so a bad engine or version fails at load time,
-    and again by the seed generator and the plan printer, which both need the
-    resolved version and port rather than the raw config.
-#>
 function Get-DevVMDatabasePlan {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -1085,12 +867,11 @@ function Get-DevVMDatabasePlan {
     $wantServer = $db.Contains('InstallServer') -and $db['InstallServer']
 
     if (-not $engine) {
-        # Asking for a client or server without naming an engine is a mistake
-        # worth reporting: silently installing nothing looks like a broken build.
+
         if ($wantClient -or $wantServer) {
             throw "Database.InstallClient or Database.InstallServer is set but Database.Engine is blank. Set DbEngine to one of: $((Get-DevVMDatabaseEngineNames) -join ', ')."
         }
-        # Adminer needs to know which driver to load, so it cannot stand alone.
+
         if ($db.Contains('Adminer') -and $db['Adminer'] -and `
             $db['Adminer'].Contains('Install') -and $db['Adminer']['Install']) {
             throw "Database.Adminer.Install is set but Database.Engine is blank. Adminer needs an engine to know which driver to load: set DbEngine to one of: $((Get-DevVMDatabaseEngineNames) -join ', ')."
@@ -1098,7 +879,6 @@ function Get-DevVMDatabasePlan {
         return $null
     }
 
-    # Accept the obvious synonyms rather than failing on them.
     $synonyms = @{ postgresql = 'postgres'; pgsql = 'postgres'; pg = 'postgres'; mariadb = 'mysql' }
     if ($synonyms.ContainsKey($engine)) { $engine = $synonyms[$engine] }
 
@@ -1111,8 +891,6 @@ function Get-DevVMDatabasePlan {
     if ($db.Contains('Adminer') -and $db['Adminer']) { $adminer = $db['Adminer'] }
     $adminerInstall = $adminer.Contains('Install') -and $adminer['Install']
 
-    # Adminer on its own is a legitimate ask: it can browse a database on another
-    # machine without this one running a server or even holding the client tools.
     if (-not $wantClient -and -not $wantServer -and -not $adminerInstall) {
         throw "Database.Engine is '$engine' but none of Database.InstallClient, Database.InstallServer or Database.Adminer.Install is set, so nothing would be installed. Set DbClient, DbServer or DbAdminer to `$true, or blank DbEngine."
     }
@@ -1140,8 +918,7 @@ function Get-DevVMDatabasePlan {
         foreach ($name in (ConvertTo-Array $db['Databases'])) {
             $trimmed = ([string]$name).Trim()
             if (-not $trimmed) { continue }
-            # Both engines accept far more than this, but anything outside it
-            # needs quoting in SQL, and a dev database does not need the freedom.
+
             if ($trimmed -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
                 throw "Database name '$trimmed' must start with a letter or underscore and contain only letters, digits and underscores."
             }
@@ -1152,15 +929,10 @@ function Get-DevVMDatabasePlan {
     $adminPassword = ''
     if ($db.Contains('AdminPassword') -and $db['AdminPassword']) { $adminPassword = [string]$db['AdminPassword'] }
 
-    # A server on '*' with no password would accept connections from every other
-    # VM on the switch as the superuser. Refuse rather than build it.
     if ($wantServer -and $listen -eq '*' -and -not $adminPassword) {
         throw "Database.ListenAddress is '*' but Database.AdminPassword is blank, which would expose the $($spec['DisplayName']) superuser to every machine on the switch. Set AdminPassword, or leave ListenAddress as 'localhost'."
     }
 
-    # ---------------------------------------------------------------- Adminer
-    # A database browser in a single PHP file. Parsed above, because whether it
-    # was asked for decides whether this section has anything to do at all.
     $adminerPort = [int]$script:AdminerDefaultPort
     if ($adminer.Contains('Port') -and [int]$adminer['Port'] -gt 0) { $adminerPort = [int]$adminer['Port'] }
     $adminerVersion = [string]$script:AdminerDefaultVersion
@@ -1190,7 +962,7 @@ function Get-DevVMDatabasePlan {
         Source        = [string]$spec['Source']
         Client        = [string]$spec['Client']
         SELinuxType   = [string]$spec['SELinuxType']
-        InstallClient = [bool]($wantClient -or $wantServer)   # a server needs its client
+        InstallClient = [bool]($wantClient -or $wantServer)
         InstallServer = [bool]$wantServer
         AdminPassword = $adminPassword
         Databases     = $databases.ToArray()
@@ -1205,21 +977,6 @@ function Get-DevVMDatabasePlan {
     }
 }
 
-<#
-    ------------------------------------------------------- files copied from here
-
-    Directories on this laptop whose contents are carried into the guest.
-
-    Everything is embedded in the seed disk, so this is for configuration,
-    certificates, licence files and small fixtures, not for bulk data. Two limits
-    guard that: a warning at 10 MB and a hard failure at 64 MB, because base64
-    inflates by a third and the seed volume is 256 MB.
-
-    Files land staged under /var/lib/vm-bootstrap/files/<n>/ and are moved into
-    place by 06-files.sh. That indirection is what lets a destination be '~':
-    where a user's home actually is, and which uid owns it, are things only the
-    guest knows.
-#>
 $script:FileCopyWarnBytes = 10MB
 $script:FileCopyMaxBytes = 64MB
 
@@ -1230,8 +987,6 @@ function Get-DevVMFileCopyLayout {
     $files = @{}
     if ($Config.Raw.Contains('Files') -and $Config.Raw['Files']) { $files = $Config.Raw['Files'] }
 
-    # Source/Destination are the single-directory shorthand, which is what the
-    # quick settings CopyFrom and CopyTo expand to. Copy is the list form.
     $entries = New-Object System.Collections.Generic.List[object]
     if ($files.Contains('Source') -and $files['Source']) {
         $entries.Add(@{
@@ -1262,8 +1017,7 @@ function Get-DevVMFileCopyLayout {
             throw 'A Files.Copy entry is missing From.'
         }
         $from = [System.Environment]::ExpandEnvironmentVariables([string]$entry['From'])
-        # A relative path is relative to the repo, so a committed files/ directory
-        # works the same on every machine.
+
         if (-not [System.IO.Path]::IsPathRooted($from)) {
             $from = Join-Path $Config.RepoRoot $from
         }
@@ -1301,8 +1055,7 @@ function Get-DevVMFileCopyLayout {
         foreach ($file in (Get-ChildItem -LiteralPath $from -Recurse -File | Sort-Object FullName)) {
             $relative = $file.FullName.Substring($from.Length).TrimStart('\', '/') -replace '\\', '/'
             $totalBytes += $file.Length
-            # Windows has no execute bit, so shell scripts are the one case worth
-            # inferring. Anything else can be set explicitly with Mode.
+
             $perm = if ($mode) { $mode }
                     elseif ($file.Extension -eq '.sh') { '0755' }
                     else { '0644' }
@@ -1327,7 +1080,7 @@ function Get-DevVMFileCopyLayout {
             Mode        = $mode
             Files       = $items.ToArray()
             SizeBytes   = ($items | Measure-Object -Property SizeBytes -Sum).Sum
-            # Where the seed drops them before 06-files.sh moves them into place.
+
             StageRoot   = "/var/lib/vm-bootstrap/files/$index"
         })
         $index++
@@ -1344,29 +1097,6 @@ function Get-DevVMFileCopyLayout {
     return $layout.ToArray()
 }
 
-<#
-    ------------------------------------------------- Red Hat subscription
-
-    Only redhat-rhel-workstation needs this. Red Hat Enterprise Linux ships with
-    no usable package repositories until subscription-manager has registered the
-    machine against an account, which is the one thing that genuinely separates
-    it from Rocky and Alma: those are the same software with public repos and
-    need none of this.
-
-    Two ways to register, and the difference matters for an unattended build:
-
-      activation key + org id   made for automation, carries no password, can be
-                                revoked on its own, and is what Red Hat tells you
-                                to use for provisioning. Preferred.
-      username + password       your actual Red Hat login. Works, but it is a
-                                real credential going onto a seed disk.
-
-    Neither is required. Without one the install still completes - everything on
-    the DVD is installed - but the machine has no repositories, so bootstrap can
-    add nothing beyond it: no EPEL, therefore no xrdp, therefore no Enhanced
-    Session. Say that plainly at render time rather than letting someone find out
-    forty minutes in.
-#>
 function Get-DevVMRedHatPlan {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -1385,8 +1115,6 @@ function Get-DevVMRedHatPlan {
     $username      = & $get 'Username'
     $password      = & $get 'Password'
 
-    # A key file keeps the secret out of the config file itself, the same way
-    # GitHub.Cli.TokenFile does.
     $keyFile = & $get 'ActivationKeyFile'
     if ($keyFile -and -not $activationKey) {
         if (-not (Test-Path -LiteralPath $keyFile)) {
@@ -1398,9 +1126,6 @@ function Get-DevVMRedHatPlan {
     $autoAttach = $true
     if ($rh.Contains('AutoAttach')) { $autoAttach = [bool]$rh['AutoAttach'] }
 
-    # Pin dnf to the minor release the ISO is, so 'dnf upgrade' during bootstrap
-    # does not quietly move a machine that was asked for 9.7 onto 9.8. Someone
-    # naming a minor release means it.
     $pinRelease = $true
     if ($rh.Contains('PinRelease')) { $pinRelease = [bool]$rh['PinRelease'] }
 
@@ -1408,8 +1133,6 @@ function Get-DevVMRedHatPlan {
     if ($activationKey -and $orgId)      { $mode = 'activation-key' }
     elseif ($username -and $password)    { $mode = 'credentials' }
 
-    # Half a credential is a typo, not a choice. Fail rather than silently
-    # building an unregistered machine someone thinks is registered.
     if ($mode -eq 'none') {
         if ($activationKey -and -not $orgId) {
             throw 'RedHat.ActivationKey is set but RedHat.OrganizationId is not. An activation key only works with its organization id, shown as the Organization ID on console.redhat.com.'
@@ -1433,22 +1156,11 @@ function Get-DevVMRedHatPlan {
         Password      = $password
         AutoAttach    = $autoAttach
         PinRelease    = $pinRelease
-        # The one secret worth keeping out of /etc/vm-bootstrap.env.
+
         Secret        = $(if ($mode -eq 'activation-key') { $activationKey } elseif ($mode -eq 'credentials') { $password } else { '' })
     }
 }
 
-<#
-    ------------------------------------------------------------- post-start hooks
-
-    Commands from config, rendered into one script that runs in the guest after
-    everything else is provisioned.
-
-    Ordering matters: the script runs as step 80, after the repos are cloned, so a
-    hook can reasonably do something inside a checkout. It runs once by default;
-    RunAtEveryBoot installs a systemd unit instead, so it also runs on every
-    subsequent start.
-#>
 function Get-DevVMHookPlan {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -1461,8 +1173,7 @@ function Get-DevVMHookPlan {
         foreach ($line in (ConvertTo-Array $hooks['PostStart'])) {
             $text = [string]$line
             if (-not $text.Trim()) { continue }
-            # A multi-line string in config is a block of commands, which is the
-            # natural way to write anything longer than a one-liner in YAML.
+
             foreach ($split in ($text -split "`r?`n")) { $commands.Add($split) }
         }
     }
@@ -1512,13 +1223,6 @@ function Get-DevVMHookPlan {
     }
 }
 
-<#
-    Normalise Repos.Items into a validated list, one object per repository.
-
-    Entries may be a bare URL string or a hashtable, so the common case stays a
-    one-liner. Everything is validated here rather than in the guest: a typo in a
-    URL should fail during -RenderOnly, not twenty minutes into a first boot.
-#>
 function Get-DevVMRepoLayout {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -1548,13 +1252,11 @@ function Get-DevVMRepoLayout {
         if (-not $url) {
             throw 'A Repos.Items entry has no Url.'
         }
-        # Covers the forms git actually accepts as a remote. A bare path or a
-        # half-pasted URL is almost always a mistake, so reject it here.
+
         if ($url -notmatch '^(https?://|ssh://|git://|file://|[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:)') {
             throw "Repos entry '$url' does not look like a git URL. Expected https://, ssh://, git://, file://, or user@host:path."
         }
 
-        # Default the target directory to the repository name.
         $directory = ''
         if ($entry.Contains('Directory') -and $entry['Directory']) {
             $directory = ([string]$entry['Directory']).Trim()
@@ -1594,12 +1296,11 @@ function Get-DevVMRepoLayout {
             Depth     = $depth
             Recurse   = $recurse
             PostClone = $postClone
-            # git@host: and ssh:// remotes need the key from 55-github.sh.
+
             NeedsSsh  = ($url -match '^(ssh://|[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:)')
         })
     }
 
-    # Emitted as individual objects; every caller wraps the call in @(...).
     return $layout.ToArray()
 }
 
@@ -1620,27 +1321,6 @@ function Get-DevVMRepoRoot {
     return $root
 }
 
-<#
-    Drop a host's entry from this laptop's ~/.ssh/known_hosts.
-
-    A rebuilt VM has a new host key under the same name, and ssh treats that as
-    the signature of a man-in-the-middle rather than the routine event it is
-    here:
-
-        @@@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @@@
-        Host key verification failed.
-
-    StrictHostKeyChecking=accept-new does not help: it accepts keys it has never
-    seen, and still refuses one that changed. So rebuilding a machine under a
-    name you have used before leaves you locked out of your own VM until you
-    know to run ssh-keygen -R by hand, and every script here that talks to the
-    guest fails the same way.
-
-    Called when a VM is created and when one is removed: both mean any key we
-    remember for that name is now wrong. Deliberately quiet and never fatal - a
-    missing known_hosts, or no ssh-keygen on PATH, is not a reason to fail a
-    build.
-#>
 function Remove-KnownHostEntry {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$HostName)
@@ -1652,14 +1332,9 @@ function Remove-KnownHostEntry {
     $knownHosts = Join-Path $HOME '.ssh\known_hosts'
     if (-not (Test-Path -LiteralPath $knownHosts)) { return $false }
 
-    # Only touch it when there is something to remove, so the common case stays
-    # silent instead of announcing work it did not do.
     $before = @(Get-Content -LiteralPath $knownHosts -ErrorAction SilentlyContinue)
     if (-not ($before -match [regex]::Escape($HostName))) { return $false }
 
-    # ssh-keygen writes to stderr on the way past; under $ErrorActionPreference
-    # 'Stop' that is a terminating NativeCommandError in Windows PowerShell 5.1,
-    # and '2>$null' does not prevent it.
     $previous = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try { & $keygen.Source -R $HostName 2>$null | Out-Null }
@@ -1669,30 +1344,12 @@ function Remove-KnownHostEntry {
     return $true
 }
 
-# ------------------------------------------------------------------ ssh_keys
-
-<#
-    ssh_keys/ is a drop directory: put a key file in it and the build finds it,
-    with no config to edit. Everything in there is git-ignored twice over.
-#>
 function Get-DevVMSshKeyDir {
     [CmdletBinding()] param([string]$RepoRoot)
     if (-not $RepoRoot) { $RepoRoot = Get-RepoRoot }
     return (Join-Path $RepoRoot 'ssh_keys')
 }
 
-<#
-    Derive the public half of a private key with `ssh-keygen -y`.
-
-    Returns the public key text, or '' when the key is passphrase-protected (or
-    otherwise unreadable). $null means ssh-keygen itself is unavailable.
-
-    Run through Start-Process rather than the call operator because Windows
-    PowerShell 5.1 DROPS an empty-string argument: `& ssh-keygen -y -P '' -f key`
-    reaches the exe as `-y -P -f key`, so -P swallows '-f' as the passphrase and
-    ssh-keygen fails with "Too many arguments". Start-Process passes a raw command
-    line, where the literal token "" is parsed back into an empty argument.
-#>
 function Get-SshPublicKeyFromPrivate {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Path)
@@ -1728,7 +1385,7 @@ function Get-SshKeygenPath {
     if ($cmd) { return $cmd.Source }
 
     $candidates = New-Object System.Collections.Generic.List[string]
-    # Windows ships OpenSSH; Git for Windows brings its own.
+
     if ($env:SystemRoot) {
         $candidates.Add((Join-Path $env:SystemRoot 'System32\OpenSSH\ssh-keygen.exe'))
     }
@@ -1747,14 +1404,6 @@ function Get-SshKeygenPath {
     return $null
 }
 
-<#
-    Classify whatever is sitting in ssh_keys/.
-
-    Returns private keys (each paired with its public half, derived if missing),
-    plus any standalone public keys destined for the guest's authorized_keys.
-    Warnings are collected rather than thrown: a stray file in a drop directory
-    should produce a clear message, not a failed build.
-#>
 function Get-DevVMSshKeyMaterial {
     [CmdletBinding()]
     param(
@@ -1764,14 +1413,10 @@ function Get-DevVMSshKeyMaterial {
 
     $dir = Get-DevVMSshKeyDir -RepoRoot $RepoRoot
 
-    # This function reports what is in the directory; it does not decide what is
-    # fatal. Ambiguity is flagged rather than thrown, because whether it matters
-    # depends on the caller's mode - two private keys are a problem only if we
-    # actually have to pick one.
     $result = [pscustomobject]@{
         Dir              = $dir
         PrivateKeys      = @()
-        Identity         = $null   # the private key to use as the GitHub identity
+        Identity         = $null
         AuthorizedKeys   = @()
         Warnings         = @()
         Ambiguous        = $false
@@ -1779,7 +1424,6 @@ function Get-DevVMSshKeyMaterial {
     }
     if (-not (Test-Path -LiteralPath $dir)) { return $result }
 
-    # Housekeeping files and anything that is plainly not key material.
     $skip = @('README.md', '.gitignore', '.gitkeep', 'known_hosts', 'config', '.DS_Store', 'Thumbs.db')
 
     $privates = New-Object System.Collections.Generic.List[object]
@@ -1831,7 +1475,6 @@ function Get-DevVMSshKeyMaterial {
         $warnings.Add("ignoring $($file.Name) - it is neither an OpenSSH private key nor a public key.")
     }
 
-
     $keyObjects = New-Object System.Collections.Generic.List[object]
     foreach ($private in $privates) {
         $stem = $private.Name
@@ -1844,8 +1487,7 @@ function Get-DevVMSshKeyMaterial {
             $publicPath = $publicsByStem[$stem].Path
         }
         else {
-            # An empty passphrase fails on an encrypted key, which is exactly how
-            # we detect one.
+
             $derived = Get-SshPublicKeyFromPrivate -Path $private.FullName
             if ($null -eq $derived) {
                 $warnings.Add("no ssh-keygen found to derive a public key for $($private.Name). Drop $($private.Name).pub in as well.")
@@ -1868,7 +1510,6 @@ function Get-DevVMSshKeyMaterial {
         })
     }
 
-    # Which key is the GitHub identity?
     $identity = $null
     if ($keyObjects.Count -eq 1) {
         $identity = $keyObjects[0]
@@ -1877,8 +1518,7 @@ function Get-DevVMSshKeyMaterial {
         $names = ($keyObjects.ToArray() | ForEach-Object { $_.Name }) -join ', '
 
         if ($PreferName) {
-            # Indexing [0] into an empty match throws under StrictMode, so match
-            # into a variable and test the count.
+
             $matched = @($keyObjects.ToArray() | Where-Object { $_.Name -eq $PreferName })
             if ($matched.Count -eq 0) {
                 $result.Ambiguous = $true
@@ -1887,7 +1527,7 @@ function Get-DevVMSshKeyMaterial {
             else { $identity = $matched[0] }
         }
         else {
-            # Fall back to the conventional name before giving up.
+
             $conventional = @($keyObjects.ToArray() | Where-Object { $_.Name -match '^id_(ed25519|rsa|ecdsa)$' })
             if ($conventional.Count -eq 0) {
                 $result.Ambiguous = $true
@@ -1897,29 +1537,10 @@ function Get-DevVMSshKeyMaterial {
         }
     }
 
-    # Every public key in ssh_keys/ becomes an authorized key, paired or not.
-    #
-    # This used to skip a .pub whose private half was also present, on the theory
-    # that such a pair is "the GitHub identity, not a login key". That reasoning
-    # does not survive contact with how people actually use the directory: the
-    # setup ssh_keys/README.md calls typical is
-    #
-    #     Copy-Item $HOME\.ssh\id_ed25519     .\ssh_keys\
-    #     Copy-Item $HOME\.ssh\id_ed25519.pub .\ssh_keys\
-    #
-    # which is a pair, and the README promises it means "SSH from the host just
-    # works". It did not. The build finished, the VM came up, and ssh answered
-    # with Permission denied (publickey) for the very key sitting in the folder.
-    #
-    # Someone who puts their own public key here wants in. A key being useful to
-    # git as well does not make it less theirs, and this is a single-user dev VM,
-    # not a bastion. Anyone who wants the separation can leave the .pub out and
-    # set Guest.PrimaryUser.AuthorizedKeys by hand.
     foreach ($pub in $standalonePublics.ToArray()) {
         $authorizedLines.Add($pub.Text)
     }
 
-    # .ToArray() throughout, never @(): see ConvertTo-Array.
     $result.PrivateKeys = $keyObjects.ToArray()
     $result.Identity = $identity
     $result.AuthorizedKeys = @($authorizedLines.ToArray() | Select-Object -Unique)
@@ -1946,12 +1567,6 @@ function Get-MachineNames {
     return @()
 }
 
-# ------------------------------------------------------------------- password
-
-<#
-    openssl ships with Git for Windows, which every developer cloning this repo
-    already has, so password hashing needs no extra dependency.
-#>
 function Get-OpenSslPath {
     [CmdletBinding()] param()
 
@@ -1961,7 +1576,7 @@ function Get-OpenSslPath {
     $candidates = New-Object System.Collections.Generic.List[string]
     $git = Get-Command git.exe -ErrorAction SilentlyContinue
     if ($git) {
-        # Two levels up from ...\Git\cmd\git.exe is the ...\Git root.
+
         $gitRoot = Split-Path -Parent (Split-Path -Parent $git.Source)
         $candidates.Add((Join-Path $gitRoot 'usr\bin\openssl.exe'))
         $candidates.Add((Join-Path $gitRoot 'mingw64\bin\openssl.exe'))
@@ -1996,7 +1611,6 @@ function New-Sha512Crypt {
         throw $msg
     }
 
-    # crypt(3) salts draw from this 64-character alphabet.
     $alphabet = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
     $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
     try {
@@ -2006,39 +1620,12 @@ function New-Sha512Crypt {
     finally { $rng.Dispose() }
     $salt = -join (@($bytes) | ForEach-Object { $alphabet[$_ % 64] })
 
-    # The password reaches openssl through a FILE, not a pipe and not a command
-    # line argument.
-    #
-    # It used to be piped, with $OutputEncoding set to UTF-8 to stop non-ASCII
-    # characters becoming '?'. That fixed one corruption and hid another:
-    # Windows PowerShell 5.1 writes the encoding's BOM and a CRLF into the pipe,
-    # so `'secret' | openssl passwd -6 -stdin` hands openssl
-    #
-    #     EF BB BF  s e c r e t  0D 0A
-    #
-    # and -stdin strips only the 0A. The account was built with the hash of
-    # "<BOM>secret\r", which no one can type. Measured with od, and the wrong
-    # hash reproduced exactly from those bytes on Linux.
-    #
-    # Nothing about that is visible: the build succeeds, the hash is a perfectly
-    # well-formed $6$ string, and SSH keys keep working - so the machine looks
-    # fine until someone tries the console, GDM, xrdp or sudo, and every one of
-    # them says the password is wrong.
-    #
-    # A file is the only delivery that is exact. Passing the password as an
-    # argument would work too, but it would sit in the process list for every
-    # local user to read, which is the thing the pipe was chosen to avoid.
     $passwordFile = [System.IO.Path]::GetTempFileName()
     try {
-        # openssl -in reads one password per line, so exactly one newline, and
-        # no BOM: UTF8Encoding($false) is the encoder, and WriteAllBytes does not
-        # add a preamble of its own the way the pipeline did.
+
         $utf8 = New-Object System.Text.UTF8Encoding($false)
         [System.IO.File]::WriteAllBytes($passwordFile, $utf8.GetBytes($Password + "`n"))
 
-        # Read it back and compare. This is the check that would have caught the
-        # pipe: it asserts the exact bytes openssl is about to see, rather than
-        # trusting the layer in between.
         $written = [System.IO.File]::ReadAllBytes($passwordFile)
         $expected = $utf8.GetBytes($Password + "`n")
         if ($written.Length -ne $expected.Length) {
@@ -2054,8 +1641,7 @@ function New-Sha512Crypt {
     }
     finally {
         if (Test-Path -LiteralPath $passwordFile) {
-            # Overwrite before unlinking, so the plaintext is not left in a
-            # temp file's slack for the next person to find.
+
             try { [System.IO.File]::WriteAllBytes($passwordFile, (New-Object byte[] 64)) } catch { }
             Remove-Item -LiteralPath $passwordFile -Force -ErrorAction SilentlyContinue
         }
@@ -2064,18 +1650,13 @@ function New-Sha512Crypt {
     if ($hash -notmatch '^\$6\$') {
         throw "openssl did not return a SHA-512 crypt hash (got: '$hash'). Set Guest.PrimaryUser.PasswordHash manually."
     }
-    # The salt openssl echoes back must be the one we asked for. A mismatch means
-    # it rejected or rewrote the salt, and the hash would not be what we think.
+
     if ($hash -notmatch ('^\$6\$' + [regex]::Escape($salt) + '\$')) {
         throw "openssl returned a hash with a different salt than requested. Set Guest.PrimaryUser.PasswordHash manually."
     }
     return $hash
 }
 
-<#
-    Return the crypt hash for a user block, hashing plain text on the fly when
-    no PasswordHash was supplied. Returns $null for a passwordless account.
-#>
 function Resolve-PasswordHash {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$User)
@@ -2094,17 +1675,6 @@ function Resolve-PasswordHash {
     return $null
 }
 
-<#
-    Is <hostname>.local already answering on this network?
-
-    Windows 10 and later resolve .local over mDNS, so this asks the OS resolver
-    the same question a browser would. A hit means something already claims the
-    name: another VM, a teammate's machine on the same switch, or a previous build
-    of this one that is still running.
-
-    Returns the address as a string, or $null. Never throws - being unable to
-    resolve is the expected answer, and no network is not an error either.
-#>
 function Test-DevVMHostnameResolvable {
     [CmdletBinding()]
     param([Parameter(Mandatory)][string]$Hostname)
@@ -2115,7 +1685,7 @@ function Test-DevVMHostnameResolvable {
     try {
         $addresses = [System.Net.Dns]::GetHostAddresses($fqdn)
         foreach ($address in @($addresses)) {
-            # Ignore IPv6 link-local, which tells us nothing useful here.
+
             if ($address.AddressFamily -eq 'InterNetwork') { return $address.IPAddressToString }
         }
         if (@($addresses).Count -gt 0) { return @($addresses)[0].IPAddressToString }
@@ -2123,8 +1693,6 @@ function Test-DevVMHostnameResolvable {
     catch { }
     return $null
 }
-
-# ------------------------------------------------------------------ preflight
 
 function Test-Elevated {
     [CmdletBinding()] param()
@@ -2149,11 +1717,6 @@ function Assert-Prerequisites {
     }
 }
 
-<#
-    Write text as UTF-8 with no BOM and LF line endings. cloud-init silently
-    ignores a user-data file that begins with a BOM, which is a miserable
-    failure to debug from a VM console, so this is not optional politeness.
-#>
 function Write-UnixText {
     [CmdletBinding()]
     param(
@@ -2164,52 +1727,6 @@ function Write-UnixText {
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($Path, $normalized, $utf8NoBom)
 }
-
-# =============================================================================
-#  The YAML reader
-#
-#  Lives here rather than in its own module because config is the only thing that
-#  needs it, and a separate file meant every caller imported two modules to read
-#  one file.
-# =============================================================================
-
-
-<#
-    A small YAML reader, so vm.config.yaml and vm.config.local.yaml can be read
-    without a dependency.
-
-    Why hand-rolled? Windows PowerShell 5.1 has no YAML support, and the
-    alternative is telling every developer to Install-Module powershell-yaml
-    before they can build a VM - which defeats the point of a repo you clone and
-    run. This parser has no dependencies and behaves identically on every laptop.
-
-    The trade-off is that it reads a SUBSET of YAML, chosen to cover config files
-    and nothing more. Supported:
-
-        mappings          Key: value          (nested by indentation)
-        sequences         - item              (at or below the key's indent)
-        sequences of maps - Key: value
-                            Other: value
-        flow sequences    [a, b, c]  and  []
-        empty mapping     {}
-        strings           plain, 'single', "double" (with \n \t \" \\ escapes)
-        numbers           42, -3, 1.5
-        booleans          true/false, yes/no, on/off  (any case)
-        null              null, ~, or an empty value
-        comments          # to end of line, honouring quotes
-        document marker   a leading ---
-
-    NOT supported, and rejected with a clear error rather than misread: anchors
-    and aliases (&x / *x), tags (!!str), block scalars (| and >), multiple
-    documents, complex keys, and flow mappings ({a: 1}) other than empty {}.
-
-    None of the unsupported constructs are needed to express a config, and each is
-    a way to write something the next person cannot read. A nested mapping goes on
-    its own indented lines.
-
-    Keys land in ordinary PowerShell hashtables, which are case-insensitive, so
-    'cpuCount', 'CpuCount', and 'cpucount' all reach the same setting.
-#>
 
 function Remove-YamlComment {
     [CmdletBinding()] param([Parameter(Mandatory)][AllowEmptyString()][string]$Line)
@@ -2222,14 +1739,13 @@ function Remove-YamlComment {
 
         if ($ch -eq "'" -and -not $inDouble) { $inSingle = -not $inSingle; continue }
         if ($ch -eq '"' -and -not $inSingle) {
-            # A backslash-escaped quote does not close the string.
+
             if ($i -gt 0 -and $Line[$i - 1] -eq '\') { continue }
             $inDouble = -not $inDouble
             continue
         }
         if ($ch -eq '#' -and -not $inSingle -and -not $inDouble) {
-            # Only a '#' at the start of the line or preceded by whitespace
-            # begins a comment; 'a#b' is a plain scalar.
+
             if ($i -eq 0 -or $Line[$i - 1] -match '\s') {
                 return $Line.Substring(0, $i)
             }
@@ -2238,10 +1754,6 @@ function Remove-YamlComment {
     return $Line
 }
 
-<#
-    Split 'Key: value' into its two halves. Returns $null when the line is not a
-    mapping entry, so the caller can tell a key from a sequence item or a scalar.
-#>
 function Split-YamlKey {
     [CmdletBinding()] param([Parameter(Mandatory)][AllowEmptyString()][string]$Text)
 
@@ -2259,19 +1771,12 @@ function Split-YamlKey {
         }
         if ($inSingle -or $inDouble) { continue }
 
-        # The separator is a colon followed by whitespace or end of line. That is
-        # what keeps 'Path: C:\VMs' and a git@host:path URL parsing correctly.
         if ($ch -eq ':') {
             $isLast = ($i -eq $Text.Length - 1)
             if ($isLast -or $Text[$i + 1] -match '\s') {
                 $key = $Text.Substring(0, $i).Trim()
                 if (-not $key) { return $null }
 
-                # A flow mapping reaches here as a KEY, not a value: in
-                # '- {from: x, to: y}' the brace opens the key, so the rejection in
-                # ConvertFrom-YamlScalar never sees it. Without this it parsed as a
-                # key literally named '{from', and the failure surfaced later as a
-                # baffling complaint about a missing field.
                 if ($key.StartsWith('{')) {
                     throw "Flow mappings other than {} are not supported: $Text. Write the keys on their own indented lines."
                 }
@@ -2321,9 +1826,6 @@ function Expand-YamlEscapes {
     return $sb.ToString()
 }
 
-<#
-    Split a flow sequence body on commas, honouring quotes.
-#>
 function Split-YamlFlow {
     [CmdletBinding()] param([Parameter(Mandatory)][AllowEmptyString()][string]$Body)
 
@@ -2355,12 +1857,6 @@ function ConvertFrom-YamlScalar {
     $v = $Raw.Trim()
     if ($v -eq '') { return $null }
 
-    # Unsupported YAML that must not be silently misread.
-    #
-    # These messages used to suggest a .psd1 config as the way round an anchor.
-    # That was wrong: Import-PowerShellDataFile parses in restricted mode, which
-    # rejects a variable reference outright, so a .psd1 cannot reuse a value
-    # either. Point at what actually works instead.
     if ($v -match '^[&*]') {
         throw ("Anchors and aliases (& and *) are not supported (line $LineNumber of $Source). " +
                "You usually do not need them: a top-level setting already applies to every machine, " +
@@ -2403,9 +1899,6 @@ function ConvertFrom-YamlScalar {
     if ($v -match '^(?i)(true|yes|on)$') { return $true }
     if ($v -match '^(?i)(false|no|off)$') { return $false }
 
-    # Integers, but a leading zero stays a string: '007' is far more likely to be
-    # an identifier than an octal number, and guessing either way surprises
-    # somebody.
     if ($v -match '^[+-]?[1-9][0-9]*$' -or $v -eq '0') {
         $parsed = 0L
         if ([long]::TryParse($v, [ref]$parsed)) {
@@ -2437,8 +1930,6 @@ function Get-YamlLines {
     foreach ($raw in ($Text -split "`r?`n")) {
         $number++
 
-        # YAML forbids tabs in indentation, and a tab-indented file that parses
-        # "somehow" is worse than one that says what is wrong.
         if ($raw -match '^ *\t') {
             throw "Tab used for indentation on line $number of $Source. YAML requires spaces."
         }
@@ -2450,18 +1941,13 @@ function Get-YamlLines {
         $indent = $stripped.Length - $trimmedStart.Length
         $text = $trimmedStart.TrimEnd()
 
-        if ($text -eq '---') { continue }          # a single document marker
+        if ($text -eq '---') { continue }
         if ($text -eq '...') { continue }
-        if ($text -match '^%') { continue }        # directives
+        if ($text -match '^%') { continue }
 
         $lines.Add([pscustomobject]@{ Indent = $indent; Text = $text; Line = $number })
     }
 
-    # `, ([object[]]...)` and not a bare return: PowerShell unrolls a returned
-    # collection, so a document with exactly ONE setting came back as a single
-    # PSCustomObject and every $lines.Count in the parser threw under StrictMode.
-    # A one-line vm.config.local.yaml is the most natural thing a person writes
-    # first, so this was reachable on day one.
     return , ([object[]]$lines.ToArray())
 }
 
@@ -2476,12 +1962,7 @@ function Read-YamlNode {
 
     if ($Index.Value -ge $Lines.Count) { return $null }
     if (Test-YamlSequenceLine $Lines[$Index.Value]) {
-        # Read-YamlSequence already guards its array with `, (...)`, but passing that
-        # straight back through `return (...)` undoes it twice over: the wrapper is
-        # unrolled, and then a single-element inner array is unrolled too. So a
-        # one-item sequence arrived as a bare scalar, and 'repos:' with exactly one
-        # entry was silently dropped, because the caller type-tests for an array.
-        # Re-wrap here, and normalise with @() so a scalar from any path becomes one.
+
         $sequence = Read-YamlSequence -Lines $Lines -Index $Index -Indent $Indent -Source $Source
         return , ([object[]]@($sequence))
     }
@@ -2517,8 +1998,6 @@ function Read-YamlMapping {
             continue
         }
 
-        # An empty value means the value is the block that follows: either
-        # indented deeper, or a sequence at the same indent as the key.
         if ($Index.Value -lt $Lines.Count) {
             $next = $Lines[$Index.Value]
             if ($next.Indent -gt $Indent) {
@@ -2554,16 +2033,12 @@ function Read-YamlSequence {
         $rest = $after.TrimStart(" `t")
 
         if ($rest -ne '') {
-            # The item's content starts on this line. Its effective indent is the
-            # real column of that content, so both '- Key: v' and '-   Key: v'
-            # line up with their continuation lines.
+
             $itemIndent = $line.Indent + 1 + ($after.Length - $rest.Length)
             $kv = Split-YamlKey $rest
 
             if ($kv) {
-                # A mapping starting on the dash line. Rewrite this entry as an
-                # ordinary mapping line so the mapping reader can consume it
-                # together with the lines below it.
+
                 $Lines[$Index.Value] = [pscustomobject]@{
                     Indent = $itemIndent
                     Text   = $rest
@@ -2588,7 +2063,6 @@ function Read-YamlSequence {
             continue
         }
 
-        # A bare '-': the item is the indented block underneath it.
         $Index.Value++
         if ($Index.Value -lt $Lines.Count -and $Lines[$Index.Value].Indent -gt $line.Indent) {
             $items.Add((Read-YamlNode -Lines $Lines -Index $Index -Indent $Lines[$Index.Value].Indent -Source $Source))
@@ -2601,9 +2075,6 @@ function Read-YamlSequence {
     return , ([object[]]$items.ToArray())
 }
 
-<#
-    Parse YAML text into hashtables, arrays, and scalars.
-#>
 function ConvertFrom-YamlText {
     [CmdletBinding()]
     param(
@@ -2636,7 +2107,6 @@ function Import-Yaml {
     if ($null -eq $text) { $text = '' }
     return (ConvertFrom-YamlText -Text $text -Source (Split-Path -Leaf $Path))
 }
-
 
 Export-ModuleMember -Function Write-Step, Write-Detail, Write-Warn, Get-RepoRoot,
     Reset-BuildSteps, Start-BuildStep, Complete-BuildStep, Write-BuildReport, Get-DevVMTargets,

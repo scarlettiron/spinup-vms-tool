@@ -1,44 +1,5 @@
-﻿#requires -Version 5.1
-<#
-.SYNOPSIS
-    Open a dev VM's desktop. Starts it first if it is not running.
+#requires -Version 5.1
 
-.DESCRIPTION
-    One command to get from a cold laptop to a desktop you can click around in.
-
-    Starts the VM if needed, waits until the guest is actually up, and then opens
-    the console window. The waiting is the point: Hyper-V decides between a basic
-    session and an Enhanced Session at the moment the window opens, so a window
-    opened while the guest is still booting stays stuck at a fixed size with no
-    clipboard, and you have to close it and reopen it. Waiting first means the
-    window you get is the good one.
-
-    Nothing here provisions anything. If the VM does not exist yet this tells you
-    to run New-DevVM.ps1 and stops.
-
-.PARAMETER Machine
-    One machine from the Machines block. Without it, the single VM that
-    vm.config.yaml describes.
-
-.PARAMETER Name
-    A Hyper-V VM name, for a machine config does not describe.
-
-.PARAMETER NoWait
-    Open the window immediately instead of waiting for the guest to come up. You
-    will probably get a basic session and have to reopen it.
-
-.PARAMETER TimeoutSeconds
-    How long to wait for the guest to be ready. Default 240, because a cold boot
-    plus the display manager takes a while.
-
-.EXAMPLE
-    .\scripts\Open-DevVM.ps1 -Machine ubuntu-gui
-    Start the Ubuntu desktop VM if needed, then open it.
-
-.EXAMPLE
-    .\scripts\Open-DevVM.ps1
-    The same for the VM this config describes.
-#>
 [CmdletBinding()]
 param(
     [string]$Machine,
@@ -54,15 +15,6 @@ $libDir = Join-Path $PSScriptRoot 'lib'
 Import-Module (Join-Path $libDir 'Common.psm1') -Force -DisableNameChecking
 Import-Module (Join-Path $libDir 'HyperV.psm1') -Force -DisableNameChecking
 
-<#
-    Is the guest far enough along to give us an Enhanced Session?
-
-    Both signals come from the host, so this needs no SSH key and no network path
-    into the guest. The heartbeat integration service reports OK once the guest OS
-    is properly up rather than merely powered on, and an address means the network
-    stack is live. xrdp comes up alongside the display manager, so the two together
-    are a good enough proxy for "the desktop is ready".
-#>
 function Test-GuestReady {
     param([string]$VmName)
 
@@ -71,8 +23,7 @@ function Test-GuestReady {
 
     $heartbeat = Get-VMIntegrationService -VMName $VmName -Name 'Heartbeat' -ErrorAction SilentlyContinue
     if (-not $heartbeat) {
-        # No heartbeat service at all: an older guest, or the integration daemons
-        # did not install. An address is the best signal available.
+
         return $true
     }
     if (-not $heartbeat.Enabled) { return $true }
@@ -88,7 +39,6 @@ try {
 
     Reset-BuildSteps -Total 3
 
-    # ------------------------------------------------------------------ 1. find it
     Start-BuildStep "Finding $($t.Name)"
     $vm = Get-VM -Name $t.Name -ErrorAction SilentlyContinue
     if (-not $vm) {
@@ -104,9 +54,6 @@ That takes 30 to 40 minutes, most of it unattended.
     }
     Write-Detail "state: $($vm.State)"
 
-    # Enhanced Session needs the host transport set to HvSocket. The build does
-    # this, but a VM created another way, or one whose config changed, will not
-    # have it. It can only be changed while the machine is off.
     if ($null -ne $t.Config -and $t.Config.VM.Contains('EnhancedSession') -and $t.Config.VM['EnhancedSession']) {
         if ($vm.EnhancedSessionTransportType -ne 'HvSocket') {
             if ($vm.State -eq 'Off') {
@@ -121,7 +68,6 @@ That takes 30 to 40 minutes, most of it unattended.
         }
     }
 
-    # ----------------------------------------------------------------- 2. start it
     Start-BuildStep "Starting $($t.Name)"
     if ($vm.State -eq 'Running') {
         Write-Detail 'already running'
@@ -130,7 +76,6 @@ That takes 30 to 40 minutes, most of it unattended.
         Start-DevVMMachine -Name $t.Name -Hostname $t.Hostname | Out-Null
     }
 
-    # ------------------------------------------------------------- 3. wait, open
     Start-BuildStep 'Waiting for the desktop, then opening it'
 
     if ($NoWait) {
@@ -156,9 +101,7 @@ That takes 30 to 40 minutes, most of it unattended.
         }
 
         if ($ready) {
-            # The display manager and xrdp finish a little after the heartbeat says
-            # the OS is up. A few seconds here is the difference between landing on
-            # the xrdp login prompt and landing on a black window.
+
             Write-Detail 'giving the display manager a few seconds to settle'
             Start-Sleep -Seconds 8
         }

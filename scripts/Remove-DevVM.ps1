@@ -1,19 +1,5 @@
-﻿#requires -Version 5.1
-<#
-.SYNOPSIS
-    Delete a dev VM and, optionally, its disks.
+#requires -Version 5.1
 
-.DESCRIPTION
-    Resolves the VM name the same way New-DevVM.ps1 does, so -Machine and the
-    config layers behave identically. Prompts before destroying anything unless
-    -Confirm:$false is given.
-
-.EXAMPLE
-    .\scripts\Remove-DevVM.ps1 -Machine ubuntu-gui -DeleteDisks
-
-.EXAMPLE
-    .\scripts\Remove-DevVM.ps1 -All -DeleteDisks -Confirm:$false
-#>
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
     [string]$Machine,
@@ -43,8 +29,7 @@ try {
         }
     }
     elseif ($Name) {
-        # An explicit name still needs a directory to tidy up, so fall back to
-        # the config's VM.Path.
+
         $config = Get-DevVMConfig -RepoRoot $repoRoot -Machine $Machine -Override @{ VM = @{ Name = $Name } }
         $targets.Add((Get-DevVMPaths -Config $config))
     }
@@ -60,14 +45,6 @@ try {
             Write-Step "Removing $($t.Name)"
             Remove-DevVMMachine -Name $t.Name -Directory $t.Dir -DeleteDisks:$DeleteDisks
 
-            # The machine is gone, so a remembered host key for its name can only
-            # get in the way of the next build under the same name.
-            #
-            # The property is checked for existence rather than just read:
-            # StrictMode turns a missing property into a terminating error, so
-            # `if ($t.Hostname)` on an object without one does not evaluate false,
-            # it throws - and it threw here, AFTER the VM and its disks were
-            # already gone, turning a completed removal into "REMOVE FAILED".
             $tidyHost = ''
             if ($t.PSObject.Properties.Name -contains 'Hostname') { $tidyHost = [string]$t.Hostname }
             if ($tidyHost -and (Remove-KnownHostEntry -HostName $tidyHost)) {

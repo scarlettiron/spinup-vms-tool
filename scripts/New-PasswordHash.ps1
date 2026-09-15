@@ -1,19 +1,5 @@
 #requires -Version 5.1
-<#
-.SYNOPSIS
-    Generate a SHA-512 crypt hash for use in vm.config.local.yaml.
 
-.DESCRIPTION
-    New-DevVM.ps1 hashes Guest.PrimaryUser.Password for you, so this is only
-    needed when you would rather not keep a plain-text password in a config file
-    at all: run this, paste the result into PasswordHash, and leave Password
-    empty.
-
-    The password is read without echo and never written to disk or history.
-
-.EXAMPLE
-    .\scripts\New-PasswordHash.ps1
-#>
 [CmdletBinding()]
 param()
 

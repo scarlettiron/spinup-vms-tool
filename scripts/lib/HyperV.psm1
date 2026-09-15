@@ -1,16 +1,6 @@
 #requires -Version 5.1
 Set-StrictMode -Version Latest
 
-<#
-    Everything that touches Hyper-V.
-
-    Keeping the hypervisor calls in one module is what makes a different OS a
-    config change rather than a rewrite: nothing in here knows or cares that the
-    guest is Ubuntu, apart from the Secure Boot template the blueprint names.
-#>
-
-# No -Force here: re-importing Common would unload it from the caller's
-# session state, taking its functions with it.
 Import-Module (Join-Path $PSScriptRoot 'Common.psm1') -DisableNameChecking
 
 function Get-DevVMPaths {
@@ -36,14 +26,12 @@ function Get-DevVMPaths {
 
     return [pscustomobject]@{
         Name      = $name
-        # The guest's own name, which is not always the VM's: it is what mDNS
-        # publishes and what ssh and known_hosts key off, so anything tidying up
-        # after a machine needs it alongside the paths.
+
         Hostname  = [string]$Config.Guest['Hostname']
         Dir       = $dir
         OsVhd     = Join-Path $dir "$name.vhdx"
         SeedVhd   = Join-Path $dir "$name-seed.vhdx"
-        # .ToArray(), not @(): @() throws on an empty List[object] in PS 5.1.
+
         DataDisks = $dataDisks.ToArray()
     }
 }
@@ -74,23 +62,6 @@ between them.
 "@
 }
 
-<#
-    Refuse to build over a name that is already taken.
-
-    Two distinct clashes, both worth catching before anything is created:
-
-      the VM name    another Hyper-V VM already has it. -Force replaces it; that
-                     is the only way past this.
-      the hostname   <hostname>.local already answers on this network. That is
-                     not a Hyper-V question - it could be a teammate's machine on
-                     the same switch - and it matters because two machines
-                     claiming one mDNS name means avahi renames one to
-                     <hostname>-2.local and the address you were told to use
-                     reaches the wrong box.
-
-    The hostname check is skipped when -Force is replacing a VM of this name,
-    since the thing answering is almost certainly the VM being replaced.
-#>
 function Assert-DevVMNameAvailable {
     [CmdletBinding()]
     param(
@@ -117,7 +88,6 @@ config gives every VM in this project a new name.
 "@
     }
 
-    # A different VM using our hostname as its own name is a coming collision.
     if ($hostname -ne $name) {
         $sameHost = Get-VM -Name $hostname -ErrorAction SilentlyContinue
         if ($sameHost) {
@@ -149,9 +119,6 @@ holds the name. To check what answers:
     Write-Detail "'$name' is free, and $hostname.local resolves to nothing yet"
 }
 
-<#
-    Create the VM, its disks, firmware, and integration settings.
-#>
 function New-DevVMMachine {
     [CmdletBinding()]
     param(
@@ -214,8 +181,6 @@ function New-DevVMMachine {
 
     Set-VMProcessor -VM $machine -Count ([int]$vm['CpuCount'])
 
-    # Nested virtualisation and dynamic memory are mutually exclusive, so the
-    # flag has to win rather than silently failing later.
     $nested = $false
     if ($vm.Contains('NestedVirtualization')) { $nested = [bool]$vm['NestedVirtualization'] }
     $dynamic = $true
@@ -242,9 +207,6 @@ function New-DevVMMachine {
         Set-VMMemory -VM $machine -DynamicMemoryEnabled $false -StartupBytes $startupBytes
     }
 
-    # Explicit SCSI locations throughout. The guest identifies its data disks by
-    # LUN, so letting Hyper-V place them automatically - and renumber when the
-    # DVD is ejected - would break 00-disks.sh.
     $loc = Get-DevVMDiskLocations
 
     Write-Detail "attaching install media: $IsoPath"
@@ -254,16 +216,6 @@ function New-DevVMMachine {
     Add-VMHardDiskDrive -VM $machine -Path $SeedVhdPath `
         -ControllerNumber 0 -ControllerLocation $loc.Seed
 
-    # Data disks are deliberately NOT attached yet. Add-DevVMDataDisks runs after
-    # the install, so during it the only disks present are the system disk and
-    # the tiny seed volume.
-    #
-    # This is not tidiness, it is the only reliable protection. An OS installer
-    # picks its target from whatever it can see: Ubuntu's autoinstall uses
-    # 'match: size: largest', and with a 25 GB system disk beside a 50 GB data
-    # disk that resolves to the wrong one; Fedora's kickstart 'clearpart --all'
-    # would happily wipe every disk attached. A disk that is not plugged in
-    # cannot be chosen or erased.
     Write-Detail "data disks attach after the install ($($p.DataDisks.Count) to come)"
 
     if ($generation -eq 2) {
@@ -275,8 +227,7 @@ function New-DevVMMachine {
             if ($firmware.Contains('SecureBootTemplate') -and $firmware['SecureBootTemplate']) {
                 $template = [string]$firmware['SecureBootTemplate']
             }
-            # Ubuntu's shim is signed by the Microsoft UEFI CA, not the Windows
-            # production CA, so the default template will not boot it.
+
             Set-VMFirmware -VM $machine -EnableSecureBoot On -SecureBootTemplate $template
         }
         else {
@@ -289,7 +240,6 @@ function New-DevVMMachine {
             Enable-VMTPM -VM $machine
         }
 
-        # Boot the installer first; Complete-DevVMInstall flips this afterwards.
         $dvd = Get-VMDvdDrive -VM $machine
         $hdd = Get-VMHardDiskDrive -VM $machine | Where-Object { $_.Path -eq $p.OsVhd }
         Set-VMFirmware -VM $machine -BootOrder $dvd, $hdd
@@ -307,9 +257,7 @@ function New-DevVMMachine {
 
     if ($vm.Contains('EnhancedSession') -and $vm['EnhancedSession']) {
         try {
-            # Routes the VM window's RDP session over an hvsocket, so Enhanced
-            # Session works with no network path to the guest. The guest half is
-            # bootstrap step 20-hyperv.sh.
+
             Set-VM -VM $machine -EnhancedSessionTransportType HvSocket -ErrorAction Stop
             Write-Detail 'enhanced session transport set to HvSocket'
         }
@@ -321,9 +269,6 @@ function New-DevVMMachine {
     return (Get-VM -Name $p.Name)
 }
 
-<#
-    Block until the unattended install powers the VM off.
-#>
 function Wait-DevVMInstall {
     [CmdletBinding()]
     param(
@@ -333,24 +278,10 @@ function Wait-DevVMInstall {
 
     $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
     $start = Get-Date
-    # Write-Progress draws a bar that leaves nothing behind, so also print a line
-    # every couple of minutes. Someone who redirected the build to a file, or who
-    # comes back to a scrolled-away console, still gets to see it was making
-    # progress rather than wondering whether it hung.
+
     $nextTick = 2
     $tickMinutes = 2
 
-    # "still installing, 4 min elapsed" on its own says only that time passed. On
-    # a netinst blueprint most of that time is spent pulling packages from a
-    # mirror, and the honest question - is this working or has it wedged? - needs
-    # something that MOVES.
-    #
-    # Two signals, both from the hypervisor, because nothing inside the installer
-    # is reachable: no SSH, no mDNS, and the integration daemons are not running
-    # yet. The system disk grows as packages land, and CPU is non-zero while it
-    # is unpacking them. A tick where the disk has not grown and the CPU is idle
-    # is the shape of a machine genuinely stuck, usually at a prompt the seed
-    # disk failed to answer.
     $systemDisk = $null
     try {
         $systemDisk = (Get-VMHardDiskDrive -VMName $Name -ErrorAction Stop |
@@ -375,8 +306,6 @@ function Wait-DevVMInstall {
         if ($elapsed.TotalMinutes -ge $nextTick) {
             $line = "still installing, {0:N0} of {1} min allowed" -f $elapsed.TotalMinutes, $TimeoutMinutes
 
-            # Size of the file on the host, not the guest's view: it is a
-            # dynamically expanding VHDX, so it grows as the install writes.
             if ($systemDisk) {
                 try {
                     $bytes = (Get-Item -LiteralPath $systemDisk -ErrorAction Stop).Length
@@ -389,7 +318,7 @@ function Wait-DevVMInstall {
                     $lastBytes = $bytes
                 }
                 catch {
-                    # A locked or vanished file is not worth failing a build over.
+
                     $systemDisk = $null
                 }
             }
@@ -406,23 +335,6 @@ function Wait-DevVMInstall {
     throw "The install did not finish within $TimeoutMinutes minutes. Open the console with '.\vm.ps1 open -NoWait' to see where it stopped; if it is sitting at an installer prompt, the seed disk was not picked up - see docs/troubleshooting.md."
 }
 
-<#
-    Stop a VM without touching its disks.
-
-    Three ways down, and the difference matters:
-
-      shutdown  the default. Asks the guest to shut down through the integration
-                services, so filesystems are flushed and services stop cleanly.
-      save      writes the guest's memory to disk and releases it, so the machine
-                resumes exactly where it was. Costs disk equal to the assigned RAM.
-      turn off  cuts the power. Fast, and risks the filesystem damage you would
-                expect from pulling the plug on a real machine.
-
-    A graceful shutdown depends on the guest cooperating, so it is polled with a
-    deadline rather than waited on indefinitely: a guest sitting on an unsaved
-    file dialog or a hung service will never go down on its own, and a script that
-    blocks forever is worse than one that says so.
-#>
 function Stop-DevVMMachine {
     [CmdletBinding()]
     param(
@@ -450,8 +362,6 @@ function Stop-DevVMMachine {
         return 'turned-off'
     }
 
-    # A saved or paused machine has no running OS to ask, so there is nothing to
-    # request politely. Bring it back first, then it can shut itself down.
     if ($vm.State -in @('Saved', 'Paused')) {
         Write-Detail "state is $($vm.State), so resuming it first to shut down cleanly"
         Start-VM -Name $Name | Out-Null
@@ -484,14 +394,6 @@ function Stop-DevVMMachine {
     return 'timeout'
 }
 
-<#
-    Start a VM that already exists. Provisioning never re-runs: bootstrap is gated
-    on /var/lib/vm-bootstrap/complete, and the unit is skipped once a clean run has
-    happened, so this is an ordinary boot of a machine that is already built.
-
-    -WaitForNetwork polls until the guest has an address, which is the point at
-    which it is actually usable rather than merely powered on.
-#>
 function Start-DevVMMachine {
     [CmdletBinding()]
     param(
@@ -540,13 +442,6 @@ function Start-DevVMMachine {
     return 'no-network'
 }
 
-<#
-    Create and attach the data disks, at their fixed SCSI locations.
-
-    Split out of VM creation on purpose: this must not run until the OS installer
-    has finished, or the installer may choose one of these as its target. Safe to
-    re-run - a disk already attached is left alone.
-#>
 function Add-DevVMDataDisks {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -568,7 +463,7 @@ function Add-DevVMDataDisks {
             Write-Detail ("creating data disk {0} '{1}' - {2} GB, mounts at {3}" -f `
                 $(if ($disk.DriveLetter) { "$($disk.DriveLetter):" } else { '' }),
                 $disk.Label, $disk.SizeGB, $disk.MountPoint)
-            # Dynamic, so a 50 GB drive costs only what is written to it.
+
             New-VHD -Path $disk.Path -SizeBytes ([long]$disk.SizeGB * 1GB) -Dynamic | Out-Null
         }
 
@@ -578,9 +473,6 @@ function Add-DevVMDataDisks {
     }
 }
 
-<#
-    Post-install: eject the ISO, attach the data disks, boot from disk, and start.
-#>
 function Complete-DevVMInstall {
     [CmdletBinding()]
     param([Parameter(Mandatory)]$Config)
@@ -597,7 +489,6 @@ function Complete-DevVMInstall {
         Remove-VMDvdDrive -VMDvdDrive $drive
     }
 
-    # Now that the installer is done and cannot target them, the data disks go on.
     Add-DevVMDataDisks -Config $Config
 
     if ($vm.Generation -eq 2) {
@@ -625,9 +516,6 @@ function New-DevVMCheckpoint {
     Checkpoint-VM -Name $Name -SnapshotName $SnapshotName -ErrorAction Stop
 }
 
-<#
-    Best-effort guest address, once the integration services are up.
-#>
 function Get-DevVMIPAddress {
     [CmdletBinding()]
     param(
@@ -662,7 +550,7 @@ function Remove-DevVMMachine {
         if ($vm.State -ne 'Off') {
             Write-Detail "stopping '$Name'"
             Stop-VM -Name $Name -TurnOff -Force -ErrorAction SilentlyContinue
-            # Give the worker process a moment to release the VHDX handles.
+
             Start-Sleep -Seconds 2
         }
 
@@ -688,8 +576,7 @@ function Remove-DevVMMachine {
     }
 
     if ($DeleteDisks -and $Directory -and (Test-Path -LiteralPath $Directory)) {
-        # Only clear the directory if nothing but Hyper-V's own scaffolding is
-        # left - never blow away a folder that still has someone's data in it.
+
         $remaining = @(Get-ChildItem -LiteralPath $Directory -Recurse -File |
                        Where-Object { $_.Extension -notin @('.vhdx', '.vhd', '.avhdx', '.vmcx', '.vmrs', '.vmgs', '.bin', '.vsv') })
         if ($remaining.Count -eq 0) {

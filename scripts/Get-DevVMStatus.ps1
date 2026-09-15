@@ -1,51 +1,5 @@
-﻿#requires -Version 5.1
-<#
-.SYNOPSIS
-    Show what each dev VM is, where to reach it, and how it is doing.
+#requires -Version 5.1
 
-.DESCRIPTION
-    One place to answer 'what is this machine, is it up, what address do I browse
-    to, and did bootstrap finish?'.
-
-    Hyper-V is the source of truth for a VM that exists: CPU, memory and disk
-    sizes are read back from the hypervisor rather than from config, so drift
-    between the two shows up rather than hiding. Config fills in the blanks
-    Hyper-V cannot know (blueprint, mount points, drive letters), and the guest
-    fills in the rest over SSH when a key or agent lets us in: the OS it is
-    actually running, real disk usage, and bootstrap state.
-
-    Everything degrades: no SSH still gives you the full host-side picture, and a
-    VM that has not been built yet is described from config so you can see what
-    would be created.
-
-.PARAMETER Name
-    A Hyper-V VM name. Config for it is matched up automatically when one of the
-    configured machines resolves to that name.
-
-.PARAMETER Machine
-    One machine from the Machines block, instead of all of them.
-
-.PARAMETER Follow
-    Redraw every 10 seconds.
-
-.PARAMETER NoSsh
-    Skip the guest probe and report only what the host knows.
-
-.PARAMETER Report
-    Also print the guest's own bootstrap report
-    (/var/log/vm-bootstrap-report.txt), which lists every step with its status
-    and timing. Needs SSH access.
-
-.EXAMPLE
-    .\scripts\Get-DevVMStatus.ps1
-
-.EXAMPLE
-    .\scripts\Get-DevVMStatus.ps1 -Name acme-fedora-workstation -Follow
-
-.EXAMPLE
-    .\scripts\Get-DevVMStatus.ps1 -Report
-    Show which bootstrap steps passed and failed inside each VM.
-#>
 [CmdletBinding()]
 param(
     [string]$Name,
@@ -64,37 +18,12 @@ Import-Module (Join-Path $libDir 'HyperV.psm1') -Force -DisableNameChecking
 
 $repoRoot = Get-RepoRoot
 
-# ------------------------------------------------------------------- targets
-
-<#
-    Every machine we know about, each carrying its config so the report can name
-    the blueprint, the drive letters and the mount points that Hyper-V has no
-    idea about.
-
-    -Name takes a Hyper-V name rather than a config key, so match it back to a
-    configured machine when one resolves to it. That is the difference between a
-    full report and a bare one for the common case of naming a VM directly.
-#>
 function Resolve-Targets {
-    # Status with no target named reports on everything, unlike the build and
-    # lifecycle scripts which default to the single configured VM. -All gives
-    # Get-DevVMTargets that behaviour, and it falls back to the one VM when there
-    # is no Machines block to enumerate.
+
     $wantAll = -not $Machine
     return @(Get-DevVMTargets -RepoRoot $repoRoot -Machine $Machine -Name $Name -All:$wantAll)
 }
 
-# --------------------------------------------------------------- guest probe
-
-<#
-    One round trip collects everything the guest can tell us, as tab separated
-    "key<TAB>field..." lines. One probe rather than several because -Follow runs
-    this on a timer, and because a machine that is slow to answer should be slow
-    once rather than five times.
-
-    Written without single quotes on purpose: it lives in a single-quoted
-    PowerShell here-string, so a quote of that kind would end the string.
-#>
 $script:GuestProbe = @'
 if systemctl is-active --quiet vm-bootstrap.service; then
     printf "bootstrap\tprogress\t%s\n" "$(ls /var/lib/vm-bootstrap/*.done 2>/dev/null | wc -l)"
@@ -112,8 +41,6 @@ printf "kernel\t%s\n" "$(uname -r)"
 printf "guestuptime\t%s\n" "$(uptime -p 2>/dev/null | sed "s/^up //")"
 
 for u in $(getent passwd | awk -F: "\$3>=1000 && \$3<65534 {print \$1}"); do
-    # GECOS is comma separated and usually only the first part is a name, so an
-    # account with no real name gives ",,," rather than nothing. Take field one.
     printf "user\t%s\t%s\t%s\n" "$u" \
         "$(getent passwd "$u" | cut -d: -f5 | cut -d, -f1)" \
         "$(id -nG "$u" 2>/dev/null)"
@@ -163,24 +90,10 @@ function Invoke-GuestCommand {
     if ($NoSsh -or -not $SshTarget) { return $null }
     if (-not (Get-Command ssh.exe -ErrorAction SilentlyContinue)) { return $null }
 
-    # $ErrorActionPreference has to be dropped to 'Continue' around this call.
-    #
-    # This script runs with 'Stop', and in Windows PowerShell 5.1 a native
-    # command that writes to stderr under 'Stop' throws a terminating
-    # NativeCommandError - and '2>$null' does NOT prevent it, because the error
-    # record is created before the redirection discards the text. So the single
-    # most ordinary situation there is, a guest that is not reachable yet, took
-    # the whole status command down with
-    #
-    #     STATUS FAILED: ssh: Could not resolve hostname <vm>.local
-    #
-    # which is exactly when you most want the rest of the status. Every guest
-    # fact here is optional by design, so a failure must return $null and let
-    # the caller print what it does know.
     $previous = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
     try {
-        # BatchMode so a machine we have no key for fails fast instead of prompting.
+
         $out = & ssh.exe -o BatchMode=yes -o ConnectTimeout=4 -o StrictHostKeyChecking=accept-new `
             $SshTarget $Command 2>$null
     }
@@ -210,7 +123,6 @@ function Get-GuestFacts {
     return $facts
 }
 
-# One field of the first row for a key, or $Default when the guest did not say.
 function Get-Fact {
     param($Facts, [string]$Key, [int]$Field = 0, [string]$Default = '')
 
@@ -229,8 +141,6 @@ function Get-FactRows {
     return $Facts[$Key].ToArray()
 }
 
-# ------------------------------------------------------------------ printing
-
 function Format-Size {
     param([double]$Bytes)
 
@@ -246,12 +156,6 @@ function Write-Field {
     Write-Host ('    {0,-11} {1}' -f $Label, $Value) -ForegroundColor $Colour
 }
 
-<#
-    What the OS is. The guest's own /etc/os-release is the honest answer once the
-    machine is up, because it reflects what actually installed and any upgrade
-    since. Config only says what was asked for, which is the right answer while
-    the VM is still being built or does not exist yet.
-#>
 function Get-OsDescription {
     param($Config, $Facts)
 
@@ -265,12 +169,6 @@ function Get-OsDescription {
     return "$release  (from config)"
 }
 
-<#
-    The disks, joined across three places that each know part of the answer:
-    Hyper-V for what is attached and how big the files really are, config for the
-    drive letter and mount point behind each one, and the guest for how full it
-    actually is.
-#>
 function Show-Disks {
     param([string]$VmName, $Config, $Facts)
 
@@ -280,8 +178,6 @@ function Show-Disks {
         return
     }
 
-    # Path to the config that describes it, so each VHD can be named the way the
-    # team names it rather than by filename.
     $byPath = @{}
     if ($null -ne $Config) {
         $paths = Get-DevVMPaths -Config $Config
@@ -299,7 +195,6 @@ function Show-Disks {
         }
     }
 
-    # Mount point to guest usage.
     $usage = @{}
     foreach ($row in (Get-FactRows -Facts $Facts -Key 'df')) {
         if (@($row).Count -lt 4) { continue }
@@ -318,12 +213,9 @@ function Show-Disks {
         $letter = if ($meta) { $meta.Letter } else { '?' }
         $label = if ($meta) { $meta.Label } else { [System.IO.Path]::GetFileNameWithoutExtension($drive.Path) }
         $mount = if ($meta) { $meta.Mount } else { 'not in config' }
-        # A disk attached by hand is worth showing, but not at the cost of
-        # knocking every column out of line.
+
         if ($label.Length -gt 14) { $label = $label.Substring(0, 13) + '.' }
 
-        # Size is the disk as the guest sees it; FileSize is what it costs on the
-        # host today. A dynamic VHDX starts tiny and grows, so both matter.
         $allocated = '-'
         $onHost = '-'
         $vhd = Get-VHD -Path $drive.Path -ErrorAction SilentlyContinue
@@ -388,8 +280,6 @@ function Show-One {
     Write-Host ''
     Write-Host ("  {0,-30} {1}{2}" -f $Target.Name, $vm.State, $uptime) -ForegroundColor $colour
 
-    # Only talk to a machine that is running, and only when we know who to log in
-    # as. Everything below tolerates $facts being $null.
     $facts = $null
     $sshTarget = $null
     if ($vm.State -eq 'Running' -and $Target.User) {
@@ -410,9 +300,6 @@ function Show-One {
         Write-Field 'blueprint' $bp
     }
 
-    # The address someone actually browses to, and whether this laptop can
-    # currently resolve it. An unresolvable name is the single most common reason
-    # a working VM looks broken from the host.
     $resolved = Test-DevVMHostnameResolvable -Hostname $Target.Hostname
     $ip = Get-DevVMIPAddress -Name $Target.Name
     if ($resolved) {
@@ -429,8 +316,6 @@ function Show-One {
     }
     if ($sshTarget) { Write-Field 'ssh' "ssh $sshTarget" }
 
-    # Who you log in as. The guest is authoritative once it is up, because it
-    # knows about accounts bootstrap created and any added since.
     $userRows = @(Get-FactRows -Facts $facts -Key 'user')
     if ($userRows.Count -gt 0) {
         foreach ($row in $userRows) {
@@ -446,7 +331,6 @@ function Show-One {
         Write-Field 'user' ("{0}{1}  (from config)" -f $pu['Username'], $realName)
     }
 
-    # Hyper-V, not config: this is what the machine was actually given.
     $memory = if ($vm.State -eq 'Running' -and $vm.MemoryAssigned -gt 0) {
         "$(Format-Size $vm.MemoryAssigned) RAM assigned"
     }
@@ -463,9 +347,6 @@ function Show-One {
 
     Show-Disks -VmName $Target.Name -Config $Target.Config -Facts $facts
 
-    # What 35-database.sh ended up with. Reported from the guest when it is up,
-    # and from config otherwise, so a machine that is off still says what database
-    # it is meant to have.
     $dbEngine = Get-Fact -Facts $facts -Key 'database' -Field 0
     if ($dbEngine) {
         $dbStatus  = Get-Fact -Facts $facts -Key 'database' -Field 1
@@ -490,8 +371,6 @@ function Show-One {
         }
     }
 
-    # The Adminer route. The reason it is worth its own line is that it is the one
-    # thing here you paste into a browser, so it should never need looking up.
     $admStatus = Get-Fact -Facts $facts -Key 'adminer' -Field 0
     if ($admStatus) {
         $admDetail  = Get-Fact -Facts $facts -Key 'adminer' -Field 1
@@ -526,8 +405,6 @@ function Show-One {
         }
     }
 
-    # Whatever 55-github.sh concluded when it ran `ssh -T git@github.com`, worded
-    # the same way the guest's own login banner words it.
     $ghStatus = Get-Fact -Facts $facts -Key 'github' -Field 0
     $ghDetail = Get-Fact -Facts $facts -Key 'github' -Field 1
     if ($ghStatus) {
@@ -570,8 +447,6 @@ function Show-One {
     }
 }
 
-# ---------------------------------------------------------------------- main
-
 try {
     Assert-Prerequisites -RequireHyperV
     $targets = Resolve-Targets
@@ -594,9 +469,4 @@ catch {
     exit 1
 }
 
-# Explicit, and not just tidiness. Probing a guest that is not reachable leaves
-# $LASTEXITCODE at ssh's 255, and a script that ends without an exit statement
-# hands that back as its own code - so a perfectly good status report came back
-# as a failure, and vm.ps1 dutifully propagated 255. Reporting is the job here;
-# an unreachable guest is information, not an error.
 exit 0

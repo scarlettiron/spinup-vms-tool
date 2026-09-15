@@ -108,7 +108,25 @@ systemctl enable --now adminer.service
 
 # ---------------------------------------------------------------- verification
 HOSTNAME_STATIC="$(hostnamectl --static 2>/dev/null || hostname)"
+
+# Wire the link to the database this machine actually installed, so the login
+# form arrives with everything filled in except the password.
+#
+# Adminer picks its driver from the NAME of the first query parameter, which is
+# not obvious and is why this is built here rather than left to a person to
+# remember: PostgreSQL is ?pgsql=<host>, MySQL is ?server=<host>. The value is
+# the server, and &username= fills the account.
+#
+# Checked against the running instance: the returned form comes back with
+# value="pgsql" selected, auth[server] value="localhost" and auth[username]
+# value="postgres". The password is the only field left, and deliberately so -
+# see the note about auto login in vm.config.yaml.
 ROUTE="http://${HOSTNAME_STATIC}.local:${PORT}/"
+case "${VM_DB_ENGINE:-}" in
+    postgres) ROUTE="${ROUTE}?pgsql=localhost&username=postgres" ;;
+    mysql)    ROUTE="${ROUTE}?server=localhost&username=root" ;;
+    *)        : ;;   # no engine: leave the plain URL, there is nothing to wire to
+esac
 
 ok=false
 for _ in $(seq 1 10); do
@@ -121,7 +139,11 @@ done
 if $ok; then
     log "adminer ${VERSION} is serving on port ${PORT}"
     log "  open  ${ROUTE}"
-    log "  log in with the ${VM_DB_ENGINE:-database} credentials; the server field is 'localhost'"
+    if [[ -n "${VM_DB_ENGINE:-}" ]]; then
+        log "  that link arrives pre-filled for ${VM_DB_ENGINE}; type the password and go"
+    else
+        log "  no database on this machine, so the form starts empty"
+    fi
     write_state running "$ROUTE"
 else
     warn "adminer is installed but not answering on port ${PORT}"

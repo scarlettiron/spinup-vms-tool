@@ -74,7 +74,7 @@ projectName:    testvm1
 
 
 cpus:           6
-memoryGB:       8
+memoryGB:       4
 diskGB:         25            # drive C:, the system disk. Others: vm.dataDisks
 
 timezone:       America/New_York

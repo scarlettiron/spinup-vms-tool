@@ -7,16 +7,21 @@
 blueprint:      redhat-rocky-workstation
 osVersion:      9
 
-projectName:    testvm1
+projectName:    alcon
+
+username: wxs
+realName: WXS User
+password: default
 
 cpus:           6
-memoryGB:       4
+memoryGB:       10
 diskGB:         25
 
-timezone:       America/New_York
+timezone:       America/Chicago
 
-repos:          []
-reposRoot:      src
+repos:
+  - git@github.com:PendantAutomation/Alcon_Elkridge-Middleware.git
+reposRoot:      /mnt/e/WXS
 
 # Postgres, plus Adminer on 3800 to browse it.
 dbEngine:       postgres

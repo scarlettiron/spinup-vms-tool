@@ -9,8 +9,6 @@ A Rocky Linux desktop VM on Hyper-V, built from config. GNOME, git, Node,
 Python, Docker, ddev, VS Code, Chrome and Postgres — same build on every laptop.
 
 ```powershell
-git clone <this-repo> dev-vm
-cd dev-vm
 
 Copy-Item vm.config.local.example.yaml vm.config.local.yaml
 # edit it: username, password, your name

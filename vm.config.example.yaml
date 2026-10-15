@@ -11,7 +11,8 @@
 #                    supported, but read the note next to it first.
 #
 # Full reference for every setting: docs/configuration.md
-# Check a change without building anything:  .\vm.ps1 render
+# Check a change without building anything:  vmynt create --render
+# (or the PowerShell tool's render command)
 
 # ===========================================================================
 #  QUICK SETTINGS                                            @user-editable
@@ -37,6 +38,13 @@
 # version, or 24.04 parses as the number 24.04.
 blueprint:      fedora-workstation
 osVersion:      42
+
+# ---- which hypervisor and CPU ----------------------------------------------
+# Vmynt only. Both follow this computer unless set: Hyper-V on Windows, libvirt
+# on Linux, vfkit on macOS, and the computer's own CPU architecture. Apple
+# Silicon runs arm64 guests only. The PowerShell tool ignores these.
+# hypervisor:   auto          # auto, hyperv, libvirt or vfkit
+# arch:         auto          # auto, x86_64 or arm64
 
 # ---- identity --------------------------------------------------------------
 # projectName names the work, not the OS. The VM and the guest hostname default
@@ -65,11 +73,11 @@ cpus:           6
 memoryGB:       12
 diskGB:         25            # drive C:, the system disk. Others: vm.dataDisks
 
-timezone:       America/New_York
+timezone:       America/New_York   # Vmynt's default: this computer's zone (UTC on Windows)
 
-gitName:        ''            # example: Scott Scarlett
-gitEmail:       ''            # example: scott@example.com
-githubUsername: ''            # example: scottscarlett
+gitName:        ''            # example: Ada Lovelace
+gitEmail:       ''            # example: ada@example.com
+githubUsername: ''            # example: adalovelace
 
 # Cloned on first boot. A bare URL, or a mapping for branch/depth/etc.
 repos:          []            # example: [git@github.com:acme/web.git]
@@ -108,7 +116,8 @@ dbAdminerPort:  3800
 
 # ---- copying files in -----------------------------------------------------
 # A directory on this laptop whose contents are copied into the guest. Relative
-# paths are relative to this repo, so a committed files/ directory works the same
+# paths are relative to the project folder (the one holding .vmynt; for the
+# PowerShell tool, this repo), so a committed files/ directory works the same
 # for everyone. Blank copyTo means the primary user's home.
 #
 # These are embedded in the seed disk, so this is for configuration, small
@@ -131,10 +140,17 @@ postStart:      []            # example: [ddev config global --no-bind-mounts]
 #  be edited and which are better left alone.
 # ===========================================================================
 
-# ------------------------------------------------------------------- Hyper-V
+# ------------------------------------------------------------------------ VM
 #  @advanced except for dataDisks, which is marked below.
+#
+#  path: where each VM's folder lives. Vmynt's default is ~/.vmynt/vms on every
+#  OS; on Linux the disks themselves go in a libvirt storage pool instead. The
+#  PowerShell tool needs it set, for example  path: C:\VMs
+#  switchName is Hyper-V only; network and storagePool are libvirt only.
 vm:
-  path:                   C:\VMs
+  # path:                 ~/.vmynt/vms
+  # network:              default       # libvirt network
+  # storagePool:          default       # libvirt pool, /var/lib/libvirt/images
   memoryMinimumGB:        4
   memoryMaximumGB:        16
   dynamicMemory:          true
@@ -286,8 +302,9 @@ database:
 #  than one.
 #
 #  Each entry:
-#    from    a directory on this laptop. Relative paths are relative to this
-#            repo. Its *contents* are copied, not the directory itself.
+#    from    a directory on this laptop. Relative paths are relative to the
+#            project folder (this repo, for the PowerShell tool). Its
+#            *contents* are copied, not the directory itself.
 #    to      where they land in the guest. Absolute, or starting with '~' for the
 #            primary user's home. Blank means '~'.
 #    owner   user or user:group. Blank means the primary user.
@@ -452,6 +469,7 @@ machines:
 #  checksum are read from the vendor's published checksum file at build time, so
 #  nothing here needs updating when a new one ships.
 iso:
-  directory:      C:\ISO        # where downloaded ISOs are cached
-  path:           ''            # explicit .iso path; skips download + lookup
+  # directory:    ~/.vmynt/isos # where downloaded ISOs are cached (Vmynt's default;
+  #                             # the PowerShell tool needs one, for example C:\ISO)
+  path:           ''            # explicit .iso path; skips download + lookup (relative to the project)
   verifyChecksum: true          # leave on: a bad download is deleted, not used

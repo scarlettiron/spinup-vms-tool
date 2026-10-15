@@ -37,7 +37,7 @@ Optional, and nothing depends on it: `gh` gets the account from the token, and a
 SSH key does not need a username at all. It earns its place in two smaller ways.
 
 ```powershell
-GithubUsername = 'scottscarlett'      # or GitHub.Username long-hand
+GithubUsername = 'adalovelace'      # or GitHub.Username long-hand
 ```
 
 - **`git config --global github.user`** in the guest, which `hub` and some editor
@@ -47,14 +47,14 @@ GithubUsername = 'scottscarlett'      # or GitHub.Username long-hand
   `ssh -T git@github.com` and compares the greeting to the configured name:
 
   ```
-  [12:04:31] github ssh auth ok as 'scottscarlett'
+  [12:04:31] github ssh auth ok as 'adalovelace'
   ```
 
   If they differ you get a warning, which is the useful case: it means the key in
   `ssh_keys/` belongs to a different account than you thought.
 
   ```
-  ! GitHub greeted 'olduser' but GitHub.Username says 'scottscarlett'
+  ! GitHub greeted 'olduser' but GitHub.Username says 'adalovelace'
   !   the key belongs to a different account than you configured
   ```
 
@@ -71,8 +71,8 @@ config instead:
 
 ```powershell
 Git = @{
-    UserName  = 'Scott Scarlett'
-    UserEmail = 'scott@example.com'
+    UserName  = 'Ada Lovelace'
+    UserEmail = 'ada@example.com'
 }
 GitHub = @{
     SshKey = @{ Mode = 'generate' }

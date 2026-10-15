@@ -1,41 +1,72 @@
-# Hyper-V integration services + Enhanced Session Mode.
+# Guest tools for whichever hypervisor runs this VM, plus the remote desktop.
 #
-# Enhanced Session gives the VM a resizable desktop, a shared clipboard, and drive
-# redirection by tunnelling RDP over an AF_VSOCK hvsocket, so it needs no network
-# route to the guest at all. The host half is
-# Set-VM -EnhancedSessionTransportType HvSocket (scripts/lib/HyperV.psm1).
+# Was 20-hyperv.sh. The host tells us which hypervisor through VM_HYPERVISOR in
+# /etc/vm-bootstrap.env; a seed from the PowerShell tool does not set it, and
+# that tool only ever builds on Hyper-V, so unset means hyperv.
+#
+#   hyperv   the Hyper-V daemons, and xrdp listening on an AF_VSOCK hvsocket.
+#            That is Enhanced Session: a resizable desktop, a shared clipboard
+#            and drive redirection with no network route to the guest at all.
+#            The host half is Set-VM -EnhancedSessionTransportType HvSocket.
+#   libvirt  qemu-guest-agent (so the host can ask for the IP address and shut
+#            the guest down cleanly), spice-vdagent for the console, and xrdp on
+#            ordinary TCP 3389 with the firewall opened for it.
+#   vfkit    xrdp on TCP 3389 with the firewall opened. Apple's Virtualization
+#            framework needs no agent in the guest.
+#
+# VM_ENHANCED_SESSION keeps its old name but now means "set up the remote
+# desktop" on every hypervisor.
 #
 # Note that $ASSETS resolves to the MERGED assets directory, so each blueprint
 # supplies its own xrdp-startwm.sh and its own polkit file. Those genuinely differ
 # per distro (locale file, session mode, Xsession path), which is why they stay in
 # the blueprint rather than moving here.
 ASSETS="${VM_BOOTSTRAP_ROOT:-/usr/local/lib/vm-bootstrap}/assets"
+HYPERVISOR="${VM_HYPERVISOR:-hyperv}"
 
-# ------------------------------------------------- integration services (daemons)
-# One package on Fedora, two on Ubuntu, and the units are named differently: the
-# hv-* names are Debian's, the hyperv* names are Fedora's.
-case "$PKG_MANAGER" in
-    apt)
-        pkg_install linux-tools-virtual linux-cloud-tools-virtual
-        hv_services=(hv-kvp-daemon hv-vss-daemon hv-fcopy-daemon)
+# ------------------------------------------------- guest agents (daemons)
+case "$HYPERVISOR" in
+    hyperv)
+        # One package on Fedora, two on Ubuntu, and the units are named
+        # differently: the hv-* names are Debian's, the hyperv* names Fedora's.
+        case "$PKG_MANAGER" in
+            apt)
+                pkg_install linux-tools-virtual linux-cloud-tools-virtual
+                guest_services=(hv-kvp-daemon hv-vss-daemon hv-fcopy-daemon)
+                ;;
+            dnf|yum)
+                pkg_install hyperv-daemons
+                guest_services=(hypervkvpd hypervvssd hypervfcopyd)
+                ;;
+            *) die "no supported package manager for the Hyper-V daemons" ;;
+        esac
         ;;
-    dnf|yum)
-        pkg_install hyperv-daemons
-        hv_services=(hypervkvpd hypervvssd hypervfcopyd)
+    libvirt)
+        # Same package name on both. spice-vdagent only does anything inside a
+        # graphical session, so it waits for the desktop.
+        pkg_install qemu-guest-agent
+        guest_services=(qemu-guest-agent)
+        if is_true "${VM_INSTALL_DESKTOP:-true}"; then
+            pkg_install spice-vdagent \
+                || warn "could not install spice-vdagent; the console will not resize or share the clipboard"
+        fi
         ;;
-    *) die "no supported package manager for the Hyper-V daemons" ;;
+    vfkit)
+        guest_services=()
+        ;;
+    *) die "unknown VM_HYPERVISOR '$HYPERVISOR' (expected hyperv, libvirt or vfkit)" ;;
 esac
 
-for svc in "${hv_services[@]}"; do
+for svc in "${guest_services[@]}"; do
     systemctl enable --now "$svc" 2>/dev/null || true
 done
 
 if ! is_true "${VM_ENHANCED_SESSION:-true}"; then
-    log "enhanced session disabled"
+    log "remote desktop disabled"
     return 0 2>/dev/null || exit 0
 fi
 if ! is_true "${VM_INSTALL_DESKTOP:-true}"; then
-    log "enhanced session needs a desktop; skipping"
+    log "the remote desktop needs a desktop; skipping"
     return 0 2>/dev/null || exit 0
 fi
 
@@ -43,7 +74,11 @@ fi
 # Same package names on both.
 pkg_install xrdp xorgxrdp
 
-log "pointing xrdp at vsock instead of tcp/3389"
+if [[ "$HYPERVISOR" == "hyperv" ]]; then
+    log "pointing xrdp at vsock instead of tcp/3389"
+else
+    log "xrdp listens on tcp/3389"
+fi
 
 # Edit [Globals] ONLY. This was a plain `sed -i 's|^port=.*|...|'` per setting,
 # which is wrong in a way that looks fine until you try to log in: xrdp.ini has
@@ -83,12 +118,22 @@ if [[ ! -f "$XRDP_INI" ]]; then
     return 1 2>/dev/null || exit 1
 fi
 
+# On libvirt and vfkit the listener stays on TCP 3389, with TLS negotiated as
+# xrdp ships it: unlike an hvsocket, that port is reachable over the NAT network,
+# so the vsock-only shortcuts (no encryption, plain RDP security) are not taken.
 xrdp_tmp="$(mktemp)"
-awk '
+awk -v hypervisor="$HYPERVISOR" '
     /^\[/ { section = $0 }
 
+    section == "[Globals]" && hypervisor != "hyperv" {
+        if ($0 ~ /^port=/)               { print "port=3389";                 next }
+        if ($0 ~ /^use_vsock=/)          { print "use_vsock=false";           next }
+        if ($0 ~ /^security_layer=/)     { print "security_layer=negotiate";  next }
+        if ($0 ~ /^max_bpp=/)            { print "max_bpp=32";                next }
+    }
+
     # The listener.
-    section == "[Globals]" {
+    section == "[Globals]" && hypervisor == "hyperv" {
         if ($0 ~ /^port=/)               { print "port=vsock://-1:3389";      next }
         if ($0 ~ /^use_vsock=/)          { print "use_vsock=false";           next }
         if ($0 ~ /^security_layer=/)     { print "security_layer=rdp";        next }
@@ -108,13 +153,35 @@ rm -f "$xrdp_tmp"
 
 # Verify, because getting this wrong is invisible until someone opens the VM
 # window and gets "Error connecting to user session" with a clean build report.
-if ! grep -q '^port=vsock://-1:3389' "$XRDP_INI"; then
-    warn "xrdp.ini has no vsock listener after the edit; Enhanced Session will not work"
-fi
-stray_ports="$(grep -c '^port=vsock' "$XRDP_INI" || true)"
-if [[ "$stray_ports" != "1" ]]; then
-    warn "expected exactly one vsock port line in xrdp.ini, found ${stray_ports}"
-    warn "  a session backend still points at a vsock, so sessions will fail to start"
+if [[ "$HYPERVISOR" == "hyperv" ]]; then
+    if ! grep -q '^port=vsock://-1:3389' "$XRDP_INI"; then
+        warn "xrdp.ini has no vsock listener after the edit; Enhanced Session will not work"
+    fi
+    stray_ports="$(grep -c '^port=vsock' "$XRDP_INI" || true)"
+    if [[ "$stray_ports" != "1" ]]; then
+        warn "expected exactly one vsock port line in xrdp.ini, found ${stray_ports}"
+        warn "  a session backend still points at a vsock, so sessions will fail to start"
+    fi
+else
+    if ! grep -q '^port=3389' "$XRDP_INI"; then
+        warn "xrdp.ini does not listen on tcp/3389 after the edit; the remote desktop will not connect"
+    fi
+    if grep -q '^port=vsock' "$XRDP_INI"; then
+        warn "xrdp.ini still has a vsock port line, which only works on Hyper-V"
+    fi
+
+    # Open the port. firewalld on Fedora and the RHEL family; ufw on Ubuntu only
+    # when someone has turned it on, since it ships inactive.
+    if have_cmd firewall-cmd && firewall-cmd --state >/dev/null 2>&1; then
+        firewall-cmd --permanent --add-port=3389/tcp >/dev/null \
+            && firewall-cmd --reload >/dev/null \
+            && log "firewalld: opened tcp/3389 for the remote desktop" \
+            || warn "could not open tcp/3389 in firewalld"
+    elif have_cmd ufw && ufw status 2>/dev/null | grep -q '^Status: active'; then
+        ufw allow 3389/tcp >/dev/null \
+            && log "ufw: opened tcp/3389 for the remote desktop" \
+            || warn "could not open tcp/3389 in ufw"
+    fi
 fi
 
 # ------------------------------------------------- sesman's Xorg log path
@@ -327,4 +394,8 @@ systemctl daemon-reload
 systemctl enable xrdp xrdp-sesman
 systemctl restart xrdp
 
-log "enhanced session ready - reconnect the VM window after the next reboot"
+if [[ "$HYPERVISOR" == "hyperv" ]]; then
+    log "enhanced session ready - reconnect the VM window after the next reboot"
+else
+    log "remote desktop ready on tcp/3389 - connect an RDP client after the next reboot"
+fi

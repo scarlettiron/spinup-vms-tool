@@ -1,4 +1,4 @@
-// Installed as /etc/polkit-1/rules.d/45-allow-colord.rules by 20-hyperv.sh.
+// Installed as /etc/polkit-1/rules.d/45-allow-colord.rules by 20-guest-tools.sh.
 // Stops GNOME asking for authentication the moment an xrdp session starts.
 // Fedora's polkit dropped the older .pkla format, so this is the JS equivalent
 // of the rule the Ubuntu blueprint installs.

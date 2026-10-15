@@ -21,7 +21,10 @@ if ! is_true "${VM_INSTALL_DESKTOP:-true}"; then
     return 0 2>/dev/null || exit 0
 fi
 
-POSTMAN_URL="${VM_POSTMAN_URL:-https://dl.pstmn.io/download/latest/linux_64}"
+# Postman names its builds linux_64 and linux_arm64.
+postman_build=linux_64
+[[ "$GUEST_ARCH" == "aarch64" ]] && postman_build=linux_arm64
+POSTMAN_URL="${VM_POSTMAN_URL:-https://dl.pstmn.io/download/latest/${postman_build}}"
 POSTMAN_DIR=/opt/Postman
 
 if [[ -x "$POSTMAN_DIR/Postman" ]]; then

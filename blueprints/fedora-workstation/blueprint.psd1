@@ -90,6 +90,15 @@
         InstallSource = 'url --mirrorlist="https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$releasever&arch=$basearch"'
 
         PowerOffAfterInstall  = $true
+
+
+        # Hyper-V's guest daemons. They stay in Packages so they are there from the
+
+        # first boot on Hyper-V; Vmynt leaves them out on other hypervisors, where
+
+        # they would only wait for a Hyper-V device that never appears.
+
+        HyperVOnlyPackages = @('hyperv-daemons')
         InstallTimeoutMinutes = 90
     }
 
@@ -133,5 +142,35 @@
             # environment by the time 10-desktop.sh runs.
             DesktopPackage = '@workstation-product-environment'
         }
+    }
+
+    # ---------------------------------------------------------------- arm64
+    # Applied over everything above when the guest is arm64, which is every
+    # guest on an Apple Silicon Mac. Tables merge key by key and lists replace
+    # outright, so Packages below is the whole list, not an addition. The
+    # PowerShell tool only builds x86_64 and ignores this block.
+    #
+    # Fedora publishes the same netinst for aarch64 beside the x86_64 one, with
+    # its own CHECKSUM file, so only the directory changes. The install source
+    # already says $basearch and follows by itself.
+    Arm64 = @{
+        Media = @{
+            IsoBaseUrl = 'https://download.fedoraproject.org/pub/fedora/linux/releases/{Release}/Everything/aarch64/iso/'
+        }
+
+        # As above, less hyperv-daemons: there is no Hyper-V on an arm64 Mac.
+        Packages = @(
+            '@^workstation-product-environment'
+            '@standard'
+            'openssh-server'
+            'curl'
+            'wget'
+            'ca-certificates'
+            'gnupg2'
+            'git'
+            'jq'
+            'unzip'
+            'python3'
+        )
     }
 }

@@ -61,6 +61,18 @@
         # The installer powers off when done so the host can eject the ISO
         # deterministically instead of racing the post-install reboot.
         PowerOffAfterInstall = $true
+
+        # Hyper-V's guest daemons. They stay in Packages so they are there from the
+        # first boot on Hyper-V; Vmynt leaves them out on other hypervisors, where
+        # they would only wait for a Hyper-V device that never appears.
+        HyperVOnlyPackages = @('linux-tools-virtual', 'linux-cloud-tools-virtual')
+
+        # Ubuntu's installer stops at "Continue with autoinstall? (yes|no)"
+        # unless the word 'autoinstall' is on the kernel command line, and a
+        # stock ISO's boot menu can't have it. Vmynt types this answer into the
+        # VM's keyboard once the boot menu has passed. (The PowerShell tool does
+        # not, so there the answer has to be typed in the VM window.)
+        ConfirmText = 'yes'
         InstallTimeoutMinutes = 60
     }
 
@@ -91,5 +103,35 @@
             # to any other blueprint: dnf has never heard of 'ubuntu-desktop'.
             DesktopPackage = 'ubuntu-desktop'
         }
+    }
+
+    # ---------------------------------------------------------------- arm64
+    # Applied over everything above when the guest is arm64, which is every
+    # guest on an Apple Silicon Mac. Tables merge key by key and lists replace
+    # outright, so Packages below is the whole list, not an addition. The
+    # PowerShell tool only builds x86_64 and ignores this block. ubuntu-server
+    # inherits it along with everything else.
+    #
+    # releases.ubuntu.com carries amd64 only. The arm64 server ISO lives on
+    # cdimage, with a SHA256SUMS of the same format that also lists the
+    # +largemem and raspi images; the pattern below matches only the plain one.
+    Arm64 = @{
+        Media = @{
+            IsoBaseUrl     = 'https://cdimage.ubuntu.com/releases/{Release}/release/'
+            IsoNamePattern = '*live-server-arm64.iso'
+        }
+
+        # As above, less the Hyper-V tools: linux-cloud-tools is built for amd64
+        # only, and there is no Hyper-V on an arm64 Mac.
+        Packages = @(
+            'openssh-server'
+            'curl'
+            'wget'
+            'ca-certificates'
+            'gnupg'
+            'git'
+            'jq'
+            'unzip'
+        )
     }
 }

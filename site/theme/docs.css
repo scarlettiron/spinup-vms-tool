@@ -1,0 +1,242 @@
+/*Vmynt
+  Licensed under the MIT License. See the LICENSE file in the project root.
+  Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+  Contributors:
+  Scarlett A. Scott (codescarlett)*/
+
+/*Page layouts. Loaded after site.css.
+  .page   one centered column, used by the home page and short pages
+  .layout a sidebar on the left and the content on the right, used by the docs*/
+
+/* Headings and text */
+h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1.1;
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: 1.6rem;
+  margin: 0 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1.1rem;
+  margin: 1.75rem 0 0.6rem;
+}
+
+.lede {
+  font-size: 1.2rem;
+  color: var(--muted);
+  max-width: 46rem;
+}
+
+p,
+ul,
+ol {
+  max-width: 46rem;
+}
+
+li {
+  margin: 0.2rem 0;
+}
+
+/*The small "Docs / Commands" trail above a page title.*/
+.crumbs {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+.crumbs a {
+  color: var(--muted);
+}
+
+/* Single column page */
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 5rem;
+}
+
+/*The big opening block on the home page.*/
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: center;
+  padding: 2.5rem 0 3rem;
+}
+
+/*Grid children may shrink below their content's width, so wide terminals
+  scroll inside themselves instead of pushing the page sideways.*/
+.hero > * {
+  min-width: 0;
+}
+
+.hero h1 {
+  font-size: clamp(2.2rem, 5.5vw, 3.4rem);
+}
+
+.hero h1 em {
+  font-style: normal;
+  color: var(--primary);
+}
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 0 0 0.75rem;
+}
+
+/* Sidebar layout */
+.layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 2.5rem;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 6rem;
+}
+
+nav.side {
+  position: sticky;
+  top: 5rem;
+  align-self: start;
+  height: max-content;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+}
+
+nav.side .group {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 1.25rem 0 0.5rem;
+}
+
+nav.side .group:first-child {
+  margin-top: 0;
+}
+
+nav.side a {
+  display: block;
+  padding: 0.35rem 0.7rem;
+  border-radius: 0.4rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+  border-left: 2px solid transparent;
+}
+
+nav.side a:hover {
+  color: var(--text);
+  background: var(--surface);
+  text-decoration: none;
+}
+
+nav.side a.active {
+  color: var(--text);
+  background: var(--surface);
+  border-left-color: var(--primary);
+}
+
+main {
+  min-width: 0;
+}
+
+section {
+  scroll-margin-top: 5rem;
+  padding: 1.5rem 0 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+section:last-child {
+  border-bottom: none;
+}
+
+/*A command heading on the reference page: name, then its badge.*/
+.cmd-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.cmd-head h2,
+.cmd-head h3 {
+  margin: 0;
+  font-family: var(--mono);
+}
+
+.aliases {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0.8rem;
+}
+
+/*Definition lists for flags.*/
+dl.flags {
+  max-width: 46rem;
+  margin: 0.75rem 0;
+}
+
+dl.flags dt {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  color: var(--text);
+  margin-top: 0.6rem;
+}
+
+dl.flags dd {
+  margin: 0.15rem 0 0 1.25rem;
+  color: var(--muted);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding-top: 1rem;
+  }
+}
+
+/*On narrow screens the sidebar becomes a row of links you can swipe sideways.*/
+@media (max-width: 820px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    padding-top: 1rem;
+  }
+
+  nav.side {
+    position: static;
+    display: flex;
+    gap: 0.25rem;
+    overflow-x: auto;
+    max-height: none;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  nav.side .group {
+    display: none;
+  }
+
+  nav.side a {
+    white-space: nowrap;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav.side a.active {
+    border-left: none;
+    border-bottom-color: var(--primary);
+  }
+}

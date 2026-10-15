@@ -1,0 +1,195 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: CI
+
+#Runs on every pull request and on every push to main. Nothing here publishes
+#anything: releases live in release.yml (started by version-bump.yml or a v* tag).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  #Lets you run the checks by hand from the Actions tab, on any branch.
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  #A newer push makes an older run on the same branch pointless.
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  #Formatting only needs checking once; it is the same on every OS.
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+  #Clippy and the tests run on all three OSes. Each OS talks to a different
+  #hypervisor (Hyper-V, libvirt, vfkit) and has its own platform code, so a
+  #mistake in the Windows or macOS parts only shows up when built there.
+  test:
+    name: clippy + test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      #One OS failing should not hide what the others do.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      #Keeps compiled dependencies between runs, so a run takes minutes, not ten.
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      #--locked fails when Cargo.lock is out of date with Cargo.toml, which is
+      #what the release builds use too.
+      - name: Build
+        run: cargo build --locked --all-targets
+
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Test
+        run: cargo test --locked
+
+      #The same commands the package managers run after installing, so a
+      #broken --version or completion command fails here rather than in a
+      #Homebrew or Chocolatey review.
+      - name: Smoke test the binary
+        shell: bash
+        run: |
+          #The binary's name comes from Cargo.toml (jq is on every runner image).
+          name="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')"
+          bin="target/debug/$name"
+          "$bin" --version
+          "$bin" --help > /dev/null
+          for shell in bash zsh fish powershell; do
+            "$bin" completion "$shell" > /dev/null
+          done
+
+  #The oldest Rust the crate promises to build with (rust-version in
+  #Cargo.toml). Read from the file, so raising it there is the only edit.
+  msrv:
+    name: minimum Rust version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read rust-version from Cargo.toml
+        id: msrv
+        run: |
+          msrv="$(python3 -c 'import tomllib; print(tomllib.load(open("Cargo.toml","rb"))["package"]["rust-version"])')"
+          echo "rust $msrv"
+          echo "version=$msrv" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Rust ${{ steps.msrv.outputs.version }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: msrv
+
+      - name: Check
+        run: cargo check --locked --all-targets
+
+  #The Homebrew, Chocolatey, winget and apt scripts, tested without publishing:
+  #templates rendered against a made up release, and a real signed apt
+  #repository built from throwaway packages and checked with apt-get. Also the
+  #versioning script, and the changelog it edits.
+  packaging:
+    name: packaging + versioning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+
+      #Ruby is on the runner image, so the test also syntax checks the formula.
+      - name: Run packaging/test.sh
+        run: bash packaging/test.sh
+
+      - name: Test packaging/version.py
+        run: python packaging/version.py selftest
+
+      #Every pull request should say what it changed under "## [Unreleased]",
+      #which version-bump.yml turns into the next release's notes. The heading
+      #itself must always be there for that to work.
+      - name: Check CHANGELOG.md
+        run: |
+          if ! grep -q '^## \[Unreleased\]' CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::CHANGELOG.md needs a '## [Unreleased]' heading near the top."
+            exit 1
+          fi
+          version="$(python packaging/version.py current)"
+          #A released version (no dash) must have its own section by the time
+          #it reaches main; a prerelease may not, since rc notes are optional.
+          if [[ "$version" != *-* ]] && ! python packaging/version.py notes "$version" > /dev/null; then
+            echo "::error file=CHANGELOG.md::Cargo.toml is at $version but CHANGELOG.md has no '## [$version]' section."
+            exit 1
+          fi
+
+  #Workflow files, shell scripts and the website: the things cargo cannot check.
+  lint:
+    name: workflows, scripts and site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      #actionlint checks the workflow files (and the shell inside them, with
+      #shellcheck, which is on the runner image).
+      - name: actionlint
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          ./actionlint -color
+
+      #The guest bootstrap scripts run as root inside every VM, so a real bug
+      #there breaks every build. Only errors fail the check: the scripts are
+      #older than this pipeline, and style warnings are not worth the churn.
+      - name: shellcheck
+        run: |
+          shellcheck --version
+          find blueprints packaging assets -name '*.sh' -print0 \
+            | xargs -0 shellcheck --severity=error --shell=bash
+
+      #Broken links, missing anchors and missing SEO tags in site/.
+      - name: Check the website
+        run: python3 packaging/check_site.py

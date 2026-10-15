@@ -1,0 +1,226 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: End-to-end
+
+#Builds a real VM every night, the way a user would: init, create, wait for the
+#guest's bootstrap to finish, run a command in it, snapshot, stop, remove.
+#
+#GitHub's Linux runners expose /dev/kvm, so this runs the libvirt backend for
+#real. Windows and macOS runners cannot run nested VMs, so Hyper-V and vfkit get
+#the manual checklist in docs/releasing.md instead.
+#
+#It takes most of an hour (an OS install, then the toolchain bootstrap), which is
+#why it is nightly and on demand rather than on every pull request.
+on:
+  schedule:
+    #03:17 UTC every day. Not on the hour, when GitHub's scheduler is busiest.
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      blueprint:
+        description: "Blueprint to build"
+        required: false
+        type: string
+        default: ubuntu-server
+
+#One nested VM at a time is all a runner can hold.
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  BLUEPRINT: ${{ inputs.blueprint || 'ubuntu-server' }}
+
+jobs:
+  libvirt:
+    name: libvirt (${{ inputs.blueprint || 'ubuntu-server' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      #The runner image ships about 14 GB free; an OS install plus the ISO
+      #needs more headroom than that. These are toolchains this job never uses.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force > /dev/null || true
+          df -h /
+
+      - name: Install libvirt and QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            qemu-kvm qemu-utils libvirt-daemon-system libvirt-clients ovmf \
+            avahi-daemon libnss-mdns openssh-client
+          #Let every user open /dev/kvm (the runner user is not in the kvm group,
+          #and group changes only apply to new logins).
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+
+      #vmynt uses the system connection (qemu:///system), like a desktop install.
+      #A real user is in the libvirt group; here the socket is opened up instead,
+      #for the same reason as /dev/kvm above.
+      - name: Start libvirt and its default network
+        run: |
+          sudo usermod -aG libvirt,kvm "$USER"
+          sudo systemctl enable --now libvirtd.socket libvirtd.service || sudo systemctl start libvirtd
+          sudo virsh net-start default 2>/dev/null || true
+          sudo virsh net-autostart default
+          for sock in /run/libvirt/*-sock /var/run/libvirt/*-sock; do
+            [ -S "$sock" ] && sudo chmod 666 "$sock"
+          done
+          echo "LIBVIRT_DEFAULT_URI=qemu:///system" >> "$GITHUB_ENV"
+          virsh --connect qemu:///system list --all
+          virsh --connect qemu:///system net-list --all
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: |
+          cargo build --release --locked
+          name="$(python3 packaging/brand.py --get name)"
+          #Put it on the PATH as the plain command name, like an installed copy.
+          mkdir -p "$RUNNER_TEMP/bin"
+          cp "target/release/$name" "$RUNNER_TEMP/bin/"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          echo "APP=$name" >> "$GITHUB_ENV"
+          echo "APP_DIR=$HOME/.$name" >> "$GITHUB_ENV"
+
+      - name: Doctor
+        run: $APP doctor || true
+
+      #The install ISO is a 2-3 GB download from the vendor. It changes only at a
+      #point release, so it is cached by month.
+      - name: Month for the ISO cache
+        id: month
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache install media
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.APP_DIR }}/isos
+          key: iso-${{ env.BLUEPRINT }}-${{ steps.month.outputs.month }}
+
+      - name: Init a project
+        run: |
+          mkdir -p "$RUNNER_TEMP/project"
+          cd "$RUNNER_TEMP/project"
+          hash="$(echo devpass | $APP hash --stdin)"
+          $APP init --name e2e --blueprint "$BLUEPRINT" --username dev --password-hash "$hash" -y
+          #Smaller than the blueprint's defaults, so the VM fits on a runner
+          #(4 CPUs and 16 GB of RAM) beside the host.
+          {
+            echo "cpus: 3"
+            echo "memoryGB: 8"
+            echo "diskGB: 40"
+          } >> ".$APP/vm.config.local.yaml"
+          $APP config --validate
+          $APP create --render
+
+      - name: Create the VM
+        timeout-minutes: 75
+        working-directory: ${{ runner.temp }}/project
+        run: $APP create -y
+
+      #Bootstrap runs inside the guest after the install. status --json reports
+      #it as complete, failed, progress or unknown (an array when the project
+      #has several machines, so take every VM's value).
+      - name: Wait for bootstrap
+        timeout-minutes: 60
+        working-directory: ${{ runner.temp }}/project
+        run: |
+          while true; do
+            state="$($APP status --json 2>/dev/null | jq -r 'if type == "array" then .[].bootstrap else .bootstrap end' | sort -u | tr '\n' ' ' || true)"
+            echo "$(date +%H:%M:%S) bootstrap: ${state:-no answer yet}"
+            case "$state" in
+              *failed*) echo "::error::bootstrap failed inside the guest"; exit 1 ;;
+              "complete ") break ;;
+            esac
+            sleep 30
+          done
+          $APP status
+
+      - name: Run a command in the VM
+        working-directory: ${{ runner.temp }}/project
+        run: |
+          $APP exec -- uname -a
+          $APP exec -- cat /etc/os-release
+
+      - name: List
+        run: |
+          [ -z "${APP:-}" ] || $APP list
+          $APP list --json | jq .
+
+      - name: Snapshot
+        working-directory: ${{ runner.temp }}/project
+        run: |
+          $APP stop
+          $APP snapshot create e2e
+          $APP snapshot list
+
+      - name: Restart from the snapshot
+        working-directory: ${{ runner.temp }}/project
+        run: |
+          $APP snapshot restore e2e -y
+          $APP start
+          $APP stop
+
+      #What to look at when it failed: the VM's own folder (console log, seed,
+      #rendered files), the guest's bootstrap report if it can still be reached,
+      #and what libvirt thinks of the domain.
+      - name: Collect diagnostics
+        if: failure()
+        working-directory: ${{ runner.temp }}/project
+        run: |
+          out="$RUNNER_TEMP/diagnostics"
+          mkdir -p "$out"
+          cp -r "$APP_DIR/vms" "$out/" 2>/dev/null || true
+          $APP status --verbose > "$out/status.txt" 2>&1 || true
+          $APP logs > "$out/guest-logs.txt" 2>&1 || true
+          $APP exec -- sudo cat /var/log/vm-bootstrap-report.txt > "$out/bootstrap-report.txt" 2>&1 || true
+          $APP exec -- sudo cat /var/log/vm-bootstrap.log > "$out/bootstrap.log" 2>&1 || true
+          for domain in $(virsh list --all --name); do
+            virsh dumpxml "$domain" > "$out/$domain.xml" 2>&1 || true
+            virsh screenshot "$domain" "$out/$domain.ppm" > /dev/null 2>&1 || true
+          done
+          sudo cp -r /var/log/libvirt/qemu "$out/libvirt-qemu-logs" 2>/dev/null || true
+          sudo chown -R "$USER" "$out"
+          #Seed disks and rendered configs carry the password hash; this is a
+          #throwaway one (devpass), so that is fine for a test VM.
+          find "$out" \( -name '*.img' -o -name '*.qcow2' -o -name '*.iso' \) -delete
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-diagnostics-${{ env.BLUEPRINT }}
+          path: ${{ runner.temp }}/diagnostics
+          retention-days: 14
+
+      #Always last, also after a failure, so a broken run frees the disk.
+      - name: Remove the VM
+        if: always()
+        working-directory: ${{ runner.temp }}/project
+        run: |
+          if [ -n "${APP:-}" ] && [ -d ".$APP" ]; then
+            $APP remove -y --delete-disks
+          fi
+          [ -z "${APP:-}" ] || $APP list

@@ -11,7 +11,8 @@
 # next to it in vm.config.yaml, and the full reference is
 # docs/configuration.md.
 #
-# Check a change without building anything:  .\vm.ps1 render
+# Check a change without building anything:  vmynt create --render
+# (or the PowerShell tool's render command)
 
 # ---------------------------------------------------------------------------
 #  QUICK SETTINGS                                            @user-editable
@@ -44,7 +45,7 @@ projectName: scott
 # hostname: scott-testbox
 
 username: scarlett              # your Linux account
-realName: Scott Scarlett
+realName: Ada Lovelace
 password: pick-your-own
 
 cpus:     8
@@ -53,9 +54,9 @@ diskGB:   25                    # drive C:, the system disk. Others: vm.dataDisk
 
 # timezone: Europe/London
 
-gitName:        Scott Scarlett
-gitEmail:       scott@example.com
-githubUsername: scottscarlett
+gitName:        Ada Lovelace
+gitEmail:       ada@example.com
+githubUsername: adalovelace
 
 # Cloned into ~/src on first boot. Drop the whole block to clone nothing.
 repos:
@@ -108,7 +109,8 @@ repos:
 # dbAdminerPort:   3800
 
 # ---- copying files in -----------------------------------------------------
-# A directory on this laptop copied into the guest. Relative to this repo.
+# A directory on this laptop copied into the guest. Relative to the project
+# folder (this repo, for the PowerShell tool).
 # Over 10 MB warns, over 64 MB fails: it rides in the seed disk.
 # copyFrom: files
 # copyTo:   '~'                 # blank means the primary user's home
@@ -145,7 +147,9 @@ repos:
 # sshKeyMode:          auto      # auto | generate | copy | none
 # isoPath:             C:\ISO\ubuntu-24.04.3-live-server-amd64.iso
 # switch:              'Default Switch'
-# vmPath:              C:\VMs
+# vmPath:              ~/.vmynt/vms   # Vmynt's default; the PowerShell tool used C:\VMs
+# hypervisor:          auto           # Vmynt only: auto, hyperv, libvirt or vfkit
+# arch:                auto           # Vmynt only: auto, x86_64 or arm64
 # maxMemoryGB:         24
 # enhancedSession:     no
 
@@ -156,11 +160,14 @@ repos:
 #  worth overriding; the rest are included for completeness.
 # ---------------------------------------------------------------------------
 
-# ------------------------------------------------------------------- Hyper-V
-# @advanced except dataDisks. nestedVirtualization forces static memory, so
+# ------------------------------------------------------------------------ VM
+# @advanced except dataDisks. switchName is Hyper-V only; network and
+# storagePool are libvirt (Linux) only, where the disks live in the pool. nestedVirtualization forces static memory, so
 # whatever memoryGB says is claimed from the host the whole time it runs.
 # vm:
-#   path:                   C:\VMs
+#   path:                   ~/.vmynt/vms   # the PowerShell tool used C:\VMs
+#   network:                default
+#   storagePool:            default
 #   memoryMinimumGB:        4
 #   memoryMaximumGB:        16
 #   dynamicMemory:          true
@@ -330,7 +337,8 @@ repos:
 # ------------------------------------------------------------------ Machines
 # A fleet. Each key is the VM name and hostname unless overridden, and all of
 # them share one switch so <hostname>.local resolves between them. Quick
-# settings work in here too. Build with  .\vm.ps1 create -Machine <key>, or -All.
+# settings work in here too. Build one with  vmynt create <key>, or every one
+# with  vmynt create  inside the project.
 #
 # This MERGES with the team's machines block rather than replacing it, so adding
 # a key here adds a machine to the fleet. Override an existing one by repeating
@@ -362,6 +370,6 @@ repos:
 # published checksum file at build time, so nothing here needs updating when a
 # new one ships.
 # iso:
-#   directory:      C:\ISO        # where downloaded ISOs are cached
+#   directory:      ~/.vmynt/isos # where downloaded ISOs are cached (PowerShell tool: C:\ISO)
 #   path:           ''            # explicit .iso path; skips download + lookup
 #   verifyChecksum: true          # leave on: a bad download is deleted, not used

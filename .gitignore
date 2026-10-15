@@ -16,3 +16,6 @@ iso/
 ssh_keys/*
 !ssh_keys/.gitignore
 !ssh_keys/README.md
+
+# Rust build output. Cargo.lock IS committed: the release workflow builds with --locked.
+/target/

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<!--
+  Vmynt
+  Licensed under the MIT License. See the LICENSE file in the project root.
+  Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+  Contributors:
+  Scarlett A. Scott (codescarlett)
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vmynt command reference — every command, flag and alias</title>
+    <meta name="description" content="The complete Vmynt CLI reference: init, create, start, stop, open, ssh, list, status, snapshot and more, with aliases, flags, global options and exit codes." />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="creator" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="publisher" content="codescarlett" />
+    <meta name="theme-color" content="#0c0f0e" />
+    <link rel="author" href="https://codescarlett.com" />
+    <link rel="canonical" href="https://scarlettiron.github.io/vmynt/commands/" />
+
+    <link rel="icon" href="../theme/logo/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../theme/logo/favicon-32.png" />
+    <link rel="apple-touch-icon" href="../theme/logo/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vmynt" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://scarlettiron.github.io/vmynt/commands/" />
+    <meta property="og:title" content="Vmynt command reference — every command, flag and alias" />
+    <meta property="og:description" content="The complete Vmynt CLI reference: init, create, start, stop, open, ssh, list, status, snapshot and more, with aliases, flags, global options and exit codes." />
+    <meta property="og:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vmynt command reference — every command, flag and alias" />
+    <meta name="twitter:description" content="The complete Vmynt CLI reference: init, create, start, stop, open, ssh, list, status, snapshot and more, with aliases, flags, global options and exit codes." />
+    <meta name="twitter:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta name="twitter:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Vmynt",
+            "item": "https://scarlettiron.github.io/vmynt/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Commands",
+            "item": "https://scarlettiron.github.io/vmynt/commands/"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Vmynt command reference",
+        "description": "The complete Vmynt CLI reference: init, create, start, stop, open, ssh, list, status, snapshot and more, with aliases, flags, global options and exit codes.",
+        "url": "https://scarlettiron.github.io/vmynt/commands/",
+        "inLanguage": "en",
+        "dateModified": "2026-10-13",
+        "image": "https://scarlettiron.github.io/vmynt/theme/logo/og-image.png",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        },
+        "publisher": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="../theme/site.css" />
+    <link rel="stylesheet" href="../theme/docs.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site">
+      <a class="brand" href="../" aria-label="Vmynt home">
+        <img src="../theme/logo/wordmark-header.png" alt="Vmynt" width="288" height="96" />
+      </a>
+      <nav class="links" aria-label="Main">
+        <a href="../docs/">Docs</a>
+        <a class="hide-sm" href="../commands/" aria-current="page">Commands</a>
+        <a href="../install/">Install</a>
+        <a class="hide-sm" href="../demo/">Demo</a>
+        <a class="hide-sm" href="../roadmap/">Roadmap</a>
+        <a href="https://github.com/scarlettiron/vmynt">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="layout" id="content">
+      <nav class="side" aria-label="Commands">
+        <div class="group">Reference</div>
+        <a href="#overview">Overview</a>
+        <a href="#global">Global options</a>
+        <a href="#targets">Choosing a VM</a>
+        <a href="#exit-codes">Exit codes</a>
+        <div class="group">Project</div>
+        <a href="#init">init</a>
+        <a href="#config">config</a>
+        <div class="group">Lifecycle</div>
+        <a href="#create">create</a>
+        <a href="#start">start</a>
+        <a href="#stop">stop</a>
+        <a href="#restart">restart</a>
+        <a href="#poweroff">poweroff</a>
+        <a href="#remove">remove</a>
+        <div class="group">Use</div>
+        <a href="#open">open</a>
+        <a href="#ssh">ssh</a>
+        <a href="#exec">exec</a>
+        <a href="#logs">logs</a>
+        <div class="group">Inspect</div>
+        <a href="#list">list</a>
+        <a href="#status">status</a>
+        <div class="group">Snapshots</div>
+        <a href="#snapshot">snapshot</a>
+        <div class="group">Tools</div>
+        <a href="#blueprints">blueprints</a>
+        <a href="#hash">hash</a>
+        <a href="#doctor">doctor</a>
+        <a href="#clean">clean</a>
+        <a href="#completion">completion</a>
+        <a href="#version">version</a>
+        <a href="#help">help</a>
+      </nav>
+
+      <main>
+        <section id="overview" aria-labelledby="commands-title">
+          <p class="crumbs"><a href="../">Vmynt</a> / Commands</p>
+          <h1 id="commands-title">Command reference</h1>
+          <p class="lede">Every <code>vmynt</code> command, its aliases and its options. Run
+            <code>vmynt help &lt;command&gt;</code> for the same detail in your terminal.</p>
+          <p>Every command works on all three hypervisors: Hyper-V on Windows, KVM through libvirt on
+            Linux, and Apple Virtualization through vfkit on macOS. Where a backend differs, the command
+            says so below.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span></div>
+            <pre>vmynt &lt;command&gt; [name] [options]</pre>
+          </div>
+        </section>
+
+        <section id="global" aria-labelledby="global-title">
+          <h2 id="global-title">Global options</h2>
+          <p>These work with every command.</p>
+          <dl class="flags">
+            <dt>-h, --help</dt><dd>Help for Vmynt, or for the command it follows.</dd>
+            <dt>-v, -V, --version</dt><dd>Print the version. (<code>-v</code> is the version, so verbose output has no short flag.)</dd>
+            <dt>--verbose</dt><dd>More detail, and the full chain of causes on errors.</dd>
+            <dt>-q, --quiet</dt><dd>Only print errors.</dd>
+            <dt>--json</dt><dd>Machine-readable output, for <code>list</code>, <code>status</code>, <code>config</code>, <code>version</code> and <code>blueprints</code>. The JSON shape is stable; the human output may change.</dd>
+            <dt>--no-color</dt><dd>Plain output. The <code>NO_COLOR</code> environment variable does the same. Color is only used when printing to a terminal.</dd>
+            <dt>-y, --yes</dt><dd>Don't ask for confirmation. Without it, destructive commands refuse to run when there is no terminal to ask in.</dd>
+          </dl>
+          <p><code>--all</code> is not global: it belongs to the commands that act on several VMs
+            (<code>start</code>, <code>stop</code>, <code>restart</code>, <code>remove</code>,
+            <code>status</code>, and <code>create</code>, where it means every machine of the current
+            project), so it never shows up on a command that would ignore it.</p>
+          <p>Mistype a command and Vmynt suggests the closest one: <code>vmynt strat</code> asks if you meant
+            <code>start</code>.</p>
+        </section>
+
+        <section id="targets" aria-labelledby="targets-title">
+          <h2 id="targets-title">Choosing a VM</h2>
+          <ol>
+            <li><code>vmynt &lt;command&gt; &lt;name&gt;</code>: the VM, machine or hostname with that name, from any folder.</li>
+            <li><code>vmynt &lt;command&gt;</code> inside a project: that project's VM, or all of its machines.
+              <code>open</code>, <code>ssh</code>, <code>exec</code>, <code>logs</code> and <code>snapshot</code>
+              need one VM and ask you to name it when there are several.</li>
+            <li><code>--all</code>: every VM Vmynt built on this computer.</li>
+          </ol>
+        </section>
+
+        <section id="exit-codes" aria-labelledby="exit-title">
+          <h2 id="exit-title">Exit codes</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Code</th><th scope="col">Means</th></tr></thead>
+              <tbody>
+                <tr><td><code>0</code></td><td>Success</td></tr>
+                <tr><td><code>1</code></td><td>The command failed</td></tr>
+                <tr><td><code>2</code></td><td>Usage error: unknown command, option or value</td></tr>
+                <tr><td><code>3</code></td><td>The VM or project was not found</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="init" aria-labelledby="cmd-init">
+          <div class="cmd-head"><h2 id="cmd-init">vmynt init</h2> <span class="badge ok">available</span></div>
+          
+          <p>Create the <code>.vmynt/</code> config in the current folder.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt init [--name &lt;name&gt;] [--blueprint &lt;name&gt;] [options]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--name &lt;name&gt;</dt>
+            <dd>Project name. Default: the folder name. Must be hostname-safe.</dd>
+            <dt>--blueprint &lt;name&gt;</dt>
+            <dd>Blueprint to use. Without it, init shows a list, including <strong>Create my own…</strong>.</dd>
+            <dt>--username &lt;name&gt;</dt>
+            <dd>Primary user in the VM.</dd>
+            <dt>--password-hash &lt;hash&gt;</dt>
+            <dd>A SHA-512 crypt hash, as made by <code>vmynt hash</code>. Without it, init asks for a password and hashes it.</dd>
+            <dt>--no-user</dt>
+            <dd>Skip the user questions; fill in <code>vm.config.local.yaml</code> later.</dd>
+            <dt>--import &lt;path&gt;</dt>
+            <dd>Copy <code>vm.config.yaml</code> and <code>vm.config.local.yaml</code> from an existing checkout of the PowerShell tool.</dd>
+            <dt>--force</dt>
+            <dd>Run even though <code>.vmynt/</code> exists. Rewrites the example files only; never touches your local file.</dd>
+            <dt>-y, --yes</dt>
+            <dd>Accept defaults. With no terminal, a missing answer is an error.</dd>
+          </dl>
+          <p>See <a href="../docs/#init">How init works</a>.</p>
+        </section>
+        <section id="config" aria-labelledby="cmd-config">
+          <div class="cmd-head"><h2 id="cmd-config">vmynt config</h2> <span class="badge ok">available</span></div>
+          
+          <p>Show the merged configuration for the current project, after every layer is applied.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt config [--machine name] [--validate] [--json]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--machine</dt>
+            <dd>Show the config for one entry of the <code>machines:</code> block.</dd>
+            <dt>--validate</dt>
+            <dd>Run every check <code>create</code> runs: unknown keys (with suggestions), ranges, blueprint and OS version, data disks, database, files to copy, hooks, repos and SSH keys. A missing user is a warning here and an error for <code>create</code>.</dd>
+            <dt>--json</dt>
+            <dd>Print the merged config as JSON.</dd>
+          </dl>
+          
+        </section>
+        <section id="create" aria-labelledby="cmd-create">
+          <div class="cmd-head"><h2 id="cmd-create">vmynt create</h2> <span class="badge ok">available</span></div>
+          <p class="aliases">Aliases: <code>new</code>, <code>build</code></p>
+          <p>Build the VM from config: download and verify the installer, install unattended, provision on first boot.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt create [name] [--render] [--force] [--no-checkpoint] [--all]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--render</dt>
+            <dd>Render the seed files into the VM's <code>build/</code> folder for review, without touching the hypervisor or downloading anything.</dd>
+            <dt>--force</dt>
+            <dd>Delete and rebuild the VM if one with that name already exists. Without it, <code>create</code> refuses (exit 2).</dd>
+            <dt>--no-checkpoint</dt>
+            <dd>Skip the <code>clean-install</code> snapshot taken after the OS install.</dd>
+            <dt>--all</dt>
+            <dd>Build every machine of the project in this folder.</dd>
+          </dl>
+          <p>Prints numbered steps on stderr (plan, name check, install media, seed disk, define, install,
+            finish, checkpoint), so <code>--json</code> output stays clean. See
+            <a href="../docs/#create">what create does</a>.</p>
+          
+        </section>
+        <section id="start" aria-labelledby="cmd-start">
+          <div class="cmd-head"><h2 id="cmd-start">vmynt start</h2> <span class="badge ok">available</span></div>
+          <p class="aliases">Aliases: <code>up</code></p>
+          <p>Start or resume a VM. Never provisions: use <code>create</code> for that.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt start [name] [--all]</pre>
+          </div>
+          <p>Waits up to three minutes for the VM to have a network address, and prints its URL.</p>
+          
+          
+        </section>
+        <section id="stop" aria-labelledby="cmd-stop">
+          <div class="cmd-head"><h2 id="cmd-stop">vmynt stop</h2> <span class="badge ok">available</span></div>
+          <p class="aliases">Aliases: <code>halt</code>, <code>down</code></p>
+          <p>Shut the VM down and free its memory. Keeps the disks.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt stop [name] [--save] [--force] [--all]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--save</dt>
+            <dd>Save the VM's memory to disk (hibernate) instead of shutting down. Not available on macOS.</dd>
+            <dt>--force</dt>
+            <dd>Turn it off without a clean shutdown.</dd>
+          </dl>
+          <p>A clean shutdown waits up to two minutes, then says how to force it.</p>
+          
+        </section>
+        <section id="restart" aria-labelledby="cmd-restart">
+          <div class="cmd-head"><h2 id="cmd-restart">vmynt restart</h2> <span class="badge ok">available</span></div>
+          
+          <p>Stop, then start.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt restart [name] [--all]</pre>
+          </div>
+          
+          
+        </section>
+        <section id="poweroff" aria-labelledby="cmd-poweroff">
+          <div class="cmd-head"><h2 id="cmd-poweroff">vmynt poweroff</h2> <span class="badge ok">available</span></div>
+          
+          <p>Shut down every running VM Vmynt built on this computer, to get the memory back.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt poweroff</pre>
+          </div>
+          
+          
+        </section>
+        <section id="remove" aria-labelledby="cmd-remove">
+          <div class="cmd-head"><h2 id="cmd-remove">vmynt remove</h2> <span class="badge ok">available</span></div>
+          <p class="aliases">Aliases: <code>rm</code>, <code>destroy</code></p>
+          <p>Delete the VM and its record. Disks are kept unless you ask. Always asks first; without a terminal it needs <code>--yes</code>.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt remove [name] [--delete-disks] [-y]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--delete-disks</dt>
+            <dd>Delete the VM's disks too.</dd>
+            <dt>-y, --yes</dt>
+            <dd>Don't ask for confirmation.</dd>
+          </dl>
+          
+        </section>
+        <section id="open" aria-labelledby="cmd-open">
+          <div class="cmd-head"><h2 id="cmd-open">vmynt open</h2> <span class="badge ok">available</span></div>
+          <p class="aliases">Aliases: <code>desktop</code>, <code>console</code></p>
+          <p>Start the VM if needed, wait for its desktop, and open it.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt open [name] [--console] [--no-wait]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--console</dt>
+            <dd>Open the raw console instead of the desktop: <code>vmconnect</code> on Windows, <code>virt-viewer</code> on Linux. On macOS a console window exists only for a VM started with one, so stop it first and <code>open --console</code> starts it with a window.</dd>
+            <dt>--no-wait</dt>
+            <dd>Open straight away instead of waiting (up to four minutes) for the guest to be ready.</dd>
+          </dl>
+          <p>The desktop opens in <code>vmconnect</code> (Enhanced Session) on Windows, Microsoft's Windows App on macOS, and FreeRDP or Remmina on Linux.</p>
+        </section>
+        <section id="ssh" aria-labelledby="cmd-ssh">
+          <div class="cmd-head"><h2 id="cmd-ssh">vmynt ssh</h2> <span class="badge ok">available</span></div>
+          
+          <p>Open an interactive shell in the VM with your system's <code>ssh</code>. Vmynt adds its own key to every VM it builds, so this works with no setup.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt ssh [name]</pre>
+          </div>
+          
+          
+        </section>
+        <section id="exec" aria-labelledby="cmd-exec">
+          <div class="cmd-head"><h2 id="cmd-exec">vmynt exec</h2> <span class="badge ok">available</span></div>
+          
+          <p>Run one command in the VM and print its output. The exit code is the command's own.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt exec [-n name] -- &lt;command…&gt;</pre>
+          </div>
+          <dl class="flags">
+            <dt>-n, --name</dt>
+            <dd>The VM or machine (default: the project in this folder).</dd>
+          </dl>
+          
+          
+        </section>
+        <section id="logs" aria-labelledby="cmd-logs">
+          <div class="cmd-head"><h2 id="cmd-logs">vmynt logs</h2> <span class="badge ok">available</span></div>
+          
+          <p>Show the provisioning (bootstrap) and post-start logs from inside the VM.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt logs [name] [-f] [-n lines]</pre>
+          </div>
+          <dl class="flags">
+            <dt>-f, --follow</dt>
+            <dd>Keep printing new lines as they arrive.</dd>
+            <dt>-n, --lines</dt>
+            <dd>How many lines to show from the end (default 100).</dd>
+          </dl>
+          
+        </section>
+        <section id="list" aria-labelledby="cmd-list">
+          <div class="cmd-head"><h2 id="cmd-list">vmynt list</h2> <span class="badge ok">available</span></div>
+          <p class="aliases">Aliases: <code>ls</code></p>
+          <p>Every Vmynt VM on this computer: name, status, blueprint, URL, Adminer and project folder.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt list [--live] [--rescan] [--json]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--live</dt>
+            <dd>Also connect to every running VM at once and add DATABASE and BOOTSTRAP columns.</dd>
+            <dt>--rescan</dt>
+            <dd>Rebuild the project list and VM records from the tags Vmynt puts on each VM in the hypervisor, for when <code>~/.vmynt</code> was lost.</dd>
+            <dt>--json</dt>
+            <dd>Output for scripts.</dd>
+          </dl>
+          <p>STATUS comes from the hypervisor: <code>running</code>, <code>stopped</code>, <code>saved</code>, <code>paused</code> or <code>not created</code>; <code>missing</code> means the project folder is gone.</p>
+        </section>
+        <section id="status" aria-labelledby="cmd-status">
+          <div class="cmd-head"><h2 id="cmd-status">vmynt status</h2> <span class="badge ok">available</span></div>
+          <p class="aliases">Aliases: <code>info</code>, <code>describe</code></p>
+          <p>Full detail for one VM: OS, kernel, address, ssh line, users, hardware, disks and usage, database, Adminer, hooks, GitHub access and provisioning progress.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt status [name] [--follow] [--no-ssh] [--report] [--all] [--json]</pre>
+          </div>
+          <dl class="flags">
+            <dt>--follow</dt>
+            <dd>Redraw every 10 seconds until provisioning completes or fails.</dd>
+            <dt>--no-ssh</dt>
+            <dd>Only report what the hypervisor knows; don't connect to the VM.</dd>
+            <dt>--report</dt>
+            <dd>Also print the guest's own bootstrap report: every step and its result.</dd>
+            <dt>--json</dt>
+            <dd>One object (an array for several VMs) with <code>state</code>, <code>url</code>, <code>ip</code>, <code>bootstrap</code> (<code>complete</code>, <code>failed</code>, <code>progress</code> or <code>unknown</code>), <code>database</code>, <code>adminer</code> and more.</dd>
+          </dl>
+          
+        </section>
+        <section id="snapshot" aria-labelledby="cmd-snapshot">
+          <div class="cmd-head"><h2 id="cmd-snapshot">vmynt snapshot</h2> <span class="badge ok">available</span></div>
+          
+          <p>Save and restore points in a VM's life.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt snapshot create &lt;label&gt; [name]
+vmynt snapshot list [name]
+vmynt snapshot restore &lt;label&gt; [name]
+vmynt snapshot delete &lt;label&gt; [name]</pre>
+          </div>
+          <dl class="flags">
+            <dt>create &lt;label&gt;</dt>
+            <dd>Take a snapshot. Labels are letters, digits, dots, dashes and underscores. On Linux and macOS the VM must be stopped.</dd>
+            <dt>list</dt>
+            <dd>List snapshots (alias <code>ls</code>). <code>create</code> takes one called <code>clean-install</code> after the OS install.</dd>
+            <dt>restore &lt;label&gt;</dt>
+            <dd>Go back to a snapshot. Asks first unless <code>-y</code>.</dd>
+            <dt>delete &lt;label&gt;</dt>
+            <dd>Delete a snapshot (alias <code>rm</code>). Asks first unless <code>-y</code>.</dd>
+          </dl>
+          <p>Hyper-V uses checkpoints; libvirt takes external disk snapshots (restoring needs libvirt 9.9 or newer); macOS clones the disk files on APFS, which is instant and takes no space until they differ.</p>
+          
+        </section>
+        <section id="blueprints" aria-labelledby="cmd-blueprints">
+          <div class="cmd-head"><h2 id="cmd-blueprints">vmynt blueprints</h2> <span class="badge ok">available</span></div>
+          
+          <p>List the blueprints visible from here and where each comes from, or make your own.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt blueprints [--json]
+vmynt blueprints new &lt;name&gt; --from &lt;blueprint&gt;</pre>
+          </div>
+          <dl class="flags">
+            <dt>new &lt;name&gt; --from &lt;blueprint&gt;</dt>
+            <dd>Copy a blueprint into <code>.vmynt/blueprints/&lt;name&gt;/</code> to edit.</dd>
+          </dl>
+          
+        </section>
+        <section id="hash" aria-labelledby="cmd-hash">
+          <div class="cmd-head"><h2 id="cmd-hash">vmynt hash</h2> <span class="badge ok">available</span></div>
+          
+          <p>Make a SHA-512 crypt hash of a password, for <code>passwordHash</code>. Asks for the password without echoing it.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt hash</pre>
+          </div>
+          
+          
+        </section>
+        <section id="doctor" aria-labelledby="cmd-doctor">
+          <div class="cmd-head"><h2 id="cmd-doctor">vmynt doctor</h2> <span class="badge ok">available</span></div>
+          
+          <p>Check this computer is ready: hypervisor, permissions, <code>ssh</code>, desktop client. The last check connects to the hypervisor exactly as <code>create</code> will. Prints a fix for each failure and exits non-zero if something required is missing.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt doctor</pre>
+          </div>
+          
+          
+        </section>
+        <section id="clean" aria-labelledby="cmd-clean">
+          <div class="cmd-head"><h2 id="cmd-clean">vmynt clean</h2> <span class="badge ok">available</span></div>
+          
+          <p>Delete cached installers and files left over from failed builds. Asks first unless <code>-y</code>.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt clean [-y]</pre>
+          </div>
+          
+          
+        </section>
+        <section id="completion" aria-labelledby="cmd-completion">
+          <div class="cmd-head"><h2 id="cmd-completion">vmynt completion</h2> <span class="badge ok">available</span></div>
+          
+          <p>Print a shell completion script.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt completion bash|zsh|fish|powershell</pre>
+          </div>
+          
+          <p>See <a href="../install/#completion">Shell completion</a>.</p>
+        </section>
+        <section id="version" aria-labelledby="cmd-version">
+          <div class="cmd-head"><h2 id="cmd-version">vmynt version</h2> <span class="badge ok">available</span></div>
+          
+          <p>Print the version, commit, build date and platform. The same as <code>vmynt --version</code>.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt version [--json]</pre>
+          </div>
+          
+          
+        </section>
+        <section id="help" aria-labelledby="cmd-help">
+          <div class="cmd-head"><h2 id="cmd-help">vmynt help</h2> <span class="badge ok">available</span></div>
+          
+          <p>List every command, or explain one. <code>vmynt</code> on its own, <code>-h</code> and <code>--help</code> do the same.</p>
+          <div class="code">
+            <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt help [command]</pre>
+          </div>
+          
+          
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <div class="sitelinks">
+        <div>
+          <h2>Learn</h2>
+          <ul>
+            <li><a href="../docs/">Getting started</a></li>
+            <li><a href="../commands/">Command reference</a></li>
+            <li><a href="../configuration/">Configuration</a></li>
+            <li><a href="../blueprints/">Blueprints</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Get it</h2>
+          <ul>
+            <li><a href="../install/">Install</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/releases">Releases</a></li>
+            <li><a href="../demo/">Demo</a></li>
+            <li><a href="../roadmap/">Roadmap</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/scarlettiron/vmynt">Source on GitHub</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/issues">Issues</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/LICENSE">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+      <p>Vmynt is free, open source software under the MIT License. Hyper-V, Apple and other names
+        belong to their owners; Vmynt is not affiliated with them.</p>
+      <!--Author signature, always the last thing on the page.-->
+      <a class="made-by" href="https://codescarlett.com" rel="author">
+        <img src="../theme/logo/codescarlett-dragonfly.svg" alt="" width="46" height="31" />
+        <span><strong>Scarlett A. Scott</strong><span class="handle">codescarlett</span></span>
+      </a>
+    </footer>
+    <script src="../theme/site.js"></script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://scarlettiron.github.io/vmynt/sitemap.xml

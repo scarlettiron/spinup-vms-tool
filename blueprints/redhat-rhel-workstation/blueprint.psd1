@@ -114,6 +114,15 @@
         InstallSource = 'cdrom'
 
         PowerOffAfterInstall  = $true
+
+
+        # Hyper-V's guest daemons. They stay in Packages so they are there from the
+
+        # first boot on Hyper-V; Vmynt leaves them out on other hypervisors, where
+
+        # they would only wait for a Hyper-V device that never appears.
+
+        HyperVOnlyPackages = @('hyperv-daemons')
         # The DVD install is local, so it is faster than the netinst blueprints,
         # but leave headroom for a slow laptop disk.
         InstallTimeoutMinutes = 90
@@ -158,5 +167,36 @@
             # kickstart has already installed the environment.
             DesktopPackage = '@workstation-product-environment'
         }
+    }
+
+    # ---------------------------------------------------------------- arm64
+    # Applied over everything above when the guest is arm64, which is every
+    # guest on an Apple Silicon Mac. Tables merge key by key and lists replace
+    # outright, so Packages below is the whole list, not an addition. The
+    # PowerShell tool only builds x86_64 and ignores this block.
+    #
+    # Red Hat ships an aarch64 binary DVD behind the same account, named like
+    # rhel-9.7-aarch64-dvd.iso, so only the name check changes. Download it
+    # yourself and set isoPath, exactly as on x86_64.
+    Arm64 = @{
+        Media = @{
+            IsoNamePattern = '*aarch64*dvd*.iso'
+        }
+
+        # As above, less hyperv-daemons: there is no Hyper-V on an arm64 Mac.
+        Packages = @(
+            '@^workstation-product-environment'
+            '@standard'
+            'openssh-server'
+            'curl'
+            'wget'
+            'ca-certificates'
+            'gnupg2'
+            'git'
+            'jq'
+            'unzip'
+            'python3'
+            'subscription-manager'
+        )
     }
 }

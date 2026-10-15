@@ -57,7 +57,7 @@ case "$PKG_MANAGER" in
                 log "direnv already installed"
             else
                 log "installing direnv from its release binary (no EL9 package exists)"
-                if curl -fsSL https://github.com/direnv/direnv/releases/latest/download/direnv.linux-amd64 \
+                if curl -fsSL https://github.com/direnv/direnv/releases/latest/download/direnv.linux-${GUEST_DEB_ARCH} \
                         -o /usr/local/bin/direnv; then
                     chmod 0755 /usr/local/bin/direnv
                     selinux_restore /usr/local/bin/direnv

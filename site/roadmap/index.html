@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<!--
+  Vmynt
+  Licensed under the MIT License. See the LICENSE file in the project root.
+  Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+  Contributors:
+  Scarlett A. Scott (codescarlett)
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vmynt roadmap — the road to 1.0</title>
+    <meta name="description" content="The Vmynt roadmap: what shipped in each milestone, from the CLI and release pipeline to Hyper-V, KVM and Apple Virtualization backends, and what 1.0 adds." />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="creator" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="publisher" content="codescarlett" />
+    <meta name="theme-color" content="#0c0f0e" />
+    <link rel="author" href="https://codescarlett.com" />
+    <link rel="canonical" href="https://scarlettiron.github.io/vmynt/roadmap/" />
+
+    <link rel="icon" href="../theme/logo/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../theme/logo/favicon-32.png" />
+    <link rel="apple-touch-icon" href="../theme/logo/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vmynt" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://scarlettiron.github.io/vmynt/roadmap/" />
+    <meta property="og:title" content="Vmynt roadmap — the road to 1.0" />
+    <meta property="og:description" content="The Vmynt roadmap: what shipped in each milestone, from the CLI and release pipeline to Hyper-V, KVM and Apple Virtualization backends, and what 1.0 adds." />
+    <meta property="og:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vmynt roadmap — the road to 1.0" />
+    <meta name="twitter:description" content="The Vmynt roadmap: what shipped in each milestone, from the CLI and release pipeline to Hyper-V, KVM and Apple Virtualization backends, and what 1.0 adds." />
+    <meta name="twitter:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta name="twitter:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Vmynt",
+            "item": "https://scarlettiron.github.io/vmynt/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Roadmap",
+            "item": "https://scarlettiron.github.io/vmynt/roadmap/"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Vmynt roadmap",
+        "description": "The Vmynt roadmap: what shipped in each milestone, from the CLI and release pipeline to Hyper-V, KVM and Apple Virtualization backends, and what 1.0 adds.",
+        "url": "https://scarlettiron.github.io/vmynt/roadmap/",
+        "inLanguage": "en",
+        "dateModified": "2026-10-13",
+        "image": "https://scarlettiron.github.io/vmynt/theme/logo/og-image.png",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        },
+        "publisher": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="../theme/site.css" />
+    <link rel="stylesheet" href="../theme/docs.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site">
+      <a class="brand" href="../" aria-label="Vmynt home">
+        <img src="../theme/logo/wordmark-header.png" alt="Vmynt" width="288" height="96" />
+      </a>
+      <nav class="links" aria-label="Main">
+        <a href="../docs/">Docs</a>
+        <a class="hide-sm" href="../commands/">Commands</a>
+        <a href="../install/">Install</a>
+        <a class="hide-sm" href="../demo/">Demo</a>
+        <a class="hide-sm" href="../roadmap/" aria-current="page">Roadmap</a>
+        <a href="https://github.com/scarlettiron/vmynt">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="layout" id="content">
+      <nav class="side" aria-label="Milestones">
+        <div class="group">Roadmap</div>
+        <a href="#overview">Overview</a>
+        <a href="#m0">M0: Skeleton and release pipeline</a>
+        <a href="#m1">M1: The VM commands and Hyper-V</a>
+        <a href="#m2">M2: Linux and KVM</a>
+        <a href="#m3">M3: macOS and arm64</a>
+        <a href="#m4">M4: 1.0</a>
+        <a href="#later">Later</a>
+      </nav>
+
+      <main>
+        <section id="overview" aria-labelledby="roadmap-title">
+          <p class="crumbs"><a href="../">Vmynt</a> / Roadmap</p>
+          <h1 id="roadmap-title">Roadmap</h1>
+          <p class="lede">Vmynt is the Rust rewrite of a PowerShell tool that built these VMs on Windows.
+            Milestones M0 to M3 are done: every command works on Hyper-V, KVM and Apple Virtualization.
+            What's left is the road to 1.0.</p>
+          <p>The full plan is in the repository's
+            <a href="https://github.com/scarlettiron/vmynt/blob/main/docs/vmynt-design.md">design document</a>.</p>
+        </section>
+
+        <section id="m0" aria-labelledby="m0-title">
+          <div class="cmd-head"><h2 id="m0-title">M0: Skeleton and release pipeline</h2> <span class="badge ok">done</span></div>
+          <ul>
+            <li>Every command in the CLI, with help, <code>-v</code>/<code>--version</code>, shell completion and typo suggestions</li>
+            <li>Config loading, layering and quick settings</li>
+            <li>Built-in blueprints and <code>vmynt blueprints</code> / <code>blueprints new</code></li>
+            <li><code>vmynt init</code>, the full flow, with password hashing</li>
+            <li><code>hash</code>, <code>config</code>, <code>doctor</code>, <code>clean</code>, the project registry</li>
+            <li>Releases through winget, Chocolatey, Homebrew, apt and GitHub Releases, with versioning and changelog automation</li>
+          </ul>
+        </section>
+
+        <section id="m1" aria-labelledby="m1-title">
+          <div class="cmd-head"><h2 id="m1-title">M1: The VM commands and Hyper-V</h2> <span class="badge ok">done</span></div>
+          <ul>
+            <li>Full config resolution and validation: blueprint defaults and overrides, data disks, database, files, hooks, repos, SSH keys</li>
+            <li>Installer download with SHA-256 verification and a cache; the seed disk built in-process (no admin rights)</li>
+            <li>The Hyper-V backend</li>
+            <li><code>create</code>, <code>start</code>, <code>stop</code>, <code>restart</code>, <code>poweroff</code>, <code>remove</code>,
+              <code>open</code>, <code>ssh</code>, <code>exec</code>, <code>logs</code>, <code>status</code>, live <code>list</code>, <code>snapshot</code></li>
+            <li>Vmynt's own SSH key in every VM, so <code>ssh</code> and <code>status</code> need no setup</li>
+            <li>Still to come: the first pass on real Hyper-V hardware</li>
+          </ul>
+        </section>
+
+        <section id="m2" aria-labelledby="m2-title">
+          <div class="cmd-head"><h2 id="m2-title">M2: Linux and KVM</h2> <span class="badge ok">done</span></div>
+          <ul>
+            <li>The libvirt backend, with disks in a storage pool and snapshots</li>
+            <li>Guest tools and remote desktop over TCP for KVM</li>
+            <li>Opening the desktop with FreeRDP or Remmina, the console with virt-viewer</li>
+            <li><code>.deb</code> and <code>.rpm</code> packages, and a nightly end-to-end build in CI</li>
+          </ul>
+        </section>
+
+        <section id="m3" aria-labelledby="m3-title">
+          <div class="cmd-head"><h2 id="m3-title">M3: macOS and arm64</h2> <span class="badge ok">done</span></div>
+          <ul>
+            <li>The vfkit backend on Apple Virtualization, with APFS-clone snapshots</li>
+            <li>arm64 installers for every blueprint, and Chromium where Chrome has no arm64 build</li>
+            <li>Opening the desktop in Windows App</li>
+            <li>Still to come: the first pass on a real Mac</li>
+          </ul>
+        </section>
+
+        <section id="m4" aria-labelledby="m4-title">
+          <div class="cmd-head"><h2 id="m4-title">M4: 1.0</h2> <span class="badge planned">next</span></div>
+          <ul>
+            <li>Real-hardware passes on Hyper-V and macOS</li>
+            <li>Blueprints converted to YAML, and the PowerShell tool retired</li>
+            <li>Signed binaries</li>
+            <li>First stable release</li>
+          </ul>
+        </section>
+
+        <section id="later" aria-labelledby="later-title">
+          <h2 id="later-title">Later</h2>
+          <ul>
+            <li>Blueprints downloadable on their own, instead of all built in</li>
+            <li>A second backend per OS, such as QEMU on macOS, through the <code>hypervisor</code> setting</li>
+          </ul>
+          <p>Not planned for 1.0: Windows guests, remote hosts and cloud providers, and a graphical app.
+            Ideas and help are welcome on <a href="https://github.com/scarlettiron/vmynt/issues">GitHub</a>.</p>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <div class="sitelinks">
+        <div>
+          <h2>Learn</h2>
+          <ul>
+            <li><a href="../docs/">Getting started</a></li>
+            <li><a href="../commands/">Command reference</a></li>
+            <li><a href="../configuration/">Configuration</a></li>
+            <li><a href="../blueprints/">Blueprints</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Get it</h2>
+          <ul>
+            <li><a href="../install/">Install</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/releases">Releases</a></li>
+            <li><a href="../demo/">Demo</a></li>
+            <li><a href="../roadmap/">Roadmap</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/scarlettiron/vmynt">Source on GitHub</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/issues">Issues</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/LICENSE">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+      <p>Vmynt is free, open source software under the MIT License. Hyper-V, Apple and other names
+        belong to their owners; Vmynt is not affiliated with them.</p>
+      <!--Author signature, always the last thing on the page.-->
+      <a class="made-by" href="https://codescarlett.com" rel="author">
+        <img src="../theme/logo/codescarlett-dragonfly.svg" alt="" width="46" height="31" />
+        <span><strong>Scarlett A. Scott</strong><span class="handle">codescarlett</span></span>
+      </a>
+    </footer>
+    <script src="../theme/site.js"></script>
+  </body>
+</html>

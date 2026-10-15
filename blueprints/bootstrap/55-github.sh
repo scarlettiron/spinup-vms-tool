@@ -91,7 +91,7 @@ if is_true "${VM_GITHUB_INSTALL_CLI:-false}"; then
     if [[ "$PKG_MANAGER" == "apt" ]]; then
         add_apt_repo githubcli \
             'https://cli.github.com/packages/githubcli-archive-keyring.gpg' \
-            'deb [arch=amd64 signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main'
+            "deb [arch=${GUEST_DEB_ARCH} signed-by=/etc/apt/keyrings/githubcli.gpg] https://cli.github.com/packages stable main"
     fi
     pkg_install gh
 fi

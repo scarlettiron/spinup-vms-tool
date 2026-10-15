@@ -1,5 +1,5 @@
 #!/bin/sh
-# Installed as /etc/xrdp/startwm.sh by bootstrap step 20-hyperv.sh.
+# Installed as /etc/xrdp/startwm.sh by bootstrap step 20-guest-tools.sh.
 if [ -r /etc/locale.conf ]; then
   . /etc/locale.conf
   export LANG

@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+PackageIdentifier: {{winget_id}}
+PackageVersion: {{version}}
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: {{name}}.exe
+    PortableCommandAlias: {{name}}
+Commands:
+  - {{name}}
+UpgradeBehavior: install
+ReleaseDate: {{date}}
+Installers:
+  - Architecture: x64
+    InstallerUrl: {{url_x86_64_pc_windows_msvc}}
+    InstallerSha256: {{sha256_x86_64_pc_windows_msvc}}
+  - Architecture: arm64
+    InstallerUrl: {{url_aarch64_pc_windows_msvc}}
+    InstallerSha256: {{sha256_aarch64_pc_windows_msvc}}
+ManifestType: installer
+ManifestVersion: 1.10.0

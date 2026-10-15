@@ -53,7 +53,7 @@ case "$PKG_MANAGER" in
             mkcert_ver="$(curl -fsSL https://api.github.com/repos/FiloSottile/mkcert/releases/latest \
                 | sed -n 's/.*"tag_name": *"\(v[^"]*\)".*/\1/p' | head -1)"
             if [[ -n "$mkcert_ver" ]] && curl -fsSL \
-                    "https://github.com/FiloSottile/mkcert/releases/download/${mkcert_ver}/mkcert-${mkcert_ver}-linux-amd64" \
+                    "https://github.com/FiloSottile/mkcert/releases/download/${mkcert_ver}/mkcert-${mkcert_ver}-linux-${GUEST_DEB_ARCH}" \
                     -o /usr/local/bin/mkcert; then
                 chmod 0755 /usr/local/bin/mkcert
                 selinux_restore /usr/local/bin/mkcert

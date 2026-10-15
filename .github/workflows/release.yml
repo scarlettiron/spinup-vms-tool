@@ -1,0 +1,472 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: Release
+
+# Pushing a tag like v1.2.3 builds every binary, publishes a GitHub Release, and
+# then updates Homebrew, winget, Chocolatey and the apt repository.
+#
+# A tag with a dash in it (v1.2.3-rc.1) is a prerelease: the binaries and the
+# GitHub Release are made exactly the same way, but no package manager is
+# touched. Use one to test this whole workflow before a real release.
+#
+# Every package manager job checks for its secret first and skips itself with a
+# notice when the secret is missing, so a half set up repository still releases.
+# docs/releasing.md lists the secrets and how to make each one.
+#
+# Normally the "Version bump" workflow (version-bump.yml) starts this: it bumps
+# Cargo.toml, commits, tags, and then runs this workflow on the new tag. A tag
+# pushed by hand starts it too, and it can be re-run from the Actions tab for an
+# existing tag (pick the tag in "Use workflow from", or type it below).
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release, like v1.2.3 (blank: the ref this runs on)"
+        required: false
+        type: string
+
+# Two releases at once would race each other to the tap and the apt repository.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Reads the name, version and ids from Cargo.toml once, and checks the tag
+  # matches the version, so a typo in the tag can never publish the wrong version.
+  meta:
+    name: Read Cargo.toml
+    runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.brand.outputs.name }}
+      display_name: ${{ steps.brand.outputs.display_name }}
+      version: ${{ steps.brand.outputs.version }}
+      winget_id: ${{ steps.brand.outputs.winget_id }}
+      chocolatey_id: ${{ steps.brand.outputs.chocolatey_id }}
+      homebrew_tap: ${{ steps.brand.outputs.homebrew_tap }}
+      tag: ${{ steps.tag.outputs.tag }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      #Which tag is being released: the typed input, or the tag this run is on.
+      - name: Work out the tag
+        id: which
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          if [[ "$tag" != v* ]]; then
+            echo "::error::'$tag' is not a release tag. Run this on a v* tag, or type one in the tag box."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.which.outputs.tag }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Read the brand from Cargo.toml
+        id: brand
+        run: python packaging/brand.py --github-output
+
+      #packaging/version.py is the one place that knows how versions and tags
+      #relate, so the check lives there rather than being repeated here.
+      - name: Check the tag matches the version
+        id: tag
+        env:
+          VERSION: ${{ steps.brand.outputs.version }}
+          TAG: ${{ steps.which.outputs.tag }}
+        run: |
+          if ! python packaging/version.py check-tag "$TAG"; then
+            echo "::error::Tag $TAG does not match Cargo.toml version $VERSION. Tag v$VERSION instead, or bump the version first."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # Semver puts a dash before prerelease labels: 1.2.3-rc.1
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$tag is a prerelease: building and releasing on GitHub only, no package managers."
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # One binary per OS and CPU. Each is built on a runner of that kind where one
+  # exists, so it can be run once as a smoke test before it is shipped.
+  build:
+    name: Build ${{ matrix.target }}
+    needs: meta
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: zip
+            native: true
+          - target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            archive: zip
+            native: true
+          # Linux builds run on Ubuntu 22.04 on purpose: a binary only runs on
+          # systems with the same glibc or newer, and 22.04's is older than
+          # 24.04's, so the .deb also installs on Debian 12 and Ubuntu 22.04.
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-22.04
+            archive: tar.gz
+            native: true
+            deb_arch: amd64
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04-arm
+            archive: tar.gz
+            native: true
+            deb_arch: arm64
+          # Both Mac builds run on an Apple Silicon runner. The Intel one is
+          # cross compiled, which Apple's toolchain does natively, so it cannot
+          # be run as a smoke test there.
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            native: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: tar.gz
+            native: false
+    env:
+      NAME: ${{ needs.meta.outputs.name }}
+      VERSION: ${{ needs.meta.outputs.version }}
+      TARGET: ${{ matrix.target }}
+      ARCHIVE_KIND: ${{ matrix.archive }}
+      DEB_ARCH: ${{ matrix.deb_arch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --locked --target "$TARGET"
+
+      - name: Smoke test
+        if: matrix.native
+        shell: bash
+        run: '"target/$TARGET/release/$NAME" --version'
+
+      # The archive holds the binary at its root, plus the license and readme.
+      - name: Package the archive
+        shell: bash
+        run: |
+          exe="$NAME"
+          if [[ "$TARGET" == *windows* ]]; then exe="$NAME.exe"; fi
+
+          stage="target/stage"
+          mkdir -p "$stage" target/dist
+          cp "target/$TARGET/release/$exe" LICENSE README.md "$stage/"
+
+          archive="$NAME-$VERSION-$TARGET.$ARCHIVE_KIND"
+          if [ "$ARCHIVE_KIND" = "zip" ]; then
+            (cd "$stage" && 7z a -tzip "../dist/$archive" ./* > /dev/null)
+          else
+            tar -C "$stage" -czf "target/dist/$archive" .
+          fi
+          echo "built $archive"
+
+      # .deb and .rpm, using the [package.metadata.deb] and
+      # [package.metadata.generate-rpm] sections of Cargo.toml.
+      - name: Install cargo-deb and cargo-generate-rpm
+        if: matrix.deb_arch
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb,cargo-generate-rpm
+
+      - name: Package .deb and .rpm
+        if: matrix.deb_arch
+        run: |
+          # --no-strip: the binary was already built, and cargo-deb would go
+          # looking for a cross "strip" tool named after the target.
+          cargo deb --no-build --no-strip --target "$TARGET" \
+            --output "target/dist/${NAME}_${VERSION}_${DEB_ARCH}.deb"
+          cargo generate-rpm --target "$TARGET" --output target/dist/
+          ls -la target/dist
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.target }}
+          path: target/dist/*
+          if-no-files-found: error
+
+  # Collects every file, writes SHA256SUMS, and publishes the GitHub Release.
+  release:
+    name: GitHub Release
+    needs: [meta, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+
+      - name: Download the builds
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Write SHA256SUMS
+        run: |
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      # The "## [1.2.3]" section of CHANGELOG.md goes at the top of the release
+      # notes (packaging/version.py notes prints it). GitHub's own list of merged
+      # pull requests is added below it either way. A version with no section
+      # still releases, with a warning, so a forgotten changelog never blocks a fix.
+      - name: Notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          if ! python3 packaging/version.py notes "$VERSION" > notes.md; then
+            echo "::warning::CHANGELOG.md has no section for $VERSION; the release notes only list pull requests."
+            : > notes.md
+          fi
+          cat notes.md
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: ${{ needs.meta.outputs.display_name }} ${{ needs.meta.outputs.version }}
+          body_path: notes.md
+          generate_release_notes: true
+          prerelease: ${{ needs.meta.outputs.prerelease == 'true' }}
+          files: dist/*
+          fail_on_unmatched_files: true
+
+      # The package manager jobs below need the hashes, not the binaries.
+      - name: Keep SHA256SUMS for the next jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256sums
+          path: dist/SHA256SUMS
+
+  # Writes Formula/<name>.rb in the tap repository.
+  homebrew:
+    name: Homebrew
+    needs: [meta, release]
+    if: needs.meta.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    env:
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      NAME: ${{ needs.meta.outputs.name }}
+    steps:
+      - name: Check for the secret
+        id: check
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "::notice::HOMEBREW_TAP_TOKEN is not set, so Homebrew was skipped. See docs/releasing.md."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+
+      - name: Checkout the tap
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.meta.outputs.homebrew_tap }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Set up Python
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download SHA256SUMS
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256sums
+
+      - name: Render the formula
+        if: steps.check.outputs.ok == 'true'
+        run: |
+          python packaging/render.py --sums SHA256SUMS \
+            "packaging/homebrew/formula.rb.tmpl=tap/Formula/{{name}}.rb"
+          ruby -c "tap/Formula/$NAME.rb"
+
+      - name: Commit and push
+        if: steps.check.outputs.ok == 'true'
+        working-directory: tap
+        env:
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "Formula/$NAME.rb"
+          if git diff --cached --quiet; then
+            echo "formula unchanged"
+            exit 0
+          fi
+          git commit -m "$NAME $TAG"
+          git push
+
+  # Opens a pull request on microsoft/winget-pkgs from your fork of it.
+  # Only works once the package already exists there: the very first version
+  # is submitted by hand (docs/releasing.md, "First winget submission").
+  winget:
+    name: winget
+    needs: [meta, release]
+    if: needs.meta.outputs.prerelease == 'false'
+    runs-on: windows-latest
+    env:
+      WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+    steps:
+      - name: Check for the secret
+        id: check
+        shell: bash
+        run: |
+          if [ -z "$WINGET_TOKEN" ]; then
+            echo "::notice::WINGET_TOKEN is not set, so winget was skipped. See docs/releasing.md."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Copies the previous version's manifests and swaps in the new zips.
+      # The architecture of each zip is read from its name (x86_64 / aarch64).
+      - name: Submit to winget-pkgs
+        if: steps.check.outputs.ok == 'true'
+        uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: ${{ needs.meta.outputs.winget_id }}
+          version: ${{ needs.meta.outputs.version }}
+          release-tag: ${{ needs.meta.outputs.tag }}
+          installers-regex: '\.zip$'
+          token: ${{ secrets.WINGET_TOKEN }}
+          fork-user: ${{ github.repository_owner }}
+
+  # Builds the .nupkg, installs it on this runner as a test, then pushes it.
+  chocolatey:
+    name: Chocolatey
+    needs: [meta, release]
+    if: needs.meta.outputs.prerelease == 'false'
+    runs-on: windows-latest
+    env:
+      CHOCO_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+      NAME: ${{ needs.meta.outputs.name }}
+      CHOCO_ID: ${{ needs.meta.outputs.chocolatey_id }}
+      VERSION: ${{ needs.meta.outputs.version }}
+    steps:
+      - name: Check for the secret
+        id: check
+        shell: bash
+        run: |
+          if [ -z "$CHOCO_KEY" ]; then
+            echo "::notice::CHOCOLATEY_API_KEY is not set, so Chocolatey was skipped. See docs/releasing.md."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.meta.outputs.tag }}
+
+      - name: Set up Python
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Download SHA256SUMS
+        if: steps.check.outputs.ok == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256sums
+
+      - name: Render the package
+        if: steps.check.outputs.ok == 'true'
+        shell: bash
+        run: |
+          python packaging/render.py --sums SHA256SUMS \
+            "packaging/chocolatey/package.nuspec.tmpl=build/choco/package.nuspec" \
+            "packaging/chocolatey/tools/chocolateyinstall.ps1.tmpl=build/choco/tools/chocolateyinstall.ps1"
+
+      - name: Pack
+        if: steps.check.outputs.ok == 'true'
+        run: choco pack build/choco/package.nuspec --outputdirectory build
+
+      # Installs from the freshly built package, which downloads the real zip
+      # from the release, so a wrong url or hash fails here and not for users.
+      - name: Test install
+        if: steps.check.outputs.ok == 'true'
+        shell: pwsh
+        run: |
+          choco install $env:CHOCO_ID --version $env:VERSION --source "build;https://community.chocolatey.org/api/v2/" -y --no-progress
+          & $env:NAME --version
+          choco uninstall $env:CHOCO_ID -y --no-progress
+
+      - name: Push
+        if: steps.check.outputs.ok == 'true'
+        shell: pwsh
+        run: |
+          choco push "build/$($env:CHOCO_ID).$($env:VERSION).nupkg" --source https://push.chocolatey.org/ --api-key $env:CHOCO_KEY
+
+  # The apt repository is rebuilt by the Pages workflow, from the .deb files of
+  # every release. It is started with a dispatch on main (rather than called
+  # from here) because the github-pages environment only accepts deployments
+  # from main by default, and this run belongs to a tag.
+  apt:
+    name: apt repository
+    needs: [meta, release]
+    if: needs.meta.outputs.prerelease == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Rebuild the site and the apt repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main --repo "${{ github.repository }}"

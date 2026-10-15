@@ -59,7 +59,15 @@ fi
 # Two different mechanisms, not just two paths: Fedora uses BLS entries which
 # grubby edits per kernel, while Debian regenerates grub.cfg from
 # /etc/default/grub. Neither approach works on the other.
+#
+# Hyper-V only. hyperv_fb is the Hyper-V framebuffer driver; on libvirt and vfkit
+# the console is virtio-gpu, which follows the window size by itself, and the
+# desktop people use there is xrdp, which takes its size from the RDP client.
 RES="${VM_DISPLAY_RESOLUTION:-1920x1080}"
+if [[ "${VM_HYPERVISOR:-hyperv}" != "hyperv" ]]; then
+    log "not on Hyper-V, so the framebuffer mode is left to the display driver"
+    RES=""
+fi
 if [[ -n "$RES" ]]; then
     log "setting framebuffer resolution to $RES"
     # Chosen by package manager rather than by probing for grubby, so it matches

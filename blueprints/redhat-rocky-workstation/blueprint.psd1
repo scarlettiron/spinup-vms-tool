@@ -121,6 +121,15 @@ repo --name="AppStream" --mirrorlist="https://mirrors.rockylinux.org/mirrorlist?
 '@
 
         PowerOffAfterInstall  = $true
+
+
+        # Hyper-V's guest daemons. They stay in Packages so they are there from the
+
+        # first boot on Hyper-V; Vmynt leaves them out on other hypervisors, where
+
+        # they would only wait for a Hyper-V device that never appears.
+
+        HyperVOnlyPackages = @('hyperv-daemons')
         InstallTimeoutMinutes = 90
     }
 
@@ -165,5 +174,43 @@ repo --name="AppStream" --mirrorlist="https://mirrors.rockylinux.org/mirrorlist?
             # already installed the environment by the time 10-desktop.sh runs.
             DesktopPackage = '@workstation-product-environment'
         }
+    }
+
+    # ---------------------------------------------------------------- arm64
+    # Applied over everything above when the guest is arm64, which is every
+    # guest on an Apple Silicon Mac. Tables merge key by key and lists replace
+    # outright, so Packages below is the whole list, not an addition. The
+    # PowerShell tool only builds x86_64 and ignores this block.
+    #
+    # Rocky publishes the same boot image, stable '-latest-' name and per-ISO
+    # CHECKSUM for aarch64, in a sibling directory. The mirrorlists take the
+    # architecture as a parameter, so both install source lines change too.
+    Arm64 = @{
+        Media = @{
+            IsoBaseUrl   = 'https://download.rockylinux.org/pub/rocky/{Release}/isos/aarch64/'
+            ChecksumFile = 'Rocky-*-latest-aarch64-boot.iso.CHECKSUM'
+        }
+
+        Provisioning = @{
+            InstallSource = @'
+url --mirrorlist="https://mirrors.rockylinux.org/mirrorlist?arch=aarch64&repo=BaseOS-{Release}"
+repo --name="AppStream" --mirrorlist="https://mirrors.rockylinux.org/mirrorlist?arch=aarch64&repo=AppStream-{Release}"
+'@
+        }
+
+        # As above, less hyperv-daemons: there is no Hyper-V on an arm64 Mac.
+        Packages = @(
+            '@^workstation-product-environment'
+            '@standard'
+            'openssh-server'
+            'curl'
+            'wget'
+            'ca-certificates'
+            'gnupg2'
+            'git'
+            'jq'
+            'unzip'
+            'python3'
+        )
     }
 }

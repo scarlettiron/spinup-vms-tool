@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--{{display_name}}
+    Licensed under the MIT License. See the LICENSE file in the project root.
+    Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+    Contributors:
+    Scarlett A. Scott (codescarlett)
+
+    Chocolatey package definition. packaging/render.py fills in the placeholders
+    (from Cargo.toml and the release's SHA256SUMS) and the release workflow runs
+    "choco pack" on the result.-->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>{{chocolatey_id}}</id>
+    <version>{{version}}</version>
+    <title>{{display_name}}</title>
+    <!--"owners" must be the Chocolatey account that pushes the package.-->
+    <owners>{{repo_owner}}</owners>
+    <authors>{{authors}}</authors>
+    <projectUrl>{{homepage}}</projectUrl>
+    <projectSourceUrl>{{repository}}</projectSourceUrl>
+    <packageSourceUrl>{{repository}}/tree/main/packaging/chocolatey</packageSourceUrl>
+    <docsUrl>{{site_url}}</docsUrl>
+    <iconUrl>{{site_url}}theme/logo/{{name}}-icon.png</iconUrl>
+    <bugTrackerUrl>{{repository}}/issues</bugTrackerUrl>
+    <licenseUrl>{{repository}}/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <tags>{{chocolatey_id}} vm virtual-machine hyper-v devtools developer-tools cli foss cross-platform</tags>
+    <summary>{{homebrew_desc}}</summary>
+    <description>{{description}}
+
+Describe a development VM in a YAML file and run one command to get a fully provisioned Linux desktop: git, Node, Python, Docker, ddev, VS Code and a database, the same on every machine. On Windows it uses Hyper-V, so Hyper-V must be enabled (Windows 10/11 Pro, Enterprise or Education).
+
+Run `{{name}} --help` after installing to see every command.</description>
+    <releaseNotes>{{release_page}}</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

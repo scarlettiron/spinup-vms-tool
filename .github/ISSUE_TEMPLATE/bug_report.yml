@@ -1,0 +1,112 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: Bug report
+description: Something in Vmynt doesn't work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Security problems go to the
+        [private advisory form](https://github.com/scarlettiron/vmynt/security/advisories/new), not here.**
+
+        Before you paste config or logs below, remove passwords, password hashes, tokens and private keys.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you got instead.
+      placeholder: |
+        I ran `vmynt create` and expected …, but instead …
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that shows the problem, ideally starting from `vmynt init` in an empty folder.
+      placeholder: |
+        1. vmynt init --name demo --blueprint ubuntu-server --yes
+        2. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: version
+    attributes:
+      label: vmynt --version
+      description: Paste the output of `vmynt --version`.
+      render: text
+    validations:
+      required: true
+
+  - type: dropdown
+    id: host-os
+    attributes:
+      label: Host OS
+      options:
+        - Windows
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (Debian / Ubuntu)
+        - Linux (Fedora / RHEL / Rocky)
+        - Linux (other)
+    validations:
+      required: true
+
+  - type: input
+    id: host-version
+    attributes:
+      label: Host OS version
+      placeholder: e.g. Windows 11 Pro 24H2, macOS 15.3, Ubuntu 24.04
+
+  - type: dropdown
+    id: hypervisor
+    attributes:
+      label: Hypervisor
+      options:
+        - Hyper-V
+        - libvirt / QEMU / KVM
+        - vfkit (Apple Virtualization)
+        - Not relevant (the problem happens before any VM is involved)
+    validations:
+      required: true
+
+  - type: input
+    id: blueprint
+    attributes:
+      label: Blueprint
+      description: Which blueprint, and whether it's a built-in one or a custom one in `.vmynt/blueprints/`.
+      placeholder: e.g. redhat-rocky-workstation (built-in)
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Config
+      description: |
+        The relevant part of `.vmynt/vm.config.yaml` and `vm.config.local.yaml`, or the output of `vmynt config`.
+        **Remove passwords, password hashes, tokens and keys first.**
+      render: yaml
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: The full terminal output, ideally with `--verbose`.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed passwords, password hashes, tokens and private keys from everything above.
+          required: true
+        - label: I ran `vmynt doctor` and it passes, or I've pasted what it reports.

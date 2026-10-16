@@ -73,12 +73,12 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.which.outputs.tag }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -157,7 +157,7 @@ jobs:
       DEB_ARCH: ${{ matrix.deb_arch }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.meta.outputs.tag }}
 
@@ -313,7 +313,7 @@ jobs:
           ls -la target/dist
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.target }}
           path: target/dist/*
@@ -330,12 +330,12 @@ jobs:
       attestations: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.meta.outputs.tag }}
 
       - name: Download the builds
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: dist-*
           path: dist
@@ -354,7 +354,7 @@ jobs:
       # so a private one skips it.
       - name: Attest build provenance
         if: ${{ !github.event.repository.private }}
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/*
 
@@ -373,7 +373,7 @@ jobs:
           cat notes.md
 
       - name: Publish the release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.meta.outputs.tag }}
           name: ${{ needs.meta.outputs.display_name }} ${{ needs.meta.outputs.version }}
@@ -385,7 +385,7 @@ jobs:
 
       # The package manager jobs below need the hashes, not the binaries.
       - name: Keep SHA256SUMS for the next jobs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sha256sums
           path: dist/SHA256SUMS
@@ -412,13 +412,13 @@ jobs:
 
       - name: Checkout
         if: steps.check.outputs.ok == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.meta.outputs.tag }}
 
       - name: Checkout the tap
         if: steps.check.outputs.ok == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ needs.meta.outputs.homebrew_tap }}
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -426,13 +426,13 @@ jobs:
 
       - name: Set up Python
         if: steps.check.outputs.ok == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Download SHA256SUMS
         if: steps.check.outputs.ok == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: sha256sums
 
@@ -533,19 +533,19 @@ jobs:
 
       - name: Checkout
         if: steps.check.outputs.ok == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.meta.outputs.tag }}
 
       - name: Set up Python
         if: steps.check.outputs.ok == 'true'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Download SHA256SUMS
         if: steps.check.outputs.ok == 'true'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: sha256sums
 

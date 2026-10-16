@@ -76,7 +76,7 @@ jobs:
       RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           #The whole history, so the tag check below sees every existing tag.
           fetch-depth: 0
@@ -84,7 +84,7 @@ jobs:
           token: ${{ secrets.RELEASE_TOKEN || github.token }}
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 

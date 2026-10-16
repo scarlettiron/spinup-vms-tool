@@ -7,8 +7,8 @@
 
 //Building the seed disk in-process: a small disk with one FAT32 partition whose
 //volume label is the whole contract. CIDATA is found by cloud-init, OEMDRV by
-//Anaconda. The PowerShell tool needed admin rights and Windows' disk cmdlets to
-//do this; writing the bytes ourselves works the same on every computer.
+//Anaconda. Writing the bytes ourselves needs no admin rights or disk tools, and
+//works the same on every computer.
 //
 //Hyper-V wants a .vhd: a "fixed" VHD is just the raw disk with a 512-byte
 //footer on the end, so no conversion tool is needed either.

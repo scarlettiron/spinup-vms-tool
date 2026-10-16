@@ -8,8 +8,7 @@
 //The parts of a config that need working out before they mean anything: data
 //disks, the database, files to copy, Red Hat registration, hooks, repositories
 //and SSH keys. Each is checked here, so a typo fails in a second rather than
-//half an hour into a build. These are the Get-DevVM*Plan and *Layout functions
-//from scripts/lib/Common.psm1, with the same rules and messages.
+//half an hour into a build.
 
 use std::path::{Path, PathBuf};
 

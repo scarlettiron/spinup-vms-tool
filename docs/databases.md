@@ -11,23 +11,14 @@ the database VM itself needs the server.
 
 Four settings at the top of `vm.config.yaml`:
 
-```powershell
-DbEngine  = 'postgres'   # or 'mysql'. Blank installs neither.
-DbVersion = ''           # blank takes the engine default
-DbClient  = $true        # psql / mysql on the path
-DbServer  = $true        # the server too, running as a service
-```
-
-or the same in YAML:
-
 ```yaml
-dbEngine:  postgres
-dbVersion: ''
-dbClient:  true
-dbServer:  true
+dbEngine:  postgres   # or mysql. Blank installs neither.
+dbVersion: ''         # blank takes the engine default
+dbClient:  true       # psql / mysql on the path
+dbServer:  true       # the server too, running as a service
 ```
 
-Defaults when `DbVersion` is blank:
+Defaults when `dbVersion` is blank:
 
 | Engine | Default version | Default port | Versions accepted |
 | --- | --- | --- | --- |
@@ -36,10 +27,10 @@ Defaults when `DbVersion` is blank:
 
 `postgresql`, `pgsql` and `pg` are accepted as synonyms for `postgres`, and
 `mariadb` for `mysql`. Asking for the server implies the client, so
-`DbServer = $true` on its own is enough.
+`dbServer: true` on its own is enough.
 
 Everything is validated when config loads, so a wrong engine name or an
-unsupported version fails during `-RenderOnly` rather than twenty minutes into a
+unsupported version fails during `vmynt config --validate` or `vmynt create --render` rather than twenty minutes into a
 first boot.
 
 ## Where the packages come from
@@ -69,30 +60,28 @@ one your distribution ships, or use Postgres.
 
 ## The rest of the settings
 
-The `Database` section holds what is not in QUICK SETTINGS:
+The `database` section holds what is not in QUICK SETTINGS:
 
-```powershell
-Database = @{
-    Port          = 0             # 0 takes the engine default
-    ListenAddress = 'localhost'   # or '*'
-    AdminPassword = ''            # postgres superuser / mysql root
-    Databases     = @()           # created empty, owned by the primary user
-}
+```yaml
+database:
+  port:          0             # 0 takes the engine default
+  listenAddress: localhost     # or '*'
+  adminPassword: ''            # postgres superuser / mysql root
+  databases:     []            # created empty, owned by the primary user
 ```
 
 ## Reaching the database from another VM
 
 By default the server listens on localhost only, and nothing is exposed to the
-rest of the virtual switch. To open it up:
+rest of the virtual network. To open it up:
 
-```powershell
-Database = @{
-    ListenAddress = '*'
-    AdminPassword = 'something-only-your-team-knows'
-}
+```yaml
+database:
+  listenAddress: '*'
+  adminPassword: something-only-your-team-knows
 ```
 
-`ListenAddress = '*'` does four things, and all four are needed for a connection
+`listenAddress: '*'` does four things, and all four are needed for a connection
 from another machine to actually work:
 
 1. Binds the server to all addresses (`listen_addresses` for Postgres,
@@ -110,10 +99,10 @@ from another machine to actually work:
    connection is still refused. For MySQL, creates the primary user with `'%'` as
    its host so it can connect from anywhere.
 
-A server on `'*'` with a blank `AdminPassword` is refused at build time, because
-it would leave the superuser reachable from every machine on the switch.
+A server on `'*'` with a blank `adminPassword` is refused at build time, because
+it would leave the superuser reachable from every machine on the network.
 
-Then, from another VM or from the Windows host:
+Then, from another VM or from the host:
 
 ```bash
 psql "postgresql://dev@acme-fedora-workstation.local:5432/app_dev"
@@ -127,8 +116,14 @@ only whether the port is reachable, from Windows:
 Test-NetConnection acme-fedora-workstation.local -Port 5432
 ```
 
+or from macOS or Linux:
+
+```sh
+nc -vz acme-fedora-workstation.local 5432
+```
+
 One caveat on `.local` names: mDNS resolution comes from avahi and nss-mdns on the
-host OS, so it works from a shell on either VM and from Windows, but generally
+guest OS, so it works from a shell on either VM and from the host, but generally
 **not from inside a Docker container**, which has neither. If your app runs in
 Docker or ddev and needs to reach the database VM, use the IP or a Docker network
 alias instead of the `.local` name.
@@ -136,39 +131,35 @@ alias instead of the `.local` name.
 ## A worked example: the fleet
 
 The natural shape is the client on the application VM and the server on the
-database VM, which is what the `Machines` block is for:
+database VM, which is what the `machines` block is for:
 
-```powershell
-Machines = @{
-    'ubuntu-gui' = @{
-        Blueprint = 'ubuntu-desktop'
-        OsVersion = '24.04'
-        DbEngine  = 'postgres'
-        DbClient  = $true          # psql only, to reach the db VM
-    }
-    'ubuntu-middleware-db' = @{
-        Blueprint = 'ubuntu-server'
-        OsVersion = '24.04'
-        DbEngine  = 'postgres'
-        DbServer  = $true
-        Database  = @{
-            ListenAddress = '*'
-            AdminPassword = 'something-only-your-team-knows'
-            Databases     = @('app_dev', 'app_test')
-        }
-    }
-}
+```yaml
+machines:
+  ubuntu-gui:
+    blueprint: ubuntu-desktop
+    osVersion: '24.04'
+    dbEngine:  postgres
+    dbClient:  true            # psql only, to reach the db VM
+  ubuntu-middleware-db:
+    blueprint: ubuntu-server
+    osVersion: '24.04'
+    dbEngine:  postgres
+    dbServer:  true
+    database:
+      listenAddress: '*'
+      adminPassword: something-only-your-team-knows
+      databases:     [app_dev, app_test]
 ```
 
 ## Adminer
 
 A database browser in a single PHP file:
 
-```powershell
-DbEngine      = 'postgres'
-DbServer      = $true
-DbAdminer     = $true
-DbAdminerPort = 3800     # optional, this is the default
+```yaml
+dbEngine:      postgres
+dbServer:      true
+dbAdminer:     true
+dbAdminerPort: 3800      # optional, this is the default
 ```
 
 After the build the route is on the login banner and in the status output:
@@ -180,10 +171,10 @@ After the build the route is on the login banner and in the status output:
 Log in with the database credentials. The server field is `localhost` when the
 database is on the same VM.
 
-`DbAdminer` needs `DbEngine` set, because Adminer has to be told which driver to
+`dbAdminer` needs `dbEngine` set, because Adminer has to be told which driver to
 load, and the matching PHP extension is installed for you: `php-pgsql` for
 Postgres, `php-mysql` or `php-mysqlnd` for MySQL. It does not need
-`DbServer` though. Adminer with only an engine named is a legitimate setup: it
+`dbServer` though. Adminer with only an engine named is a legitimate setup: it
 gives you a GUI on this VM for a database running somewhere else.
 
 ### Not the Docker image, and how it is served instead
@@ -200,12 +191,12 @@ other than a dev convenience.
 
 ### Who can reach it
 
-The unit binds `0.0.0.0`, so the route works from the Windows host and from the
-other VMs on the switch, not only from inside the guest, and the firewall is
+The unit binds `0.0.0.0`, so the route works from the host and from the
+other VMs on the network, not only from inside the guest, and the firewall is
 opened for its port. That is the point of printing a route at all.
 
 Adminer has no login of its own. It asks for database credentials, so it is only
-as protected as the database behind it. On a shared switch, treat the route as
+as protected as the database behind it. On a shared network, treat the route as
 internal: anyone who can reach the port gets a login form against your database.
 
 The port has to differ from the database port, which is checked at build time.
@@ -254,8 +245,8 @@ database:  postgres 17 running on port 5432
 
 From the host:
 
-```powershell
-.\scripts\Get-DevVMStatus.ps1
+```sh
+vmynt status
 ```
 
 ```
@@ -273,8 +264,8 @@ sudo vm-bootstrap --only 35-database --force
 
 ## Adding another engine
 
-Two edits. The engine table in [scripts/lib/Common.psm1](../scripts/lib/Common.psm1)
+Two edits. The `ENGINES` table in [src/plans.rs](../src/plans.rs)
 holds the display name, default version and port, accepted versions, where the
-packages come from, and the SELinux port type. Then add a case to
+packages come from, the SELinux port type, and Adminer's PHP driver package. Then add a case to
 [blueprints/bootstrap/35-database.sh](../blueprints/bootstrap/35-database.sh)
 that installs and configures it. Nothing else needs to know.

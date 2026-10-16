@@ -1,9 +1,9 @@
 # Vmynt — design
 
-Status: **M0–M3 built; M4 (1.0) remaining** · Drafted 2026-10-13 · Supersedes the PowerShell tool once M4 removes it
+Status: **M0–M3 built; M4 (1.0) in progress** · Drafted 2026-10-13 · Replaced the PowerShell tool, removed at M4
 
-Vmynt is the Rust rewrite of this repo's PowerShell tool (`vm.ps1` + `scripts/`). It keeps
-what the tool already does — describe a dev VM in YAML, run one command, get a fully
+Vmynt is the Rust rewrite of this repo's original PowerShell tool (`vm.ps1` + `scripts/`, removed
+before 1.0 and still in git history). It keeps what that tool did — describe a dev VM in YAML, run one command, get a fully
 provisioned desktop — and makes it:
 
 - **cross-platform**: Windows (Hyper-V), Linux (QEMU/KVM via libvirt), macOS
@@ -21,8 +21,8 @@ All three host platforms are in scope for 1.0. The milestones in §16 only order
 
 **Goals**
 
-- Same YAML config, same blueprints, same guest bootstrap scripts as `main` — a VM built by
-  Vmynt is the same machine the PowerShell tool builds today.
+- Same YAML config, same blueprints, same guest bootstrap scripts as the PowerShell tool had —
+  a VM built by Vmynt is the same machine that tool built.
 - One binary per platform, no runtime dependencies beyond the hypervisor itself (and vfkit on
   macOS, pulled in by Homebrew).
 - Every user-facing name comes from one constant (§2).
@@ -122,8 +122,13 @@ Hand-written GitHub Actions workflows in `.github/workflows/` (no `dist`):
   the site link check. `e2e.yml` (nightly): a real `ubuntu-server` build under libvirt on a
   Linux runner with `/dev/kvm` (§17). `pages.yml`: the website and the apt repository.
 - **Requires:** release artifacts must be publicly downloadable.
-- **Signing:** unsigned Windows binaries trigger SmartScreen; an Authenticode cert (or Azure
-  Trusted Signing) is part of M4. Homebrew installs are not quarantined.
+- **Signing:** release binaries can be signed. Windows uses Azure Artifact Signing (formerly
+  Trusted Signing) through `azure/artifact-signing-action`; macOS uses a Developer ID
+  certificate plus notarization with `notarytool`. Each is optional and turns on when its
+  secrets are set; unsigned Windows binaries trigger SmartScreen. Homebrew installs are not
+  quarantined.
+- **Provenance:** every release gets GitHub build-provenance attestations, checked with
+  `gh attestation verify <file> --repo scarlettiron/vmynt`.
 
 `docs/releasing.md` is the operational guide.
 
@@ -156,34 +161,33 @@ src/
     args.rs, help.rs      every command, option and alias; the grouped help page
     common.rs             shared by the VM commands: pick the backend, wait for a state,
                           confirm, find the guest's address
-    create.rs             §12 create (New-DevVM.ps1)
+    create.rs             §12 create
     lifecycle.rs          start, stop, restart, poweroff, remove
     open.rs               open (desktop or --console)
     shell.rs              ssh, exec, logs
-    status.rs             status (Get-DevVMStatus.ps1)
+    status.rs             status
     snapshot.rs           snapshot create|list|restore|delete
     list.rs               list, --live, --rescan
     init.rs, config.rs, blueprints.rs, hash.rs, doctor.rs, clean.rs, completion.rs, version.rs
   config/
     mod.rs                one layer: read, expand quick settings, merge
-    effective.rs          every layer + the blueprint, names checked (Get-DevVMConfig)
+    effective.rs          every layer + the blueprint, names checked
     user.rs               ~/.vmynt/config.yaml: the saved default identity
   plans.rs                data disks, database, files, Red Hat, hooks, repos, ssh keys
-                          (the Get-DevVM*Plan / *Layout functions)
   blueprint/
-    mod.rs                list, find, copy (project → downloaded → embedded, §9.2)
-    psd1.rs               reader for PowerShell data files (blueprint.psd1)
-    resolve.rs            Inherits chain, Arm64 overlay, seed templates, bootstrap tree
+    mod.rs                list, find, copy (project → downloaded → embedded, §9.2);
+                          reads blueprint.yaml
+    resolve.rs            inherits chain, arm64 overlay, seed templates, bootstrap tree
   seed/
-    mod.rs                renders ks.cfg / user-data + /etc/vm-bootstrap.* (Seed.psm1)
+    mod.rs                renders ks.cfg / user-data + /etc/vm-bootstrap.*
     disk.rs               MBR + FAT32 image, fixed-VHD footer (§10)
-  media.rs                ISO lookup, download, SHA-256 check, cache (Iso.psm1)
+  media.rs                ISO lookup, download, SHA-256 check, cache
   guest/
     mod.rs                ssh wrapper, the status probe and its parser
     keys.rs               Vmynt's own key pair and known_hosts (§11.5)
   hypervisor/
     mod.rs                trait Hypervisor, VmSpec, shared helpers (run, RDP launch, tags)
-    hyperv.rs             PowerShell + Hyper-V cmdlets (HyperV.psm1)
+    hyperv.rs             PowerShell + Hyper-V cmdlets
     libvirt.rs            virsh + generated domain XML
     vfkit.rs              detached vfkit + REST over a unix socket
     fake.rs               in-memory backend for tests (debug builds only)
@@ -196,8 +200,8 @@ assets/
   defaults.yaml           the built-in config layer (§8.1)
   guest/probe.sh          the status probe (§11.4)
   templates/              vm.config*.yaml, .gitignore, ssh_keys/README.md for init
-blueprints/               embedded with include_dir; stays at the repository root while the
-                          PowerShell tool still reads it (moves at M4)
+blueprints/               embedded with include_dir; blueprint.yaml, seed templates and the
+                          shared bootstrap steps
 tests/cli.rs              runs the real binary in throwaway folders, including a full VM
                           lifecycle on the fake backend
 ```
@@ -286,7 +290,7 @@ The tag text is `vmynt:<machine>:<project folder>` on every backend.
 
 - One PowerShell process per operation; the script is sent `-EncodedCommand` (UTF-16LE base64),
   so nothing needs shell quoting, and values are quoted PowerShell-style (`'` doubled).
-- Ports `scripts/lib/HyperV.psm1` cmdlet for cmdlet: same switch check, memory rules
+- Ported from the PowerShell tool's `HyperV.psm1` cmdlet for cmdlet: same switch check, memory rules
   (nested virtualisation forces static memory), explicit SCSI locations, boot order, integration
   services, `EnhancedSessionTransportType HvSocket`.
 - Elevation: never self-elevates. Permission errors become the exact `Add-LocalGroupMember`
@@ -345,8 +349,8 @@ then opens the platform's client:
 
 ### 8.1 Files and layering
 
-The schema is the one documented in `docs/configuration.md` on `main`, unchanged except for the
-additions in §8.3. Layers, lowest to highest:
+The schema is the one documented in `docs/configuration.md`, the PowerShell tool's schema
+unchanged except for the additions in §8.3. Layers, lowest to highest:
 
 1. Vmynt's built-in defaults
 2. the blueprint's defaults
@@ -355,13 +359,12 @@ additions in §8.3. Layers, lowest to highest:
 5. the selected `Machines:` entry, if any
 6. command-line overrides
 
-The flat aliases (`projectName`, `cpus`, `memoryGB`, `dbEngine`, …) and the `Machines:` block
-keep working exactly as `Expand-ConfigAliases` and `Get-DevVMConfig` do today. The `.psd1`
-config format is dropped; YAML only.
+The flat aliases (`projectName`, `cpus`, `memoryGB`, `dbEngine`, …) and the `machines:` block
+work exactly as they did in the PowerShell tool. Config files are YAML only.
 
 As built: layer 1 is `assets/defaults.yaml`, embedded in the binary, plus three defaults that
 depend on the computer (`vm.path`, `iso.directory`, the time zone). The blueprint's `Overrides`
-sit between the shared and local files, as in the PowerShell tool. `config/effective.rs` does
+sit between the shared and local files. `config/effective.rs` does
 the merge; `plans.rs` checks every section.
 
 Relative paths in config (`copyFrom`, `hooks.postStartFile`, `githubTokenFile`,
@@ -370,7 +373,7 @@ holding `.vmynt/` — and may start with `~/` or use `%VAR%`/`$VAR`.
 
 ### 8.2 Validation
 
-`vmynt config --validate` and every `create` run the same checks `Common.psm1` runs today
+`vmynt config --validate` and every `create` run the same checks the PowerShell tool ran
 (unknown keys with did-you-mean, ranges, blueprint/version match, database engine/version,
 disk letters, files, hooks, repos, keys) through `plans::check_all`. As built, `--validate`
 collects the quick checks (project name, blueprint, hostname, password) all at once, then
@@ -401,46 +404,56 @@ committed there is readable by everyone with access to the repository.
 
 ### 9.1 Format
 
-**Changed from the plan:** blueprints stay `blueprint.psd1` until M4, because the PowerShell tool
-on this branch still reads the same files. `blueprint/psd1.rs` reads PowerShell data files
-(tables, lists, single/double/here-strings, numbers with KB–TB suffixes, `$true`/`$false`/`$null`,
-comments) into the same YAML value type config uses, so blueprints and config merge with one
-function.
+Each blueprint is a folder with a **`blueprint.yaml`**, its seed templates (`seed/`) and
+optionally its own `bootstrap/` steps. Keys are camelCase like the config files (matching
+ignores case): `name`, `description`, `inherits`, `os` (`family`, `vendor`, `version`,
+`versionPattern`, `supportPolicy`), `media` (`isoBaseUrl`, `isoNamePattern`, `checksumFile`, or
+a pinned `isoUrl` + `isoSha256`), `provisioning` (`method`, `seedLabel`, `seedFileName`,
+`seedTemplate`, `metaTemplate`, `bootstrapDirs`, `bootstrapRoot`, `installSource`,
+`confirmText`, `hyperVPackages`, `installTimeoutMinutes`, …), `firmware`, `packages`,
+`defaults`, `overrides` and `arm64`. It is read into the same YAML value type config uses, so
+blueprints and config merge with one function.
 
-Per-architecture media is a top-level **`Arm64`** block rather than per-arch `media:` sections:
+**Changed from the plan:** until M4 blueprints were PowerShell data files (`blueprint.psd1`),
+because the PowerShell tool read the same files. They became YAML when that tool was removed.
+A project blueprint folder that still has only a `blueprint.psd1` gets an error saying to
+recreate it with `vmynt blueprints new` and move the changes across.
 
-```powershell
-Arm64 = @{
-    Media = @{
-        IsoBaseUrl   = 'https://download.rockylinux.org/pub/rocky/{Release}/isos/aarch64/'
-        ChecksumFile = 'Rocky-*-latest-aarch64-boot.iso.CHECKSUM'
-    }
-    Provisioning = @{ InstallSource = @' … arch=aarch64 … '@ }
-    Packages = @( … without hyperv-daemons … )
-}
+Per-architecture media is a top-level **`arm64`** block rather than per-arch `media:` sections:
+
+```yaml
+arm64:
+  media:
+    isoBaseUrl: 'https://download.rockylinux.org/pub/rocky/{Release}/isos/aarch64/'
+    checksumFile: 'Rocky-*-latest-aarch64-boot.iso.CHECKSUM'
+  provisioning:
+    installSource: |-
+      url --mirrorlist="https://mirrors.rockylinux.org/mirrorlist?arch=aarch64&repo=BaseOS-{Release}"
+      repo --name="AppStream" --mirrorlist="…arch=aarch64&repo=AppStream-{Release}"
+    hyperVPackages: []
 ```
 
-When the guest is arm64 the block is merged over the blueprint (tables merge, lists replace);
-otherwise it is dropped. A blueprint without one refuses arm64 with a message. The PowerShell
-tool ignores the key. Converting to `blueprint.yaml` is M4 work.
+When the guest is arm64 the block is merged over the blueprint (blocks merge key by key, lists
+replace); otherwise it is dropped. A blueprint without one refuses arm64 with a message.
 
 Seed templates keep their `{{PLACEHOLDER}}` syntax (`ks.cfg.tmpl`, `user-data.tmpl`), rendered
 by plain substitution; an unreplaced token is an error.
 
-Two `Provisioning` keys are new in Vmynt (the PowerShell tool ignores both):
+Two `provisioning` keys are new in Vmynt:
 
-- **`ConfirmText`** (Ubuntu blueprints: `'yes'`). Ubuntu's installer stops at "Continue with
+- **`confirmText`** (Ubuntu blueprints: `'yes'`). Ubuntu's installer stops at "Continue with
   autoinstall? (yes|no)" unless `autoinstall` is on the kernel command line, which a stock ISO's
   boot menu can't have. `create` types this text plus Enter into the VM's keyboard
   (`virsh send-key`; Hyper-V's `Msvm_Keyboard`) from 75 s in — after GRUB's menu, where letters
   would edit the boot entry — every 45 s until the system disk passes 256 MB. Typed early, it
   waits in the console's input buffer. vfkit has no keyboard API, so there the install starts
   with a window and the person is told to answer.
-- **`HyperVOnlyPackages`**: entries of `Packages` installed only on Hyper-V. Hyper-V's guest
-  daemons stay in `Packages` for the PowerShell tool; elsewhere they only stall boot for 90 s
-  waiting for a VMBus device.
+- **`hyperVPackages`**: Hyper-V's guest daemons (`hyperv-daemons`, or Ubuntu's
+  `linux-tools-virtual` / `linux-cloud-tools-virtual`), added to `packages` only when the
+  hypervisor is Hyper-V. Elsewhere they only stall boot for 90 s waiting for a VMBus device.
+  The `arm64` blocks set it to `[]`.
 
-All five blueprints from `main` are embedded: `redhat-rocky-workstation` (the default),
+All five blueprints are embedded: `redhat-rocky-workstation` (the default),
 `redhat-rhel-workstation`, `fedora-workstation`, `ubuntu-desktop`, `ubuntu-server`.
 
 ### 9.2 Resolution order
@@ -475,8 +488,8 @@ shared bootstrap (`assets/blueprints/bootstrap/`, ~180 KB) stays embedded regard
 
 ## 10. Seed disk
 
-Today `Seed.psm1` creates a VHDX, then `Mount-VHD` + `Initialize-Disk` + `New-Partition` +
-`Format-Volume` — Windows-only and needs admin. Vmynt builds it in-process (`seed/disk.rs`):
+The PowerShell tool created a VHDX, then ran `Mount-VHD` + `Initialize-Disk` + `New-Partition` +
+`Format-Volume` — Windows-only and needing admin. Vmynt builds it in-process (`seed/disk.rs`):
 
 1. A 256 MB file with an **MBR and one FAT32 (LBA) partition** starting at 1 MiB — the same
    shape the PowerShell tool made, rather than the unpartitioned volume first planned.
@@ -503,14 +516,12 @@ installed system already has everything it needs.
 ### 11.1 Reused as-is
 
 Everything under `blueprints/bootstrap/` and each blueprint's `bootstrap/` is embedded from
-`blueprints/` unchanged, apart from §11.2. It moves under `assets/` at M4, with the PowerShell
-tool's removal.
+`blueprints/`, unchanged from the PowerShell tool apart from §11.2.
 
 ### 11.2 Hypervisor-aware changes
 
 - The seed's `/etc/vm-bootstrap.env` carries `VM_HYPERVISOR=hyperv|libvirt|vfkit` and
-  `VM_ARCH=x86_64|aarch64`. Unset (the PowerShell tool) means hyperv and x86_64, so its
-  behaviour is unchanged.
+  `VM_ARCH=x86_64|aarch64`. Unset means hyperv and x86_64.
 - `20-hyperv.sh` is now **`20-guest-tools.sh`**:
   - `hyperv` — today's behaviour: Hyper-V daemons, xrdp on hv_sock (vsock).
   - `libvirt` — `qemu-guest-agent`, plus `spice-vdagent` with a desktop; xrdp on TCP 3389 with
@@ -537,7 +548,7 @@ Required on Apple Silicon, optional on arm Linux/Windows hosts.
 
 ### 11.4 Status probe
 
-The bash probe from `Get-DevVMStatus.ps1` is now `assets/guest/probe.sh` (plus `browser` and
+The PowerShell tool's bash status probe is now `assets/guest/probe.sh` (plus `browser` and
 `ip` lines). Vmynt sends it over `ssh -o BatchMode=yes -o ConnectTimeout=4 … 'bash -s'` with a
 30-second limit and parses the same tab-separated output (`guest::Facts`). Every fact stays
 optional: an unreachable guest yields a partial status, never an error.
@@ -694,7 +705,7 @@ Next: check it with `vmynt config --validate`, then build the VM with `vmynt cre
 - **Re-running:** refuses if `.vmynt/` exists; `--force` rewrites the example files only and
   never touches `vm.config.local.yaml`.
 - **Migrating:** `vmynt init --import <path>` copies an existing `vm.config.yaml` /
-  `vm.config.local.yaml` from a checkout of this repo into `.vmynt/`.
+  `vm.config.local.yaml` from another project or an old PowerShell-tool checkout into `.vmynt/`.
 
 ---
 
@@ -761,7 +772,7 @@ old                  missing      ubuntu-desktop            —                 
 
 ## 14. Status
 
-`vmynt status` reproduces `Get-DevVMStatus.ps1`'s report: state and uptime, OS and kernel
+`vmynt status` reproduces the PowerShell tool's status report: state and uptime, OS and kernel
 (from the guest, or the blueprint from config), blueprint, address and whether `.local`
 resolves, the ssh command, users, hardware, guest uptime, disks with usage, database, Adminer,
 hooks, GitHub auth, browser, and bootstrap progress. The hypervisor gives host-side facts and
@@ -772,26 +783,14 @@ hooks, GitHub auth, browser, and bootstrap progress. The hypervisor gives host-s
 `ip`, `user`, `bootstrap` (`complete`, `failed`, `progress` or `unknown`), `database`,
 `adminer`, `github`, `browser` and the hardware fields. The nightly e2e workflow relies on it.
 
-## 15. Mapping from the PowerShell tool
+## 15. The PowerShell tool
 
-| PowerShell | Vmynt |
-|---|---|
-| `vm.ps1` command table | `cli/` + clap derive (same commands and aliases, §12.1) |
-| `scripts/New-DevVM.ps1` | `cli/create.rs` |
-| `Start-`, `Stop-`, `Open-`, `Remove-DevVM.ps1` | `cli/{start,stop,open,remove}.rs` |
-| `Get-DevVMStatus.ps1` | `cli/status.rs` + `assets/guest/probe.sh` |
-| `New-PasswordHash.ps1`, `Get-OpenSslPath` | `cli/hash.rs` + `passwd.rs` (no openssl) |
-| `lib/Common.psm1` | `config/`, `plans.rs`, `blueprint/`, `vms.rs` |
-| `lib/HyperV.psm1` | `hypervisor/hyperv.rs` |
-| `lib/Iso.psm1` | `media.rs` |
-| `lib/Seed.psm1` | `seed/` + `blueprint/` rendering |
-| `Open-DevVM.ps1` | `cli/open.rs` |
-| `blueprints/*/blueprint.psd1` | read as-is by `blueprint/psd1.rs`; YAML at M4 |
-| `blueprints/**/*.sh`, `*.tmpl` | embedded from `blueprints/` (§11) |
-| `docs/*.md` | updated for the new paths and commands |
-
-The PowerShell tool stays on `main` and keeps working until Vmynt reaches parity on Windows;
-then it's removed in one commit.
+Vmynt started as a port of the PowerShell tool (`vm.ps1`, `scripts/*.ps1`, `scripts/lib/*.psm1`)
+that built these VMs on Windows and Hyper-V. The config schema, blueprints, seed templates and
+guest bootstrap steps carried over; the PowerShell modules became `config/`, `plans.rs`,
+`blueprint/`, `seed/`, `media.rs` and `hypervisor/hyperv.rs`. The tool was removed at M4 and
+remains in git history. `vmynt init --import <folder>` copies `vm.config.yaml` and
+`vm.config.local.yaml` from an old checkout of it.
 
 ---
 
@@ -806,11 +805,11 @@ quick settings; blueprint resolver with embedded assets; `init`; `hash`; `config
 packaging for Homebrew, winget, Chocolatey and apt; the website.
 
 **M1 — shared core + Windows / Hyper-V. Done (not yet run on real Hyper-V).**
-Full config resolution (`config/effective.rs`, `plans.rs`, built-in defaults); the `.psd1`
-reader and blueprint inheritance; `media` (download, checksum, cache); `seed` (rendering, FAT32
-+ MBR, VHD footer); `hyperv.rs`; `create`, `start`, `stop`, `restart`, `poweroff`, `remove`,
-`open`, `ssh`, `exec`, `logs`, `status`, `list` with live state, `snapshot`; VM records and
-target resolution; Vmynt's own SSH key; `doctor`'s hypervisor check; the fake backend and a
+Full config resolution (`config/effective.rs`, `plans.rs`, built-in defaults); the blueprint
+reader (`.psd1` at the time) and blueprint inheritance; `media` (download, checksum, cache);
+`seed` (rendering, FAT32 + MBR, VHD footer); `hyperv.rs`; `create`, `start`, `stop`,
+`restart`, `poweroff`, `remove`, `open`, `ssh`, `exec`, `logs`, `status`, `list` with live
+state, `snapshot`; VM records and target resolution; Vmynt's own SSH key; `doctor`'s hypervisor check; the fake backend and a
 lifecycle integration test.
 
 **M2 — Linux / libvirt. Done.**
@@ -819,18 +818,21 @@ lifecycle integration test.
 `.deb`/`.rpm`.
 
 **M3 — macOS / vfkit + arm64. Done (not yet run on a real Mac).**
-`vfkit.rs` (detached process, REST socket, DHCP-lease IP, APFS-clone snapshots); `Arm64`
+`vfkit.rs` (detached process, REST socket, DHCP-lease IP, APFS-clone snapshots); `arm64`
 blueprint blocks with aarch64 media; Chromium fallback and other arm64 changes (§11.3); `.rdp`
 launch.
 
-**M4 — 1.0. Remaining.**
-Blueprints converted to `blueprint.yaml` and the PowerShell tool removed in one commit; real-
-hardware passes on Hyper-V and on a Mac; code signing; docs pass; first stable release with
-the final name.
+**M4 — 1.0. In progress.**
+Done: blueprints converted to `blueprint.yaml` (camelCase keys, `provisioning.hyperVPackages`
+in place of `HyperVOnlyPackages`); the PowerShell tool (`vm.ps1`, `scripts/`) and the `.psd1`
+reader removed; docs pass. Wired up but waiting on certificates and accounts: code signing
+(Azure Artifact Signing on Windows, Developer ID + notarization on macOS), alongside the
+build-provenance attestations every release already gets (§3.2). Still to do: real-hardware
+passes on Hyper-V and on a Mac, and the first stable release with the final name.
 
 ## 17. Testing
 
-- **Unit (in `src/`):** the `.psd1` reader (every embedded blueprint), blueprint inheritance and
+- **Unit (in `src/`):** every embedded blueprint parses, blueprint inheritance and
   the arm64 overlay, config layering and machines, every plan's rules, seed rendering for
   kickstart and cloud-init, the FAT image read back with `fatfs`, the VHD footer checksum and
   geometry, Hyper-V scripts, libvirt XML and `virsh` output parsing, vfkit command lines, MACs,
@@ -864,7 +866,7 @@ the final name.
 | Item | Risk | Plan |
 |---|---|---|
 | mDNS across macOS NAT | `<host>.local` may not resolve from the host | test in M3; fall back to the VM's IP from vfkit/DHCP lease in `list`/`status` |
-| FAT seed with Anaconda | label search might be fussy | resolved: MBR + one FAT32 partition, as the PowerShell tool made |
+| FAT seed with Anaconda | label search might be fussy | resolved: MBR + one FAT32 partition, the shape the PowerShell tool used |
 | Secure Boot on libvirt | distro OVMF paths differ | resolved: libvirt firmware autoselection (`firmware='efi'` + features) reads the descriptors |
 | libvirt snapshots | internal snapshots refuse UEFI guests; external revert needs libvirt ≥ 9.9 | external disk-only snapshots while off; older libvirt can create but not revert |
 | Hyper-V and vfkit untested on hardware | scripts and command lines are unit-tested only | manual pass before 1.0 (M4) |
@@ -873,5 +875,5 @@ the final name.
 | Windows Home | no Hyper-V | `doctor` explains; out of scope for 1.0 |
 | winget ID / tap name | permanent once published | finalise the name before M4 |
 | Public releases | winget/Homebrew need public download URLs | decide repo visibility before M0's pre-release |
-| Code signing | SmartScreen warnings | cert before M4 |
+| Code signing | SmartScreen and Gatekeeper warnings | signing wired up (§3.2); needs the Azure and Apple accounts set up before 1.0 |
 | Hyper-V via PowerShell | slow startup, output parsing | one script per operation, JSON only; consider WMI later |

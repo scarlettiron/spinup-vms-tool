@@ -6,8 +6,8 @@
 //Scarlett A. Scott (codescarlett)
 
 //Install media: find the ISO a blueprint describes, download it into the cache
-//(~/.vmynt/isos), and check it against the vendor's published SHA-256. This is
-//scripts/lib/Iso.psm1. A blueprint describes its media one of three ways:
+//(~/.vmynt/isos), and check it against the vendor's published SHA-256. A
+//blueprint describes its media one of three ways:
 //
 //  1. iso.path in config               a local .iso, used as it is
 //  2. Media.IsoUrl + Media.IsoSha256   a pinned download
@@ -272,8 +272,7 @@ fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-//Shell-style matching: * is any run of characters, ? is one. Case-insensitive,
-//as PowerShell's -like is.
+//Shell-style matching: * is any run of characters, ? is one. Case-insensitive.
 pub fn wildcard_match(pattern: &str, text: &str) -> bool {
     let p: Vec<char> = pattern.to_lowercase().chars().collect();
     let t: Vec<char> = text.to_lowercase().chars().collect();

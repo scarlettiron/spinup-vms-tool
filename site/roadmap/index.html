@@ -147,7 +147,7 @@
           <h1 id="roadmap-title">Roadmap</h1>
           <p class="lede">Vmynt is the Rust rewrite of a PowerShell tool that built these VMs on Windows.
             Milestones M0 to M3 are done: every command works on Hyper-V, KVM and Apple Virtualization.
-            What's left is the road to 1.0.</p>
+            M4, the road to 1.0, is under way.</p>
           <p>The full plan is in the repository's
             <a href="https://github.com/scarlettiron/vmynt/blob/main/docs/vmynt-design.md">design document</a>.</p>
         </section>
@@ -198,12 +198,16 @@
         </section>
 
         <section id="m4" aria-labelledby="m4-title">
-          <div class="cmd-head"><h2 id="m4-title">M4: 1.0</h2> <span class="badge planned">next</span></div>
+          <div class="cmd-head"><h2 id="m4-title">M4: 1.0</h2> <span class="badge planned">in progress</span></div>
           <ul>
-            <li>Real-hardware passes on Hyper-V and macOS</li>
-            <li>Blueprints converted to YAML, and the PowerShell tool retired</li>
-            <li>Signed binaries</li>
-            <li>First stable release</li>
+            <li>Done: blueprints are YAML (<code>blueprint.yaml</code>, camelCase keys like the config files)</li>
+            <li>Done: the PowerShell tool is removed; Vmynt is the only tool</li>
+            <li>Code signing, ready and waiting for certificates: Windows binaries through Azure Artifact Signing,
+              macOS binaries with a Developer ID certificate and notarization. Each turns on once its account is set up.</li>
+            <li>Every release carries GitHub build-provenance attestations. Check a download with
+              <code>gh attestation verify &lt;file&gt; --repo scarlettiron/vmynt</code></li>
+            <li>Still to come: real-hardware passes on Hyper-V and on a Mac</li>
+            <li>Still to come: the first stable release</li>
           </ul>
         </section>
 

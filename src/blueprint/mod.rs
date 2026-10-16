@@ -16,13 +16,13 @@
 //Splitting blueprints out of the program later means filling in step 2 and
 //dropping step 3. Callers don't change. See docs/vmynt-design.md section 9.
 
-pub mod psd1;
 pub mod resolve;
 
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
 use include_dir::{Dir, DirEntry, include_dir};
+use serde_norway::{Mapping, Value};
 
 use crate::brand;
 use crate::constants::files;
@@ -188,71 +188,50 @@ fn read_folder(name: &str, dir: &Path, source: Source) -> Result<Blueprint> {
     Ok(Blueprint {
         name: name.to_string(),
         description: manifest_value(&text, "Description")
-            .unwrap_or_else(|| "(no blueprint.psd1)".to_string()),
+            .unwrap_or_else(|| "(no blueprint.yaml)".to_string()),
         source,
     })
 }
 
-//Reads `Key = 'value'` from a blueprint.psd1, skipping the <# ... #> comment at
-//the top. Blueprints move to YAML in milestone M1 (design section 9.1); until
-//then this small reader is all the program needs from them.
-fn manifest_value(text: &str, key: &str) -> Option<String> {
-    let mut in_comment = false;
-    for line in text.lines() {
-        let trimmed = line.trim();
-        if trimmed.starts_with("<#") {
-            in_comment = !trimmed.contains("#>");
-            continue;
-        }
-        if in_comment {
-            in_comment = !trimmed.contains("#>");
-            continue;
-        }
-        let Some((left, right)) = trimmed.split_once('=') else {
-            continue;
-        };
-        if left.trim() != key {
-            continue;
-        }
-        let value = right.trim();
-        let quote = value.chars().next()?;
-        if quote != '\'' && quote != '"' {
-            continue;
-        }
-        let inner = &value[1..];
-        let end = inner.find(quote)?;
-        return Some(inner[..end].to_string());
+//Reads a blueprint.yaml into the value type config uses, so blueprints and
+//config merge with one function.
+pub fn parse_manifest(text: &str) -> Result<Mapping> {
+    match serde_norway::from_str::<Value>(text).context("blueprint.yaml is not valid YAML")? {
+        Value::Mapping(map) => Ok(map),
+        Value::Null => Ok(Mapping::new()),
+        _ => bail!("a blueprint.yaml must be a block of settings (name:, description:, os: ...)"),
     }
-    None
 }
 
-//Replaces the value of the first `Key = '...'` line outside the comment block.
+//One top-level text value, like the description, ignoring case.
+fn manifest_value(text: &str, key: &str) -> Option<String> {
+    parse_manifest(text)
+        .ok()
+        .and_then(|map| crate::config::get_string(&map, key))
+}
+
+//Replaces the first top-level `key: ...` line, leaving every comment and the
+//rest of the file as it was. Adds the line at the end when there is none.
 fn set_manifest_value(text: &str, key: &str, value: &str) -> String {
-    let mut in_comment = false;
+    let quoted = format!("'{}'", value.replace('\'', "''"));
     let mut done = false;
     let mut output: Vec<String> = Vec::new();
     for line in text.lines() {
-        let trimmed = line.trim();
-        //A line opening the comment block, or any line inside it, only moves
-        //the "are we in the comment" state along.
-        if in_comment || (!done && trimmed.starts_with("<#")) {
-            in_comment = !trimmed.contains("#>");
-        } else if !done
-            && let Some((left, _)) = line.split_once('=')
-            && left.trim() == key
+        if !done
+            && !line.starts_with([' ', '\t', '#'])
+            && let Some((left, _)) = line.split_once(':')
+            && left.trim().eq_ignore_ascii_case(key)
         {
-            let escaped = value.replace('\'', "''");
-            output.push(format!("{left}= '{escaped}'"));
+            output.push(format!("{}: {quoted}", left.trim()));
             done = true;
             continue;
         }
         output.push(line.to_string());
     }
-    let mut joined = output.join("\n");
-    if text.ends_with('\n') {
-        joined.push('\n');
+    if !done {
+        output.push(format!("{key}: {quoted}"));
     }
-    joined
+    output.join("\n") + "\n"
 }
 
 fn copy_folder(from: &Path, to: &Path) -> Result<()> {
@@ -333,10 +312,18 @@ mod tests {
 
     #[test]
     fn manifest_values_can_be_replaced() {
-        let text =
-            "<#\n  Name = 'not this'\n#>\n@{\n    Name        = 'old'\n    Description = 'x'\n}\n";
-        let changed = set_manifest_value(text, "Name", "new");
-        assert_eq!(manifest_value(&changed, "Name").as_deref(), Some("new"));
-        assert!(changed.contains("Name = 'not this'"), "comment untouched");
+        let text = "# name: not this\nname: 'old'\ndescription: x\nos:\n  name: inner\n";
+        let changed = set_manifest_value(text, "Name", "it's new");
+        assert_eq!(
+            manifest_value(&changed, "name").as_deref(),
+            Some("it's new")
+        );
+        assert!(
+            changed.starts_with("# name: not this\n"),
+            "comment untouched"
+        );
+        assert!(changed.contains("  name: inner\n"), "nested keys untouched");
+        let added = set_manifest_value("description: x\n", "name", "n");
+        assert_eq!(manifest_value(&added, "name").as_deref(), Some("n"));
     }
 }

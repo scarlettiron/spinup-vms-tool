@@ -6,7 +6,7 @@
 //Scarlett A. Scott (codescarlett)
 
 //`vmynt status`: what each VM is, where to reach it, and how bootstrap is
-//going. This is Get-DevVMStatus.ps1. The hypervisor is the truth for hardware,
+//going. The hypervisor is the truth for hardware,
 //config fills in what it can't know, and the guest (over ssh, when reachable)
 //says what is really installed. Every fact is optional: an unreachable guest
 //gives a partial report, never an error.

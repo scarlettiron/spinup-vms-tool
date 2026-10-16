@@ -10,7 +10,7 @@ die()  { printf '[%s] ERROR: %s\n' "$(date +%H:%M:%S)" "$*" >&2; exit 1; }
 
 have_cmd() { command -v "$1" >/dev/null 2>&1; }
 
-# Treat 1/true/yes/on as true so the value can come from PowerShell or a human.
+# Treat 1/true/yes/on as true so the value can come from YAML or a human.
 is_true() {
     case "${1:-}" in
         1|true|True|TRUE|yes|Yes|on|On) return 0 ;;
@@ -97,8 +97,8 @@ export OS_ID OS_ID_LIKE OS_VERSION_ID OS_MAJOR OS_FAMILY
 #   GUEST_DEB_ARCH  amd64  | arm64     Debian's names, used by apt lines and by
 #                                      most GitHub release assets
 #
-# The host says which in VM_ARCH; a seed from the PowerShell tool does not, so
-# fall back to asking the kernel, which is never wrong about itself.
+# The host says which in VM_ARCH; an older seed does not, so fall back to
+# asking the kernel, which is never wrong about itself.
 GUEST_ARCH="${VM_ARCH:-$(uname -m)}"
 case "$GUEST_ARCH" in
     aarch64|arm64) GUEST_ARCH=aarch64; GUEST_DEB_ARCH=arm64 ;;

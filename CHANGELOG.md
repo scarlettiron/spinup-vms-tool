@@ -21,6 +21,14 @@ version bump (0.1 → 0.2) may include breaking changes to the CLI or config for
 - **CI checks** for the minimum supported Rust version, workflow files (actionlint),
   guest shell scripts (shellcheck), the changelog, and the website's links and SEO tags.
 - **Dependabot** for Rust crates and GitHub Actions, grouped weekly.
+- **Code signing**, optional and switched on by secrets: Windows binaries through Azure
+  Artifact Signing, macOS binaries with a Developer ID certificate and notarization.
+- **Build provenance**: every release file gets a GitHub attestation, checked with
+  `gh attestation verify <file> --repo scarlettiron/vmynt`.
+- **winget's first version is detected**: the release skips winget with a warning until
+  the package exists in winget-pkgs, instead of failing.
+- **[docs/publishing-guide.md](docs/publishing-guide.md)**, a click-by-click walkthrough
+  of the store accounts, secrets and the first release.
 - **Building and running VMs** on all three backends:
   - `create` (`new`, `build`): checks the config, downloads and verifies the install ISO,
     writes the seed disk, installs unattended, takes a `clean-install` snapshot and boots the
@@ -37,7 +45,7 @@ version bump (0.1 → 0.2) may include breaking changes to the CLI or config for
   snapshots, `virt-viewer` console, FreeRDP or Remmina desktop.
 - **Apple Virtualization backend** (macOS) through vfkit: a detached vfkit per VM controlled over
   its REST socket, APFS-clone snapshots, the desktop through Microsoft's Windows App.
-- **arm64 guests**: every blueprint has an `Arm64` block with aarch64 installers; Chromium
+- **arm64 guests**: every blueprint has an `arm64` block with aarch64 installers; Chromium
   replaces Chrome on arm64.
 - **Install media**: the current point release is read from the vendor's checksum file, the ISO
   is downloaded once to `~/.vmynt/isos` and verified with SHA-256.
@@ -67,10 +75,21 @@ version bump (0.1 → 0.2) may include breaking changes to the CLI or config for
   the password hash and any secrets. The PowerShell tool left it attached.
 - Relative paths in config are relative to the project folder (the one holding `.vmynt/`).
 - The example configs use neutral example names.
+- **Blueprints are `blueprint.yaml`** with camelCase keys (`os`, `media`, `provisioning`,
+  `arm64`, …), like the config files, instead of PowerShell data files (`blueprint.psd1`). A
+  project blueprint that still has only a `blueprint.psd1` is refused with a message: recreate
+  it with `vmynt blueprints new` and move your changes across.
+- Hyper-V's guest tools are listed in `provisioning.hyperVPackages`, which is added to
+  `packages` only on Hyper-V. It replaces `Provisioning.HyperVOnlyPackages`, and the `arm64`
+  blocks no longer repeat the whole package list.
 
 ### Removed
 
 - The "not available yet" stubs for VM commands.
+- **The PowerShell tool**: `vm.ps1`, `scripts/`, `docs/powershell-tool.md` and the root
+  `ssh_keys/` folder. Vmynt replaces it; it remains in the git history.
+  `vmynt init --import <folder>` still copies config files from an old checkout of it.
+- The reader for `.psd1` blueprints.
 
 ### Fixed
 
@@ -81,13 +100,13 @@ Found by building real VMs under libvirt/KVM (ubuntu-server and redhat-rocky-wor
   Hashes are now written as `$6$<16-character salt>$<hash>`, the way `openssl passwd -6`
   writes them, and older hashes in a config are converted when the seed is built.
 - **Ubuntu installs stopped at "Continue with autoinstall? (yes|no)".** Blueprints can now
-  set `Provisioning.ConfirmText`, which Vmynt types into the VM (libvirt and Hyper-V); on
+  set `provisioning.confirmText`, which Vmynt types into the VM (libvirt and Hyper-V); on
   macOS the install window opens so you can answer it.
 - **Bootstrap steps run as the user lost their variables** (`30-node.sh` failed to load nvm
   on Ubuntu 24.04): `run_as_user` no longer goes through `sudo -i`, whose extra shell
   expanded `$VARS` before the command could set them.
 - **Hyper-V's guest daemons delayed every boot by 90 seconds on other hypervisors.**
-  Blueprints list them in `Provisioning.HyperVOnlyPackages`, installed only on Hyper-V.
+  Blueprints list them in `provisioning.hyperVPackages`, installed only on Hyper-V.
 - **libvirt VMs got a new MAC address after the install.** Each VM now keeps a MAC derived
   from its name.
 - **The clean-install snapshot was taken while the installer's ISO and seed were attached.**
@@ -142,7 +161,7 @@ arrives with the Hyper-V backend in the next milestone (see
 ### Changed
 
 - The README now describes Vmynt. The original PowerShell tool's README moved to
-  [docs/powershell-tool.md](docs/powershell-tool.md). The PowerShell tool itself is unchanged
+  `docs/powershell-tool.md`. The PowerShell tool itself is unchanged
   and keeps working until Vmynt reaches parity on Windows.
 
 [Unreleased]: https://github.com/scarlettiron/vmynt/compare/v0.1.0...HEAD

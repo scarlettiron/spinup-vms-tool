@@ -35,7 +35,7 @@ install -d /var/lib/vm-bootstrap
 MYSQL_DEFAULTS=''
 MYSQL_ROOT_OPTS='-uroot'
 
-# Recorded for the login banner and for Get-DevVMStatus.ps1, so the state of the
+# Recorded for the login banner and for `vmynt status`, so the state of the
 # database is visible without anyone having to know the engine's own commands.
 # Written even on failure, which is the case where it matters most.
 write_state() {

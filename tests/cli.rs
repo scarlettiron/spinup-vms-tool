@@ -313,11 +313,11 @@ fn custom_blueprints_are_copied_into_the_project() {
     assert!(output.status.success(), "{}", stderr(&output));
     let manifest = project
         .join(format!(".{NAME}"))
-        .join("blueprints/my-rocky/blueprint.psd1");
+        .join("blueprints/my-rocky/blueprint.yaml");
     assert!(
         std::fs::read_to_string(manifest)
             .unwrap()
-            .contains("'my-rocky'")
+            .contains("name: 'my-rocky'")
     );
 
     let list = sandbox.run(&project, &["blueprints", "--json"]);

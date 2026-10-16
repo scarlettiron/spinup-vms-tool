@@ -6,8 +6,7 @@
 //Scarlett A. Scott (codescarlett)
 
 //The complete config for building one VM: every layer merged, the blueprint
-//resolved, names worked out and checked. This is Get-DevVMConfig from
-//scripts/lib/Common.psm1. Layers, lowest to highest:
+//resolved, names worked out and checked. Layers, lowest to highest:
 //
 //  1. built-in defaults (assets/defaults.yaml)
 //  2. the blueprint's Defaults

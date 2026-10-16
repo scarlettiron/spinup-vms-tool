@@ -1,0 +1,152 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+# Blueprint: fedora-workstation
+#
+# Fedora with the GNOME Workstation environment, installed unattended from the
+# Everything netinst image and then provisioned as a dev workstation.
+#
+# Why Everything netinst rather than the Workstation Live ISO? The Live image
+# boots a desktop and runs the Anaconda live installer, whose kickstart support
+# is the weaker path. The netinst image is the one built for automated installs:
+# kickstart selects @^workstation-product-environment and the packages come
+# from the mirror, which also keeps the download to a few hundred MB instead of
+# a couple of GB.
+#
+# Differences from the Ubuntu blueprint that actually matter:
+#
+#   kickstart, not cloud-init   Anaconda reads ks.cfg from a volume labelled
+#                               OEMDRV, the counterpart of cloud-init's CIDATA.
+#   dnf, not apt                handled by pkg_install in blueprints/bootstrap.
+#   wheel, not sudo             the admin group; admin_group() resolves it.
+#   SELinux enforcing           files written in %post need restorecon, and
+#                               xrdp needs its labels fixed.
+#   firewalld active            SSH and mDNS have to be opened explicitly;
+#                               Ubuntu ships ufw inactive.
+#   python3-devel, not -dev     one of several package names that differ.
+name: 'fedora-workstation'
+description: 'Fedora + GNOME Workstation, provisioned as a dev workstation'
+
+os:
+  family: 'linux'
+  vendor: 'fedora'
+
+  # The release this blueprint installs, used when osVersion is left blank
+  # in config.
+  #
+  # Fedora has no LTS. A release is supported for roughly 13 months, which
+  # is about one month after the release two ahead of it ships, so a Fedora
+  # workstation needs upgrading roughly once a year.
+  #
+  # This is not a theoretical cost. 42 was the value here until it went end
+  # of life and Fedora moved it off the mirrors into pub/archive, at which
+  # point the blueprint could no longer download its own ISO and every
+  # build failed on a 404. If that happens again, bump this: the current
+  # releases are listed at
+  # https://dl.fedoraproject.org/pub/fedora/linux/releases/
+  #
+  # If the team wants a desktop that does not need this, that is
+  # redhat-rocky-workstation, which follows the RHEL 9 lifecycle.
+  version: '43'
+
+  # Fedora releases are a plain integer. Checked at build time so pointing
+  # this blueprint at '24.04' fails immediately. It does not check that the
+  # release still exists: a retired one fails later, at the download.
+  versionPattern: '^\d{2}$'
+  supportPolicy: 'about 13 months per release; no LTS'
+
+media:
+  # The ISO name carries a build number (42-1.1), and so does the checksum
+  # file, so neither can be constructed from the release alone. The
+  # checksum filename is a pattern resolved from the directory index, and
+  # the ISO name then comes out of the checksum file itself.
+  isoBaseUrl: 'https://download.fedoraproject.org/pub/fedora/linux/releases/{Release}/Everything/x86_64/iso/'
+  isoNamePattern: '*Everything-netinst*.iso'
+  # Fedora publishes BSD-style tags: SHA256 (file) = hash
+  checksumFile: '*-CHECKSUM'
+
+provisioning:
+  method: 'kickstart-oemdrv'  # FAT32 disk labelled OEMDRV
+  seedLabel: 'OEMDRV'
+  seedFileName: 'ks.cfg'
+  seedTemplate: 'seed/ks.cfg.tmpl'
+  # No MetaTemplate: kickstart has no equivalent of cloud-init's meta-data.
+
+  # The bootstrap steps come from blueprints/bootstrap; this blueprint
+  # adds only the ones whose package names or mechanisms differ. Later
+  # directories win, so a file here replaces the shared one.
+  bootstrapDirs: ['../bootstrap', 'bootstrap']
+  bootstrapRoot: '/usr/local/lib/vm-bootstrap'
+
+  # Anaconda's target disk. Safe because the host attaches the data disks
+  # only after the install (at create's finish step): during it the system
+  # disk is the only real disk present.
+  systemDisk: 'sda'
+
+  # Where packages come from, since netinst carries only the installer.
+  # The metalink follows the release, so this needs no edit per version.
+  installSource: 'url --mirrorlist="https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$releasever&arch=$basearch"'
+
+  powerOffAfterInstall: true
+
+  # Hyper-V's guest tools, added to packages only when the VM runs on
+  # Hyper-V. Anywhere else they wait for a Hyper-V device that never
+  # appears and hold up every boot by 90 seconds.
+  hyperVPackages: ['hyperv-daemons']
+  installTimeoutMinutes: 90
+
+firmware:
+  generation: 2
+  # Fedora's shim is signed by the Microsoft UEFI CA, same as Ubuntu's, so
+  # Secure Boot works with the stock template.
+  secureBootTemplate: 'MicrosoftUEFICertificateAuthority'
+  enableTpm: false
+
+# Laid down by the installer. @^ selects an environment group, @ a plain
+# group; everything else is a package.
+packages:
+  - '@^workstation-product-environment'
+  - '@standard'
+  - 'openssh-server'
+  - 'curl'
+  - 'wget'
+  - 'ca-certificates'
+  - 'gnupg2'
+  - 'git'
+  - 'jq'
+  - 'unzip'
+  - 'python3'
+
+defaults:
+  # Fedora Workstation wants a little more room than Ubuntu Server plus a
+  # desktop, and the netinst pulls everything from the mirror.
+  vm:
+    memoryStartupGB: 12
+    memoryMaximumGB: 16
+  bootstrap:
+    # The desktop group, named the way THIS OS names it. It lives here
+    # rather than in vm.config.yaml because the value is meaningless to
+    # any other blueprint: apt has never heard of a comps group.
+    # Normally a no-op, since the kickstart has already installed the
+    # environment by the time 10-desktop.sh runs.
+    desktopPackage: '@workstation-product-environment'
+
+# ---------------------------------------------------------------- arm64
+# Applied over everything above when the guest is arm64, which is every
+# guest on an Apple Silicon Mac. Blocks merge key by key and lists replace
+# outright.
+#
+# Fedora publishes the same netinst for aarch64 beside the x86_64 one, with
+# its own CHECKSUM file, so only the directory changes. The install source
+# already says $basearch and follows by itself.
+arm64:
+  media:
+    isoBaseUrl: 'https://download.fedoraproject.org/pub/fedora/linux/releases/{Release}/Everything/aarch64/iso/'
+
+  # No Hyper-V guest daemons on arm64.
+  provisioning:
+    hyperVPackages: []

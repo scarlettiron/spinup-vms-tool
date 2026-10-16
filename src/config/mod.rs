@@ -6,8 +6,7 @@
 //Scarlett A. Scott (codescarlett)
 
 //Loading a project's config: read each file, expand the quick settings, and
-//merge the layers. This follows the PowerShell tool's rules
-//(Expand-ConfigAliases and Get-DevVMConfig in scripts/lib/Common.psm1).
+//merge the layers.
 //
 //Layers, lowest to highest:
 //  1. .vmynt/vm.config.yaml        shared, committed
@@ -250,7 +249,7 @@ pub fn merge_into(base: &mut Mapping, layer: Mapping) {
 }
 
 //Reads a dotted path like "VM.Name", ignoring case. Null and empty strings count
-//as unset, as they do in the PowerShell tool.
+//as unset.
 pub fn get_path<'a>(map: &'a Mapping, path: &str) -> Option<&'a Value> {
     let mut current = map;
     let parts: Vec<&str> = path.split('.').collect();

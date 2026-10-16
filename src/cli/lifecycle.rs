@@ -5,9 +5,8 @@
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//start, stop, restart, poweroff and remove. These are Start-, Stop- and
-//Remove-DevVM.ps1. None of them provisions anything: bootstrap runs once, on
-//the first boot after `create`.
+//start, stop, restart, poweroff and remove. None of them provisions anything:
+//bootstrap runs once, on the first boot after `create`.
 
 use std::time::Duration;
 

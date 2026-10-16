@@ -12,7 +12,6 @@
 #
 # Full reference for every setting: docs/configuration.md
 # Check a change without building anything:  vmynt create --render
-# (or the PowerShell tool's render command)
 
 # ===========================================================================
 #  QUICK SETTINGS                                            @user-editable
@@ -40,9 +39,9 @@ blueprint:      fedora-workstation
 osVersion:      42
 
 # ---- which hypervisor and CPU ----------------------------------------------
-# Vmynt only. Both follow this computer unless set: Hyper-V on Windows, libvirt
-# on Linux, vfkit on macOS, and the computer's own CPU architecture. Apple
-# Silicon runs arm64 guests only. The PowerShell tool ignores these.
+# Both follow this computer unless set: Hyper-V on Windows, libvirt on Linux,
+# vfkit on macOS, and the computer's own CPU architecture. Apple Silicon runs
+# arm64 guests only.
 # hypervisor:   auto          # auto, hyperv, libvirt or vfkit
 # arch:         auto          # auto, x86_64 or arm64
 
@@ -116,9 +115,8 @@ dbAdminerPort:  3800
 
 # ---- copying files in -----------------------------------------------------
 # A directory on this laptop whose contents are copied into the guest. Relative
-# paths are relative to the project folder (the one holding .vmynt; for the
-# PowerShell tool, this repo), so a committed files/ directory works the same
-# for everyone. Blank copyTo means the primary user's home.
+# paths are relative to the project folder (the one holding .vmynt), so a
+# committed files/ directory works the same for everyone. Blank copyTo means the primary user's home.
 #
 # These are embedded in the seed disk, so this is for configuration, small
 # fixtures and certificates, not bulk data: over 10 MB warns, over 64 MB fails.
@@ -143,9 +141,8 @@ postStart:      []            # example: [ddev config global --no-bind-mounts]
 # ------------------------------------------------------------------------ VM
 #  @advanced except for dataDisks, which is marked below.
 #
-#  path: where each VM's folder lives. Vmynt's default is ~/.vmynt/vms on every
-#  OS; on Linux the disks themselves go in a libvirt storage pool instead. The
-#  PowerShell tool needs it set, for example  path: C:\VMs
+#  path: where each VM's folder lives. The default is ~/.vmynt/vms on every
+#  OS; on Linux the disks themselves go in a libvirt storage pool instead.
 #  switchName is Hyper-V only; network and storagePool are libvirt only.
 vm:
   # path:                 ~/.vmynt/vms
@@ -303,8 +300,8 @@ database:
 #
 #  Each entry:
 #    from    a directory on this laptop. Relative paths are relative to the
-#            project folder (this repo, for the PowerShell tool). Its
-#            *contents* are copied, not the directory itself.
+#            project folder (the one holding .vmynt). Its *contents* are
+#            copied, not the directory itself.
 #    to      where they land in the guest. Absolute, or starting with '~' for the
 #            primary user's home. Blank means '~'.
 #    owner   user or user:group. Blank means the primary user.
@@ -434,7 +431,8 @@ github:
 #
 #  A fleet. Each key is the VM name and the hostname unless overridden, and all
 #  of them share one switch so <hostname>.local resolves between them. Quick
-#  settings work in here too. Build with -Machine <key>, or -All.
+#  settings work in here too. Build one with  vmynt create <key>, or all of them
+#  with  vmynt create --all.
 #
 #  Each names its own blueprint AND its osVersion, because the version at the top
 #  of this file is a Fedora one and means nothing to Ubuntu. That is the cost of
@@ -469,7 +467,6 @@ machines:
 #  checksum are read from the vendor's published checksum file at build time, so
 #  nothing here needs updating when a new one ships.
 iso:
-  # directory:    ~/.vmynt/isos # where downloaded ISOs are cached (Vmynt's default;
-  #                             # the PowerShell tool needs one, for example C:\ISO)
+  # directory:    ~/.vmynt/isos # where downloaded ISOs are cached (the default)
   path:           ''            # explicit .iso path; skips download + lookup (relative to the project)
   verifyChecksum: true          # leave on: a bad download is deleted, not used

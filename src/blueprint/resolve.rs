@@ -6,8 +6,7 @@
 //Scarlett A. Scott (codescarlett)
 
 //Turning a blueprint name into everything a build needs from it: the merged
-//settings (following Inherits), the seed templates, and the bootstrap files.
-//This is Resolve-Blueprint from scripts/lib/Common.psm1.
+//settings (following inherits), the seed templates, and the bootstrap files.
 //
 //Files are looked up along the inheritance chain, child first. A blueprint that
 //lives in a project (or was downloaded) and lacks a file falls through to the
@@ -22,7 +21,7 @@ use anyhow::{Context, Result, bail};
 use include_dir::{Dir, DirEntry, File};
 use serde_norway::{Mapping, Value};
 
-use super::{EMBEDDED, Source, find, psd1};
+use super::{EMBEDDED, Source, find, parse_manifest};
 use crate::config::{get_path, get_string, merge_into};
 use crate::constants::files;
 use crate::platform::Arch;
@@ -214,11 +213,19 @@ fn read_manifest(location: &Location) -> Result<Mapping> {
             .with_context(|| format!("the built-in blueprint {dir} has no manifest"))?,
         Location::Disk(dir) => {
             let path = dir.join(files::BLUEPRINT_MANIFEST);
+            if !path.is_file() && dir.join(files::OLD_BLUEPRINT_MANIFEST).is_file() {
+                bail!(
+                    "{} is a blueprint.psd1 from before 1.0. Blueprints are YAML now: copy a \
+                     current one with `{} blueprints new` and move your changes across.",
+                    dir.display(),
+                    crate::brand::NAME
+                );
+            }
             std::fs::read_to_string(&path)
                 .with_context(|| format!("could not read {}", path.display()))?
         }
     };
-    psd1::parse(&text)
+    parse_manifest(&text)
 }
 
 //`relative` resolved against `base` ("ubuntu-server" + "../bootstrap" is
@@ -367,6 +374,28 @@ mod tests {
                 "{}: {media}",
                 blueprint.name
             );
+        }
+    }
+
+    #[test]
+    fn install_sources_hold_only_kickstart_source_lines() {
+        //A YAML block scalar swallows any more-indented line after it, so a key
+        //written beneath one by mistake ends up inside the kickstart.
+        for blueprint in super::super::list(None).unwrap() {
+            for arch in [Arch::X86_64, Arch::Aarch64] {
+                let resolved = resolve(&blueprint.name, None, arch).unwrap();
+                let Some(source) = resolved.get_string("Provisioning.InstallSource") else {
+                    continue;
+                };
+                for line in source.lines() {
+                    let command = line.split_whitespace().next().unwrap_or("");
+                    assert!(
+                        ["url", "repo", "cdrom", "harddrive", "nfs"].contains(&command),
+                        "{} ({arch:?}): {line}",
+                        blueprint.name
+                    );
+                }
+            }
         }
     }
 

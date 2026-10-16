@@ -7,7 +7,7 @@
 
 //Password hashing. Linux stores passwords as SHA-512 crypt hashes, the strings
 //that start with "$6$". Making one here means the config never needs the plain
-//password, and nobody needs openssl installed (the PowerShell tool did).
+//password, and nobody needs openssl installed.
 
 use anyhow::{Result, anyhow};
 #[cfg(test)]

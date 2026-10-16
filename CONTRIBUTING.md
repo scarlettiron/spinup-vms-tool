@@ -70,7 +70,7 @@ Use the comment syntax of the file you're in:
 | ------------------------------------------ | ------------------------------------------------------------------------ |
 | Rust (`.rs`), JavaScript (`.js`)            | `//` on every line, as above                                             |
 | CSS (`.css`)                                | one `/* … */` block holding the same lines                               |
-| Bash (`.sh`), PowerShell (`.ps1`, `.psm1`), YAML (`.yml`, `.yaml`), TOML | `#` on every line                                                        |
+| Bash (`.sh`), PowerShell (`.ps1`), YAML (`.yml`, `.yaml`), TOML | `#` on every line                                                        |
 | HTML (`.html`)                              | one `<!-- … -->` block, placed right after `<!DOCTYPE html>`             |
 | Markdown                                    | no watermark needed                                                      |
 
@@ -97,8 +97,8 @@ Rules for the watermark:
   Keep Scarlett A. Scott (codescarlett) at the top of the list.
 - Use the format `Full Name (handle)`, one contributor per line.
 - Only add your name once per file. If it is already in the list, leave it as it is.
-- Some older scripts from the PowerShell tool don't have a watermark yet. If you edit one, add
-  the watermark with both names.
+- Some older guest scripts, written before Vmynt, don't have a watermark yet. If you edit one,
+  add the watermark with both names.
 
 For example, after a second person edits a file, the contributors section would look like this:
 
@@ -171,17 +171,18 @@ A blueprint is one operating system and how to install it unattended.
 
 1. Copy the closest existing folder under `blueprints/`, for example
    `blueprints/redhat-rocky-workstation/`, and rename it `<family>-<distro>-<flavour>`.
-2. Update its `blueprint` file: name, description, OS version pattern, install media URLs and
-   checksum file (one entry per architecture you support), and the provisioning method.
+2. Update its `blueprint.yaml`: `name`, `description`, `os.versionPattern`, the install media
+   URLs and checksum file under `media` (plus an `arm64` block if you support arm64), and the
+   `provisioning` method. Hyper-V's guest tools go in `provisioning.hyperVPackages`, not
+   `packages`.
 3. Update the seed template under `seed/`. Templates use `{{PLACEHOLDER}}` substitution, nothing
    more.
 4. Reuse the shared bootstrap steps. Only add a blueprint-specific step under its own
    `bootstrap/` folder if the shared one genuinely can't handle the OS.
 5. Build a VM with it on at least one host platform, and say which in the pull request.
 
-[docs/adding-an-os.md](docs/adding-an-os.md) walks through this in more detail. Some of it
-describes the PowerShell tool's file format, which Vmynt is moving away from (see
-[the design](docs/vmynt-design.md#9-blueprints)).
+[docs/adding-an-os.md](docs/adding-an-os.md) walks through this in more detail, and
+[the design](docs/vmynt-design.md#9-blueprints) describes the format.
 
 ## The website
 

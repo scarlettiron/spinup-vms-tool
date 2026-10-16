@@ -174,6 +174,102 @@ jobs:
       - name: Build
         run: cargo build --release --locked --target "$TARGET"
 
+      # Code signing is optional: each platform signs only when its secrets are
+      # set, and the release goes out unsigned otherwise. docs/releasing.md,
+      # "Code signing", says how to get the certificates.
+      - name: Check for signing secrets
+        id: signing
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          windows=false; macos=false; notarize=false
+          if [[ "$TARGET" == *windows* && -n "$AZURE_CLIENT_ID" ]]; then windows=true; fi
+          if [[ "$TARGET" == *apple* && -n "$APPLE_CERTIFICATE_P12" ]]; then macos=true; fi
+          if [[ "$macos" == true && -n "$APPLE_API_KEY_P8" ]]; then notarize=true; fi
+          if [[ "$TARGET" == *windows* && "$windows" == false ]]; then
+            echo "::notice::AZURE_CLIENT_ID is not set, so the Windows binary is unsigned. See docs/releasing.md."
+          fi
+          if [[ "$TARGET" == *apple* && "$macos" == false ]]; then
+            echo "::notice::APPLE_CERTIFICATE_P12 is not set, so the macOS binary is only ad-hoc signed. See docs/releasing.md."
+          fi
+          {
+            echo "windows=$windows"
+            echo "macos=$macos"
+            echo "notarize=$notarize"
+          } >> "$GITHUB_OUTPUT"
+
+      # Azure Artifact Signing (formerly Trusted Signing). Signs the .exe in
+      # place, before it is zipped, with an RFC 3161 timestamp so the signature
+      # outlives the short-lived certificate.
+      - name: Sign the Windows binary
+        if: steps.signing.outputs.windows == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          files: ${{ github.workspace }}\target\${{ matrix.target }}\release\${{ needs.meta.outputs.name }}.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      # A Developer ID signature with the hardened runtime, then notarization.
+      # A bare binary can't have the ticket stapled to it, so Gatekeeper looks
+      # the ticket up online the first time the binary runs. Homebrew installs
+      # are never quarantined and work without any of this.
+      - name: Sign and notarize the macOS binary
+        if: steps.signing.outputs.macos == 'true'
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          NOTARIZE: ${{ steps.signing.outputs.notarize }}
+        run: |
+          binary="target/$TARGET/release/$NAME"
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(openssl rand -hex 24)"
+
+          echo "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s \
+            -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain"
+          rm "$RUNNER_TEMP/cert.p12"
+
+          identity="$(security find-identity -v -p codesigning "$keychain" \
+            | awk -F'"' '/Developer ID Application/ { print $2; exit }')"
+          if [ -z "$identity" ]; then
+            echo "::error::APPLE_CERTIFICATE_P12 holds no 'Developer ID Application' certificate."
+            exit 1
+          fi
+          codesign --force --options runtime --timestamp \
+            --keychain "$keychain" --sign "$identity" "$binary"
+          codesign --verify --strict --verbose=2 "$binary"
+
+          if [ "$NOTARIZE" = "true" ]; then
+            printf '%s\n' "$APPLE_API_KEY_P8" > "$RUNNER_TEMP/notary.p8"
+            ditto -c -k --keepParent "$binary" "$RUNNER_TEMP/notarize.zip"
+            xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" \
+              --key "$RUNNER_TEMP/notary.p8" --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER" --wait --timeout 30m
+            rm "$RUNNER_TEMP/notary.p8"
+          else
+            echo "::notice::APPLE_API_KEY_P8 is not set, so the macOS binary is signed but not notarized."
+          fi
+          security delete-keychain "$keychain"
+
       - name: Smoke test
         if: matrix.native
         shell: bash
@@ -230,6 +326,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -248,6 +346,17 @@ jobs:
           cd dist
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
+
+      # A signed record, kept by GitHub, that each file was built by this
+      # workflow from this tag. Anyone can check a download with
+      #   gh attestation verify <file> --repo <owner>/<repo>
+      # It needs no secrets. GitHub offers it free for public repositories only,
+      # so a private one skips it.
+      - name: Attest build provenance
+        if: ${{ !github.event.repository.private }}
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/*
 
       # The "## [1.2.3]" section of CHANGELOG.md goes at the top of the release
       # notes (packaging/version.py notes prints it). GitHub's own list of merged
@@ -361,16 +470,30 @@ jobs:
     env:
       WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
     steps:
-      - name: Check for the secret
+      # winget-releaser can only update a package that is already in
+      # winget-pkgs, so the very first version is submitted by hand
+      # (docs/releasing.md, "First winget submission").
+      - name: Check for the secret and an existing package
         id: check
         shell: bash
+        env:
+          WINGET_ID: ${{ needs.meta.outputs.winget_id }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -z "$WINGET_TOKEN" ]; then
             echo "::notice::WINGET_TOKEN is not set, so winget was skipped. See docs/releasing.md."
             echo "ok=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "ok=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          # CodeScarlett.Vmynt lives at manifests/c/CodeScarlett/Vmynt.
+          first="${WINGET_ID:0:1}"
+          folder="manifests/${first,,}/${WINGET_ID//.//}"
+          if ! gh api "repos/microsoft/winget-pkgs/contents/$folder" --silent 2> /dev/null; then
+            echo "::warning::$WINGET_ID is not in winget-pkgs yet. Submit this first version by hand (docs/releasing.md, \"First winget submission\"); later releases update it automatically."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ok=true" >> "$GITHUB_OUTPUT"
 
       # Copies the previous version's manifests and swaps in the new zips.
       # The architecture of each zip is read from its name (x86_64 / aarch64).

@@ -36,7 +36,7 @@ const SHARED_TEMPLATE: &str = include_str!("../../assets/templates/vm.config.yam
 const LOCAL_TEMPLATE: &str = include_str!("../../assets/templates/vm.config.local.yaml.tmpl");
 const GITIGNORE_TEMPLATE: &str = include_str!("../../assets/templates/gitignore.tmpl");
 const SSH_README_TEMPLATE: &str = include_str!("../../assets/templates/ssh_keys_README.md.tmpl");
-//The full reference files, shared with the PowerShell tool at the repository root.
+//The full reference files, kept at the repository root.
 const SHARED_EXAMPLE: &str = include_str!("../../vm.config.example.yaml");
 const LOCAL_EXAMPLE: &str = include_str!("../../vm.config.local.example.yaml");
 
@@ -435,15 +435,14 @@ fn write_support_files(folder: &Path) -> AppResult<Vec<PathBuf>> {
     Ok(written)
 }
 
-//The reference files at the repository root were written for the PowerShell
-//tool. Point their commands and doc links at this program instead.
+//The reference files at the repository root link to docs/ in this repository.
+//Point those links at the website and GitHub instead.
 fn example_text(raw: &str) -> String {
     let header = render_with_brand(
         "# Reference copy written by `{{app}} init`: every setting, with what it does.\n# {{App}} does not read this file. Copy the lines you want into vm.config.yaml\n# or vm.config.local.yaml.\n#\n",
         &[],
     );
     let body = raw
-        .replace(".\\vm.ps1 ", &format!("{} ", brand::NAME))
         .replace(
             "docs/configuration.md",
             &format!("{}configuration/", brand::SITE_URL),
@@ -465,8 +464,8 @@ fn support_note(path: &Path) -> &'static str {
     }
 }
 
-//`init --import <folder>`: reuse the config files of an existing checkout of the
-//PowerShell tool (or another project).
+//`init --import <folder>`: reuse the config files of another project, or of a
+//checkout of the old PowerShell tool.
 fn import(source: &Path, cwd: &Path, ui: Ui) -> AppResult<()> {
     let candidates = [source.join(brand::DIR), source.to_path_buf()];
     let Some(from) = candidates
@@ -631,7 +630,7 @@ mod tests {
     #[test]
     fn examples_point_at_this_program() {
         let text = example_text(SHARED_EXAMPLE);
-        assert!(!text.contains(".\\vm.ps1 "));
+        assert!(!text.contains("vm.ps1"));
         assert!(text.contains(&format!("{}configuration/", brand::SITE_URL)));
     }
 }

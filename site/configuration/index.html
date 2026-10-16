@@ -140,7 +140,7 @@
         <a href="#naming">Names and addresses</a>
         <a href="#os">Choosing the OS</a>
         <a href="#machines">Machines</a>
-        <a href="#new-keys">New in Vmynt</a>
+        <a href="#new-keys">Host and hypervisor</a>
         <a href="#passwords">password vs passwordHash</a>
         <a href="#validate">Checking a config</a>
       </nav>
@@ -151,8 +151,7 @@
           <h1 id="config-title">Configuration</h1>
           <p class="lede">A Vmynt VM is described by YAML in your project's <code>.vmynt/</code> folder:
             a shared file the team commits, and a local file that's yours alone.</p>
-          <p>The format is the one the PowerShell tool already uses, so existing configs carry over
-            unchanged. <code>.vmynt/vm.config.example.yaml</code>, written by <code>vmynt init</code>,
+          <p><code>.vmynt/vm.config.example.yaml</code>, written by <code>vmynt init</code>,
             explains every option in place.</p>
         </section>
 
@@ -361,22 +360,21 @@ blueprint:   ubuntu-desktop
         </section>
 
         <section id="new-keys" aria-labelledby="new-title">
-          <h2 id="new-title">New in Vmynt</h2>
+          <h2 id="new-title">Host and hypervisor</h2>
           <div class="table-wrap">
             <table>
               <thead><tr><th scope="col">Key</th><th scope="col">Default</th><th scope="col">Means</th></tr></thead>
               <tbody>
                 <tr><td><code>hypervisor</code></td><td><code>auto</code></td><td>Which backend runs the VM: <code>hyperv</code> on Windows, <code>libvirt</code> on Linux, <code>vfkit</code> on macOS. Only the computer's own is accepted in 1.0.</td></tr>
                 <tr><td><code>arch</code></td><td><code>auto</code></td><td>The guest's CPU architecture, <code>x86_64</code> or <code>arm64</code>, the same as the host's by default. Must match the host on macOS.</td></tr>
-                <tr><td><code>vm.path</code></td><td><code>~/.vmynt/vms</code></td><td>Where each VM's folder lives: disks on Windows and macOS, build files and state everywhere. (The PowerShell tool used <code>C:\VMs</code>.)</td></tr>
+                <tr><td><code>vm.path</code></td><td><code>~/.vmynt/vms</code></td><td>Where each VM's folder lives: disks on Windows and macOS, build files and state everywhere.</td></tr>
                 <tr><td><code>vm.network</code></td><td><code>default</code></td><td>Linux: the libvirt network the VM joins.</td></tr>
                 <tr><td><code>vm.storagePool</code></td><td><code>default</code></td><td>Linux: the libvirt storage pool for the disks, seed and installer (<code>/var/lib/libvirt/images</code>, created if missing). The system QEMU can't read home folders, so disks don't go in <code>vm.path</code> on Linux.</td></tr>
-                <tr><td><code>iso.directory</code></td><td><code>~/.vmynt/isos</code></td><td>Where downloaded installers are cached. (The PowerShell tool used <code>C:\ISO</code>.)</td></tr>
+                <tr><td><code>iso.directory</code></td><td><code>~/.vmynt/isos</code></td><td>Where downloaded installers are cached.</td></tr>
                 <tr><td><code>timezone</code></td><td>this computer's</td><td>Read from the computer on Linux and macOS; <code>UTC</code> on Windows unless set.</td></tr>
               </tbody>
             </table>
           </div>
-          <p>Configs are YAML only. The PowerShell tool's <code>.psd1</code> config format is not read.</p>
         </section>
 
         <section id="passwords" aria-labelledby="passwords-title">

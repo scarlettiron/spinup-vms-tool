@@ -1,8 +1,6 @@
-# per-developer overrides. The .psd1 forms are here too because the loader still
-# accepts that format for a layer, so an accidental one should not be committed.
+# per-developer overrides
 vm.config.local.yaml
 vm.config.local.yml
-vm.config.local.psd1
 
 # generated seed material + rendered cloud-init (contains a password hash)
 build/
@@ -12,10 +10,8 @@ iso/
 *.iso
 *.vhdx
 
-# dropped-in key material (ssh_keys/.gitignore repeats this - deliberately)
-ssh_keys/*
-!ssh_keys/.gitignore
-!ssh_keys/README.md
+# dropped-in key material
+ssh_keys/
 
 # Rust build output. Cargo.lock IS committed: the release workflow builds with --locked.
 /target/

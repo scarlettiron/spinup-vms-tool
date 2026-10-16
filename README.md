@@ -48,7 +48,9 @@ sudo apt update && sudo apt install vmynt
 
 **Anything else:** download an archive for your platform from
 [Releases](https://github.com/scarlettiron/vmynt/releases), check it against `SHA256SUMS`, and put
-`vmynt` on your `PATH`.
+`vmynt` on your `PATH`. Every release file also carries a GitHub build-provenance attestation:
+`gh attestation verify <file> --repo scarlettiron/vmynt` confirms it was built by this
+repository's release workflow.
 
 Then run `vmynt doctor` to check your machine is ready.
 
@@ -143,12 +145,17 @@ Blueprints that ship: Rocky Linux (the default), RHEL, Fedora and Ubuntu with GN
 Server. Each installs on x86_64 and arm64. You can copy any of them into your project and change
 it with `vmynt blueprints new`.
 
-## The PowerShell tool
+## Guides
 
-This repository started as a PowerShell tool for Windows and Hyper-V (`vm.ps1` and `scripts/`). It
-still works and reads the same config and blueprints. Its guide is in
-[docs/powershell-tool.md](docs/powershell-tool.md), and the deeper topics (configuration, disks,
-databases, GitHub access, troubleshooting) are in [docs/](docs/). It is removed at 1.0.
+- [Configuration](docs/configuration.md): layers, quick settings, machines, Red Hat subscriptions
+- [Disks](docs/disks.md), [databases](docs/databases.md), [repos](docs/repos.md),
+  [GitHub access](docs/github-access.md), [files and hooks](docs/files-and-hooks.md)
+- [Adding or changing an OS](docs/adding-an-os.md): blueprints and bootstrap steps
+- [Troubleshooting](docs/troubleshooting.md)
+
+This repository started as a PowerShell tool for Windows and Hyper-V (`vm.ps1` and `scripts/`).
+Vmynt replaced it and it was removed before 1.0; it remains in the git history.
+`vmynt init --import <folder>` reuses config files from an old checkout of it.
 
 ## Learn more
 

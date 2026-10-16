@@ -145,7 +145,7 @@
         <a href="#machines">Several machines</a>
         <a href="#targets">Choosing a VM</a>
         <a href="#folders">Where things live</a>
-        <a href="#migrating">From the PowerShell tool</a>
+        <a href="#migrating">Bringing an existing config</a>
         <a href="#help">Getting help</a>
         <div class="group">Reference</div>
         <a href="../commands/">Commands</a>
@@ -319,8 +319,8 @@
             <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
             <pre>vmynt hash</pre>
           </div>
-          <p class="callout">A plain <code>password</code> key still works, for configs written for the
-            PowerShell tool. Vmynt warns when one appears in the committed <code>vm.config.yaml</code>.</p>
+          <p class="callout">A plain <code>password</code> key still works, for older configs. Vmynt
+            warns when one appears in the committed <code>vm.config.yaml</code>.</p>
         </section>
 
         <section id="scripting" aria-labelledby="scripting-title">
@@ -401,20 +401,18 @@
         </section>
 
         <section id="migrating" aria-labelledby="migrating-title">
-          <h2 id="migrating-title">Coming from the PowerShell tool</h2>
-          <p>Vmynt is the Rust rewrite of the PowerShell scripts in the same repository
-            (<code>vm.ps1</code> and <code>scripts/</code>), and keeps the same config format and
-            blueprints. To bring an existing config across:</p>
+          <h2 id="migrating-title">Bringing an existing config</h2>
+          <p>To reuse the config files from another project, or from an old checkout of the PowerShell
+            tool Vmynt replaced:</p>
           <div class="code">
             <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
-            <pre>vmynt init --import path/to/old/checkout</pre>
+            <pre>vmynt init --import path/to/other/folder</pre>
           </div>
           <p>It copies <code>vm.config.yaml</code> and <code>vm.config.local.yaml</code> into
-            <code>.vmynt/</code>. The commands map one to one: <code>.\vm.ps1 create</code> becomes
-            <code>vmynt create</code>, and so on, with the same aliases. Relative paths in the config
-            (<code>copyFrom</code>, <code>postStartFile</code>, token files) are now relative to the project
-            folder, the one holding <code>.vmynt/</code>. Vmynt keeps VM files in <code>~/.vmynt/vms/</code>
-            rather than <code>C:\VMs</code> unless <code>vm.path</code> says otherwise.</p>
+            <code>.vmynt/</code>. Relative paths in the config (<code>copyFrom</code>,
+            <code>postStartFile</code>, token files) are relative to the project folder, the one holding
+            <code>.vmynt/</code>. The PowerShell tool was removed before 1.0 and is still in the
+            repository's git history.</p>
         </section>
 
         <section id="help" aria-labelledby="help-title">

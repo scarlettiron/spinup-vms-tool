@@ -7,9 +7,7 @@
 
 //Turning the config into unattended-install files: the kickstart or cloud-init
 //seed, with the whole bootstrap tree and its generated settings embedded, so
-//the finished VM carries its own provisioning. This is New-DevVMSeed and the
-//New-* helpers from scripts/lib/Seed.psm1; the files it produces are the same,
-//apart from two new variables (VM_HYPERVISOR and VM_ARCH).
+//the finished VM carries its own provisioning.
 
 pub mod disk;
 
@@ -308,11 +306,10 @@ pub fn render(config: &Effective, target: &Target, own_key: Option<&str>) -> Res
         ),
     };
     //Hyper-V's guest daemons only make sense on Hyper-V.
-    let hyperv_only = string_list(blueprint.get("Provisioning.HyperVOnlyPackages"));
-    let packages: Vec<String> = string_list(blueprint.get("Packages"))
-        .into_iter()
-        .filter(|p| target.hypervisor == HypervisorKind::HyperV || !hyperv_only.contains(p))
-        .collect();
+    let mut packages: Vec<String> = string_list(blueprint.get("Packages"));
+    if target.hypervisor == HypervisorKind::HyperV {
+        packages.extend(string_list(blueprint.get("Provisioning.HyperVPackages")));
+    }
 
     let (package_block, keys_block, write_files) = if kickstart {
         let keys_block = keys
@@ -1059,6 +1056,10 @@ mod tests {
         let user_data = &seed.seed_files[0].1;
         assert!(user_data.starts_with("#cloud-config"));
         assert!(user_data.contains("      - path: /etc/vm-bootstrap.env"));
+        assert!(
+            user_data.contains("linux-cloud-tools-virtual"),
+            "Hyper-V gets its guest tools"
+        );
         let meta = &seed.seed_files[1].1;
         assert!(meta.contains("local-hostname: dev-ubuntu-server"));
         //The env file names the hypervisor, decoded back out of the payload.

@@ -22,8 +22,8 @@ documentation = "https://scarlettiron.github.io/vmynt/docs/"
 readme = "README.md"
 keywords = ["vm", "hyper-v", "kvm", "devtools", "provisioning"]
 categories = ["command-line-utilities", "development-tools"]
-#Only what the binary needs. The site, packaging and PowerShell tool stay out of
-#a crates.io upload if one is ever made.
+#Only what the binary needs. The site and packaging stay out of a crates.io
+#upload.
 include = [
     "/src/**",
     "/assets/**",

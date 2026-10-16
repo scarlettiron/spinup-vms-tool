@@ -27,7 +27,9 @@ pub const ISO_CACHE_DIR: &str = "isos";
 pub const TEMP_DIR: &str = "tmp";
 
 //Blueprints.
-pub const BLUEPRINT_MANIFEST: &str = "blueprint.psd1";
+pub const BLUEPRINT_MANIFEST: &str = "blueprint.yaml";
+//What the PowerShell tool and Vmynt before 1.0 used, recognised only to say so.
+pub const OLD_BLUEPRINT_MANIFEST: &str = "blueprint.psd1";
 //The bootstrap steps every blueprint shares. It sits beside the blueprints but is
 //not one itself.
 pub const SHARED_BOOTSTRAP_DIR: &str = "bootstrap";

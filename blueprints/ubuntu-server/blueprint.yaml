@@ -1,0 +1,48 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+# Blueprint: ubuntu-server
+#
+# Identical to ubuntu-desktop but headless. Also the cheapest possible example
+# of extending this repo: inherit another blueprint's media, templates, and
+# bootstrap steps, then state the difference.
+#
+# Defaults vs Overrides is the distinction that matters:
+#
+#   Defaults  - what this OS *suggests*. Sits BELOW vm.config.yaml, so the
+#               team standard can override it. Sizing belongs here.
+#   Overrides - what this OS *is*. Sits ABOVE vm.config.yaml, so choosing this
+#               blueprint actually produces a headless machine instead of being
+#               quietly undone by an InstallDesktop = $true in the shared
+#               config. A developer's own vm.config.local.yaml, a Machines
+#               block, or a command-line parameter still wins.
+name: 'ubuntu-server'
+description: 'Ubuntu LTS, headless, same dev toolchain'
+inherits: 'ubuntu-desktop'
+
+overrides:
+  vm:
+    # Enhanced Session is an RDP-into-GNOME feature; there is no GNOME.
+    enhancedSession: false
+  bootstrap:
+    installDesktop: false
+    installVSCode: false
+    # 41-chrome.sh skips itself without a desktop anyway, but saying so
+    # here keeps the plan honest rather than listing chrome and not
+    # installing it.
+    installChrome: false
+
+defaults:
+  vm:
+    cpuCount: 4
+    memoryStartupGB: 8
+    memoryMinimumGB: 2
+    memoryMaximumGB: 12
+    diskSizeGB: 80
+  bootstrap:
+    # Nothing to reboot into on a headless box.
+    rebootWhenDone: false

@@ -5,8 +5,7 @@
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt create`: builds a VM from the project's config. This is
-//scripts/New-DevVM.ps1. The steps:
+//`vmynt create`: builds a VM from the project's config. The steps:
 //
 //  1. plan        load and check the config, show what will be built
 //  2. name        refuse a VM name or hostname that is already taken
@@ -454,7 +453,7 @@ fn effective_kind(config: &Effective) -> HypervisorKind {
     }
 }
 
-//What will be built, the way New-DevVM.ps1's Show-Plan says it.
+//What will be built, shown before anything is downloaded or created.
 fn show_plan(config: &Effective, hv: &dyn Hypervisor, ui: Ui) -> AppResult<()> {
     let b = |path: &str| config.flag(path, false);
     let chain = &config.blueprint.chain;

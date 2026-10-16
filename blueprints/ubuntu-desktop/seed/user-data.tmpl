@@ -1,6 +1,6 @@
 #cloud-config
-# GENERATED FILE - rendered from this template by scripts/lib/Seed.psm1.
-# Edit the template, not build/<vm>/seed/user-data.
+# GENERATED FILE - rendered from this template by `vmynt create`.
+# Edit the template, not the rendered user-data.
 #
 # Delivered to the Ubuntu installer as a cloud-init NoCloud datasource on a
 # FAT32 disk labelled CIDATA. Canonical's documented shape for that delivery
@@ -26,7 +26,7 @@ autoinstall:
   # disk unallocated, which is exactly the kind of silent misconfiguration this
   # repo exists to avoid.
   # 'size: largest' is only unambiguous because the host attaches the data disks
-  # AFTER the install (see Add-DevVMDataDisks). During the install the only disks
+  # AFTER the install (create's finish step). During the install the only disks
   # present are the system disk and the tiny seed volume, so the largest is the
   # right one. Attach a 50 GB data disk here and this would install onto it.
   storage:

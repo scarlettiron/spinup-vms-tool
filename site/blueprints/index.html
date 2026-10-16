@@ -188,7 +188,7 @@
           <h2 id="anatomy-title">What's in a blueprint</h2>
           <div class="code">
             <div class="bar"><span>blueprints/redhat-rocky-workstation/</span></div>
-            <pre>blueprint.psd1          <span class="tok-c"># the OS, where its installer comes from, how to seed it; an Arm64 block for arm64</span>
+            <pre>blueprint.yaml          <span class="tok-c"># the OS, where its installer comes from, how to seed it; an arm64 block for arm64</span>
 seed/ks.cfg.tmpl        <span class="tok-c"># the unattended install answers, with {{PLACEHOLDERS}}</span>
 bootstrap/              <span class="tok-c"># steps and files only this OS needs</span>
   assets/xrdp-startwm.sh
@@ -197,9 +197,33 @@ bootstrap/              <span class="tok-c"># steps and files only this OS needs
           <p>The installer is downloaded once, checked against the distribution's published checksum, and
             cached in <code>~/.vmynt/isos</code>. The answer file is filled in from your config:
             hostname, user, password hash, locale, keyboard, timezone, packages.</p>
-          <p class="callout">Blueprints are still PowerShell data files (<code>blueprint.psd1</code>),
-            because the PowerShell tool in the repository reads the same ones. Vmynt reads them directly;
-            they move to YAML, with the same fields, when that tool is retired at 1.0.</p>
+          <p><code>blueprint.yaml</code> uses camelCase keys, like the config files:
+            <code>os</code> (the distribution and which versions it accepts), <code>media</code> (where the
+            installer and its checksum file are), <code>provisioning</code> (the seed template, the disk
+            label, the bootstrap folders), <code>firmware</code>, <code>packages</code>, and
+            <code>defaults</code> and <code>overrides</code> for config values. A blueprint can
+            <code>inherits:</code> another and state only the difference.</p>
+          <div class="code">
+            <div class="bar"><span>blueprint.yaml (part)</span></div>
+            <pre>name: 'redhat-rocky-workstation'
+description: 'Rocky Linux + GNOME Workstation, provisioned as a dev workstation'
+os:
+  vendor: 'rocky'
+  version: '9'
+media:
+  isoBaseUrl: 'https://download.rockylinux.org/pub/rocky/{Release}/isos/x86_64/'
+  checksumFile: 'Rocky-*-latest-x86_64-boot.iso.CHECKSUM'
+provisioning:
+  method: 'kickstart-oemdrv'
+  seedTemplate: 'seed/ks.cfg.tmpl'
+  hyperVPackages: ['hyperv-daemons']   <span class="tok-c"># added to packages on Hyper-V only</span>
+packages:
+  - '@^workstation-product-environment'
+  - 'openssh-server'</pre>
+          </div>
+          <p><code>provisioning.hyperVPackages</code> lists the Hyper-V guest tools. They are added to
+            <code>packages</code> only when the VM runs on Hyper-V; anywhere else they would hold up
+            every boot waiting for a Hyper-V device.</p>
         </section>
 
         <section id="steps" aria-labelledby="steps-title">
@@ -267,8 +291,9 @@ bootstrap/              <span class="tok-c"># steps and files only this OS needs
           <h2 id="arm64-title">arm64 and Apple Silicon</h2>
           <p>Macs with Apple Silicon run arm64 guests only, and arm Linux hosts can too. The guest's
             architecture follows the computer's unless you set <code>arch:</code> in the config. Each
-            blueprint has an <code>Arm64</code> block naming its arm64 installer and packages, laid over
-            the rest of the blueprint when the guest is arm64.</p>
+            blueprint has an <code>arm64</code> block naming its arm64 installer, laid over the rest of
+            the blueprint when the guest is arm64: blocks merge key by key and lists replace. It also sets
+            <code>provisioning.hyperVPackages: []</code>, since there are no Hyper-V guest tools for arm64.</p>
           <div class="table-wrap">
             <table>
               <thead><tr><th scope="col">Part</th><th scope="col">On arm64</th></tr></thead>
@@ -282,7 +307,7 @@ bootstrap/              <span class="tok-c"># steps and files only this OS needs
               </tbody>
             </table>
           </div>
-          <p>A custom blueprint without an <code>Arm64</code> block refuses to build an arm64 guest and says so.</p>
+          <p>A custom blueprint without an <code>arm64</code> block refuses to build an arm64 guest and says so.</p>
         </section>
 
         <section id="future" aria-labelledby="future-title">

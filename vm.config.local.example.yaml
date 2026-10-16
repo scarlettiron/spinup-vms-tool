@@ -12,7 +12,6 @@
 # docs/configuration.md.
 #
 # Check a change without building anything:  vmynt create --render
-# (or the PowerShell tool's render command)
 
 # ---------------------------------------------------------------------------
 #  QUICK SETTINGS                                            @user-editable
@@ -110,7 +109,7 @@ repos:
 
 # ---- copying files in -----------------------------------------------------
 # A directory on this laptop copied into the guest. Relative to the project
-# folder (this repo, for the PowerShell tool).
+# folder (the one holding .vmynt).
 # Over 10 MB warns, over 64 MB fails: it rides in the seed disk.
 # copyFrom: files
 # copyTo:   '~'                 # blank means the primary user's home
@@ -147,9 +146,9 @@ repos:
 # sshKeyMode:          auto      # auto | generate | copy | none
 # isoPath:             C:\ISO\ubuntu-24.04.3-live-server-amd64.iso
 # switch:              'Default Switch'
-# vmPath:              ~/.vmynt/vms   # Vmynt's default; the PowerShell tool used C:\VMs
-# hypervisor:          auto           # Vmynt only: auto, hyperv, libvirt or vfkit
-# arch:                auto           # Vmynt only: auto, x86_64 or arm64
+# vmPath:              ~/.vmynt/vms   # the default
+# hypervisor:          auto           # auto, hyperv, libvirt or vfkit
+# arch:                auto           # auto, x86_64 or arm64
 # maxMemoryGB:         24
 # enhancedSession:     no
 
@@ -165,7 +164,7 @@ repos:
 # storagePool are libvirt (Linux) only, where the disks live in the pool. nestedVirtualization forces static memory, so
 # whatever memoryGB says is claimed from the host the whole time it runs.
 # vm:
-#   path:                   ~/.vmynt/vms   # the PowerShell tool used C:\VMs
+#   path:                   ~/.vmynt/vms   # the default
 #   network:                default
 #   storagePool:            default
 #   memoryMinimumGB:        4
@@ -370,6 +369,6 @@ repos:
 # published checksum file at build time, so nothing here needs updating when a
 # new one ships.
 # iso:
-#   directory:      ~/.vmynt/isos # where downloaded ISOs are cached (PowerShell tool: C:\ISO)
+#   directory:      ~/.vmynt/isos # where downloaded ISOs are cached (the default)
 #   path:           ''            # explicit .iso path; skips download + lookup
 #   verifyChecksum: true          # leave on: a bad download is deleted, not used

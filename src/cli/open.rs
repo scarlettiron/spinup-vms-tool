@@ -7,8 +7,7 @@
 
 //`vmynt open`: from a cold computer to a desktop in one command. Starts the VM
 //if needed, waits until the guest can actually serve a desktop, then opens it.
-//This is Open-DevVM.ps1. The waiting matters: on Hyper-V a window opened while
-//the guest is still booting is stuck in a basic session with no clipboard.
+//The waiting matters: on Hyper-V a window opened while the guest is still booting is stuck in a basic session with no clipboard.
 
 use std::time::{Duration, Instant};
 

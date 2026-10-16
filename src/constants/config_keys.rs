@@ -5,9 +5,8 @@
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//The config file vocabulary. This is a straight copy of the tables in the
-//PowerShell tool (scripts/lib/Common.psm1), so a config file that works there
-//works here. Key matching ignores upper and lower case, like PowerShell does.
+//The config file vocabulary. Key matching ignores upper and lower case, so
+//cpuCount, CpuCount and cpucount are the same key.
 
 //The sections a config file may contain at the top level.
 pub const SECTIONS: &[&str] = &[
@@ -100,8 +99,7 @@ pub const ALIASES: &[(&str, &str)] = &[
     ("PostStartEveryBoot", "Hooks.RunAtEveryBoot"),
 ];
 
-//The project name used when a config file does not set one, as in the
-//PowerShell tool.
+//The project name used when a config file does not set one.
 pub const DEFAULT_PROJECT_NAME: &str = "dev";
 
 //Adminer's port when the config turns Adminer on without choosing one.

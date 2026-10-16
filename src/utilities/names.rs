@@ -11,7 +11,7 @@
 use crate::constants::config_keys::MAX_HOSTNAME_LENGTH;
 
 //A project name becomes part of a hostname, so letters, digits and hyphens,
-//starting with a letter or digit. Same rule as the PowerShell tool.
+//starting with a letter or digit.
 pub fn check_project_name(name: &str) -> Result<(), String> {
     let mut letters = name.chars();
     let starts_well = letters

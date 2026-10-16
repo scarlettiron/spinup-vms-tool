@@ -1,8 +1,8 @@
 # Guest tools for whichever hypervisor runs this VM, plus the remote desktop.
 #
 # Was 20-hyperv.sh. The host tells us which hypervisor through VM_HYPERVISOR in
-# /etc/vm-bootstrap.env; a seed from the PowerShell tool does not set it, and
-# that tool only ever builds on Hyper-V, so unset means hyperv.
+# /etc/vm-bootstrap.env. Seeds made before it existed were all for Hyper-V, so
+# unset means hyperv.
 #
 #   hyperv   the Hyper-V daemons, and xrdp listening on an AF_VSOCK hvsocket.
 #            That is Enhanced Session: a resizable desktop, a shared clipboard

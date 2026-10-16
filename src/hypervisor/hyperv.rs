@@ -7,7 +7,7 @@
 
 //Hyper-V, through PowerShell's Hyper-V cmdlets. Each operation is one
 //PowerShell script that prints JSON, because starting powershell.exe costs
-//about 300 ms. This is scripts/lib/HyperV.psm1, cmdlet for cmdlet.
+//about 300 ms.
 //
 //Never elevates itself. Hyper-V needs the user to be an administrator or in
 //the "Hyper-V Administrators" group, and the error says how to fix that.
@@ -85,7 +85,7 @@ pub fn powershell(script: &str) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-//The script that defines a VM: New-DevVMMachine.
+//The script that defines a VM.
 pub fn create_script(spec: &VmSpec) -> String {
     let name = quote(&spec.name);
     let dir = spec.vm_dir.display().to_string();
@@ -168,7 +168,7 @@ pub fn create_script(spec: &VmSpec) -> String {
     s
 }
 
-//The script run after the installer powers off: Complete-DevVMInstall.
+//The script run after the installer powers off.
 pub fn finish_script(spec: &VmSpec) -> String {
     let name = quote(&spec.name);
     let dir = spec.vm_dir.display().to_string();
@@ -524,7 +524,7 @@ mod tests {
     }
 
     #[test]
-    fn create_script_matches_the_powershell_tool() {
+    fn create_script_defines_the_whole_vm() {
         let script = create_script(&spec());
         assert!(
             script.contains("New-VM -Name 'acme-rocky' -Generation 2 -MemoryStartupBytes 8192MB")

@@ -34,15 +34,13 @@ blueprints/bootstrap/_runner.sh             text eol=lf
 blueprints/bootstrap/_lib.sh                text eol=lf
 blueprints/bootstrap/_vm-bootstrap.service  text eol=lf
 
-# Config is read by the PowerShell YAML reader on the host, but it is also the
-# file people paste between machines. LF keeps it identical everywhere.
+# Config and blueprints are read on the host, but config is also the file
+# people paste between machines. LF keeps it identical everywhere.
 *.yaml          text eol=lf
 *.yml           text eol=lf
 
 # ---- host-side only --------------------------------------------------------
 *.ps1           text
-*.psm1          text
-*.psd1          text
 *.md            text
 
 # ---- never touch -----------------------------------------------------------

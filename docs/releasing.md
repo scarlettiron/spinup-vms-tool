@@ -4,6 +4,10 @@ How Vmynt gets from a git tag to `winget install`, `choco install`, `brew instal
 and `apt install`, what has to be set up once before that works, and what to do when
 it doesn't.
 
+**Never published to a package manager before?** Start with
+[publishing-guide.md](publishing-guide.md), a click-by-click walkthrough of the
+accounts, secrets and first release. This page is the reference behind it.
+
 The short version, once everything is set up:
 
 1. Every pull request adds a line under `## [Unreleased]` in `CHANGELOG.md`.
@@ -149,10 +153,11 @@ The workflow creates `Formula/vmynt.rb` on the first release.
    from your fork to Microsoft's repository, which fine-grained tokens can't do):
    **Developer settings → Personal access tokens → Tokens (classic) → Generate new
    token (classic)**, scope **`public_repo`** only.
-3. **Don't add the secret yet.** The workflow can only *update* a package that already
-   exists in winget-pkgs. Release v0.1.0 (or whatever the first stable version is)
-   without it, do the [first winget submission](#first-winget-submission) by hand, and
-   add **`WINGET_TOKEN`** once Microsoft has merged that pull request.
+3. You can add the secret now. The workflow can only *update* a package that already
+   exists in winget-pkgs, so until the first version is merged it skips winget with a
+   warning. Save the token as **`WINGET_TOKEN`**, release the first stable version, and
+   do the [first winget submission](#first-winget-submission) by hand. Every release
+   after Microsoft merges that pull request goes to winget automatically.
 
 ### 5. Chocolatey → `CHOCOLATEY_API_KEY`
 
@@ -203,15 +208,93 @@ The public half is exported by the workflow on every deploy, to
 `/apt/vmynt-archive-keyring.gpg` (and `.asc`), and the fingerprint is shown on
 `/apt/`.
 
+### 7. Code signing (optional) → `AZURE_*`, `APPLE_*`
+
+Releases work unsigned. Signing removes warnings, and each platform turns on by itself
+once its secrets exist. Without them the job logs a notice and carries on.
+
+**What an unsigned build means for users:**
+
+- **Windows:** winget and Chocolatey install it without complaint, because neither
+  checks signatures. A zip downloaded **in a browser** gets SmartScreen's "Windows
+  protected your PC" the first time it runs. Unsigned binaries are also more likely to
+  be flagged by Defender in winget's validation.
+- **macOS:** Homebrew never quarantines a formula's files, so `brew install` runs fine.
+  Rust's linker already gives the binary the ad-hoc signature Apple Silicon requires. A
+  tarball downloaded **in a browser** is quarantined, and Gatekeeper blocks it until the
+  person allows it in System Settings → Privacy & Security.
+- **Linux:** nothing to sign. The apt repository is signed with the step 6 key.
+
+**Windows: Azure Artifact Signing** (the new name of Azure Trusted Signing). About
+US$10 a month (Basic: 5,000 signatures). Individual developers must be in the US or
+Canada, and organizations can be in more countries. Billing starts when the account is
+created, even if identity validation later fails.
+
+1. In the [Azure portal](https://portal.azure.com), create an **Artifact Signing
+   account**. Note its **endpoint** (like `https://eus.codesigning.azure.net/`) and its
+   **name**.
+2. In the account, go to **Identity validation → New → Individual** (or Organization).
+   You verify with a government ID through Microsoft Authenticator. It can take hours
+   to days.
+3. Create a **certificate profile** of type **Public Trust**, tied to that validation.
+   Note its name.
+4. Create an **app registration** in Microsoft Entra ID (the robot that signs), then a
+   **client secret** for it. Note the tenant id, client id and secret value.
+5. On the signing account, choose **Access control (IAM) → Add role assignment →
+   *Artifact Signing Certificate Profile Signer*** (*Trusted Signing Certificate Profile
+   Signer* on older accounts) and give it to the app registration.
+6. Add six secrets: **`AZURE_TENANT_ID`**, **`AZURE_CLIENT_ID`**,
+   **`AZURE_CLIENT_SECRET`**, **`AZURE_SIGNING_ENDPOINT`**, **`AZURE_SIGNING_ACCOUNT`**,
+   **`AZURE_SIGNING_PROFILE`**.
+
+If you're outside the US and Canada, [SignPath Foundation](https://signpath.org/) signs
+open-source projects for free. Each release is approved by hand, and the certificate
+names SignPath Foundation rather than you. That needs a different signing step in
+`release.yml`.
+
+**macOS: Developer ID + notarization.** You need the Apple Developer Program (US$99 a
+year).
+
+1. In **Xcode → Settings → Accounts → Manage Certificates → + → Developer ID
+   Application** (or on developer.apple.com → Certificates), create the certificate.
+   Use **Developer ID Application**, not "Developer ID Installer" or "Apple
+   Development".
+2. In **Keychain Access**, find it under **My Certificates**, right-click → **Export**
+   as a `.p12`, and give it a password. Then:
+   ```bash
+   base64 -i DeveloperID.p12 | pbcopy      # now on the clipboard
+   ```
+   Save that as **`APPLE_CERTIFICATE_P12`**, and the password as
+   **`APPLE_CERTIFICATE_PASSWORD`**.
+3. For notarization: [App Store Connect](https://appstoreconnect.apple.com) →
+   **Users and Access → Integrations → App Store Connect API → Team Keys → +**, with the
+   **Developer** role (use **Admin** if notarization is refused). Download the `.p8`
+   (you only get one chance). Save its text (`-----BEGIN PRIVATE KEY-----` …) as **`APPLE_API_KEY_P8`**, the **Key ID** as
+   **`APPLE_API_KEY_ID`**, and the **Issuer ID** at the top of the page as
+   **`APPLE_API_ISSUER`**.
+
+With only the first two secrets, the binary is signed but not notarized.
+
+**Build provenance needs nothing.** Every release of a public repository records a
+GitHub attestation for each file, and anyone can check a download with:
+
+```bash
+gh attestation verify vmynt-1.0.0-x86_64-unknown-linux-gnu.tar.gz --repo scarlettiron/vmynt
+```
+
 ### Every secret
 
 | Secret | Required for | Notes |
 |---|---|---|
 | `HOMEBREW_TAP_TOKEN` | Homebrew | fine-grained PAT, Contents read/write on `homebrew-tap` only |
-| `WINGET_TOKEN` | winget | classic PAT, `public_repo`; add after the first manual submission |
+| `WINGET_TOKEN` | winget | classic PAT, `public_repo`; used from the second winget version on |
 | `CHOCOLATEY_API_KEY` | Chocolatey | from your community.chocolatey.org account |
 | `APT_GPG_PRIVATE_KEY` | apt | ASCII-armoured private key |
 | `APT_GPG_PASSPHRASE` | apt | only if the key has a passphrase |
+| `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | optional, Windows signing | the app registration that signs |
+| `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE` | optional, Windows signing | from the Artifact Signing account |
+| `APPLE_CERTIFICATE_P12`, `APPLE_CERTIFICATE_PASSWORD` | optional, macOS signing | base64 of the exported Developer ID Application `.p12`, and its password |
+| `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | optional, macOS notarization | App Store Connect team API key |
 | `RELEASE_TOKEN` | optional, Version bump | fine-grained PAT on this repo only: Contents read/write, Actions read/write. See below |
 
 `GITHUB_TOKEN` is provided automatically; nothing to set up.
@@ -369,8 +452,8 @@ vmynt remove --delete-disks
 
 ## First winget submission
 
-Do this once, after the first **stable** GitHub Release exists, with `WINGET_TOKEN`
-not yet set. You need a Windows machine with winget.
+Do this once, after the first **stable** GitHub Release exists (the winget job skips
+that release with a warning). You need a Windows machine with winget.
 
 1. Download that release's `SHA256SUMS`, then render the manifests from the repository
    root (any OS with Python 3.11+):
@@ -401,8 +484,7 @@ not yet set. You need a Windows machine with winget.
    ```
 4. Wait for the pull request to be merged. Bots validate it and run the installer in a
    sandbox; a maintainer may ask questions in the PR.
-5. Add the `WINGET_TOKEN` secret. From then on, every release opens the update PR
-   itself.
+5. From then on, every release opens the update PR itself (with `WINGET_TOKEN` set).
 
 `packaging/winget/` is only used for this step. Later releases copy the previous
 version's manifests from winget-pkgs, so a change to the manifest structure (say, a
@@ -420,7 +502,7 @@ new installer switch) has to be made in a manual PR once and is then carried for
 - **winget.** Every version is a pull request to `microsoft/winget-pkgs`, validated by
   bots and merged by a moderator. Usually hours, sometimes a few days. Microsoft's
   SmartScreen and Defender scans run on the zip; unsigned binaries are accepted, but
-  code signing reduces friction (see "Signing" in `docs/vmynt-design.md`).
+  code signing reduces friction (see [Code signing](#7-code-signing-optional--azure_-apple_)).
 - **Chocolatey.** Every version runs through automated validation and verification
   (it really installs it). The **first** version also needs a human moderator, which
   can take days to a couple of weeks. Once the package is trusted, later versions are

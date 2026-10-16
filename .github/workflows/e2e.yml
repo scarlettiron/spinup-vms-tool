@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 150
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       #The runner image ships about 14 GB free; an OS install plus the ISO
       #needs more headroom than that. These are toolchains this job never uses.
@@ -114,7 +114,7 @@ jobs:
         run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
 
       - name: Cache install media
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.APP_DIR }}/isos
           key: iso-${{ env.BLUEPRINT }}-${{ steps.month.outputs.month }}
@@ -209,7 +209,7 @@ jobs:
 
       - name: Upload diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-diagnostics-${{ env.BLUEPRINT }}
           path: ${{ runner.temp }}/diagnostics

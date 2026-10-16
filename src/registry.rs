@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//The list of projects on this computer, ~/.vmynt/projects.yaml. `init` adds a
+//The list of projects on this computer, ~/.vmseed/projects.yaml. `init` adds a
 //project, and `list` reads it, so VMs can be found from any folder the way ddev
 //finds its projects.
 

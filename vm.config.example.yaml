@@ -11,7 +11,7 @@
 #                    supported, but read the note next to it first.
 #
 # Full reference for every setting: docs/configuration.md
-# Check a change without building anything:  vmynt create --render
+# Check a change without building anything:  vmseed create --render
 
 # ===========================================================================
 #  QUICK SETTINGS                                            @user-editable
@@ -72,7 +72,7 @@ cpus:           6
 memoryGB:       12
 diskGB:         25            # drive C:, the system disk. Others: vm.dataDisks
 
-timezone:       America/New_York   # Vmynt's default: this computer's zone (UTC on Windows)
+timezone:       America/New_York   # Vmseed's default: this computer's zone (UTC on Windows)
 
 gitName:        ''            # example: Ada Lovelace
 gitEmail:       ''            # example: ada@example.com
@@ -115,7 +115,7 @@ dbAdminerPort:  3800
 
 # ---- copying files in -----------------------------------------------------
 # A directory on this laptop whose contents are copied into the guest. Relative
-# paths are relative to the project folder (the one holding .vmynt), so a
+# paths are relative to the project folder (the one holding .vmseed), so a
 # committed files/ directory works the same for everyone. Blank copyTo means the primary user's home.
 #
 # These are embedded in the seed disk, so this is for configuration, small
@@ -141,11 +141,11 @@ postStart:      []            # example: [ddev config global --no-bind-mounts]
 # ------------------------------------------------------------------------ VM
 #  @advanced except for dataDisks, which is marked below.
 #
-#  path: where each VM's folder lives. The default is ~/.vmynt/vms on every
+#  path: where each VM's folder lives. The default is ~/.vmseed/vms on every
 #  OS; on Linux the disks themselves go in a libvirt storage pool instead.
 #  switchName is Hyper-V only; network and storagePool are libvirt only.
 vm:
-  # path:                 ~/.vmynt/vms
+  # path:                 ~/.vmseed/vms
   # network:              default       # libvirt network
   # storagePool:          default       # libvirt pool, /var/lib/libvirt/images
   memoryMinimumGB:        4
@@ -300,7 +300,7 @@ database:
 #
 #  Each entry:
 #    from    a directory on this laptop. Relative paths are relative to the
-#            project folder (the one holding .vmynt). Its *contents* are
+#            project folder (the one holding .vmseed). Its *contents* are
 #            copied, not the directory itself.
 #    to      where they land in the guest. Absolute, or starting with '~' for the
 #            primary user's home. Blank means '~'.
@@ -431,8 +431,8 @@ github:
 #
 #  A fleet. Each key is the VM name and the hostname unless overridden, and all
 #  of them share one switch so <hostname>.local resolves between them. Quick
-#  settings work in here too. Build one with  vmynt create <key>, or all of them
-#  with  vmynt create --all.
+#  settings work in here too. Build one with  vmseed create <key>, or all of them
+#  with  vmseed create --all.
 #
 #  Each names its own blueprint AND its osVersion, because the version at the top
 #  of this file is a Fedora one and means nothing to Ubuntu. That is the cost of
@@ -467,6 +467,6 @@ machines:
 #  checksum are read from the vendor's published checksum file at build time, so
 #  nothing here needs updating when a new one ships.
 iso:
-  # directory:    ~/.vmynt/isos # where downloaded ISOs are cached (the default)
+  # directory:    ~/.vmseed/isos # where downloaded ISOs are cached (the default)
   path:           ''            # explicit .iso path; skips download + lookup (relative to the project)
   verifyChecksum: true          # leave on: a bad download is deleted, not used

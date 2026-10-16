@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -131,7 +131,7 @@ pub fn password_hash(config: &Effective) -> Result<String> {
     bail!("the user needs a password: set passwordHash (make one with `hash`) or password")
 }
 
-//Renders everything. `own_key` is Vmynt's public key, added to the user's
+//Renders everything. `own_key` is Vmseed's public key, added to the user's
 //authorized keys so `ssh`, `exec` and `status` work without setup.
 pub fn render(config: &Effective, target: &Target, own_key: Option<&str>) -> Result<Seed> {
     let blueprint = &config.blueprint;
@@ -277,7 +277,7 @@ pub fn render(config: &Effective, target: &Target, own_key: Option<&str>) -> Res
         }
     }
 
-    //Authorized keys: config, the drop folder, and Vmynt's own.
+    //Authorized keys: config, the drop folder, and Vmseed's own.
     let mut keys: Vec<String> = string_list(config.get("Guest.PrimaryUser.AuthorizedKeys"))
         .into_iter()
         .map(|k| k.trim().to_string())
@@ -992,7 +992,7 @@ mod tests {
 
     fn config(yaml: &str) -> (Effective, PathBuf) {
         let root = std::env::temp_dir().join(format!(
-            "vmynt-seed-render-{}-{}",
+            "vmseed-seed-render-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -1020,7 +1020,7 @@ mod tests {
         let seed = render(
             &config,
             &target(HypervisorKind::Libvirt),
-            Some("ssh-ed25519 AAAA vmynt@test"),
+            Some("ssh-ed25519 AAAA vmseed@test"),
         )
         .unwrap();
         assert_eq!(seed.label, "OEMDRV");
@@ -1029,7 +1029,7 @@ mod tests {
         assert!(ks.contains(
             "network --bootproto=dhcp --activate --hostname=acme-redhat-rocky-workstation"
         ));
-        assert!(ks.contains("sshkey --username=dev \"ssh-ed25519 AAAA vmynt@test\""));
+        assert!(ks.contains("sshkey --username=dev \"ssh-ed25519 AAAA vmseed@test\""));
         assert!(ks.contains("--password=\"$6$salt$hash\" --iscrypted"));
         assert!(ks.contains("base64 -d > '/etc/vm-bootstrap.env'"));
         assert!(ks.contains("ignoredisk --only-use=sda"));

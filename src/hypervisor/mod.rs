@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -8,7 +8,7 @@
 //One interface over the three hypervisors: Hyper-V on Windows, libvirt/KVM on
 //Linux and Apple Virtualization (through vfkit) on macOS. Everything above this
 //line (config, blueprints, the seed, the guest, the commands) is shared and
-//never asks which one it is talking to. See docs/vmynt-design.md section 5.2.
+//never asks which one it is talking to. See docs/vmseed-design.md section 5.2.
 //
 //Every backend only runs other programs (powershell, virsh, vfkit), so all of
 //them compile everywhere and their command building is tested on any computer;

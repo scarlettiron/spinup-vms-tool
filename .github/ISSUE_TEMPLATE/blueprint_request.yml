@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -13,7 +13,7 @@ body:
     attributes:
       value: |
         A blueprint is one operating system and how to install it unattended. Before asking, note that you can
-        make your own today with `vmynt blueprints new <name> --from <existing>`. If you get one working,
+        make your own today with `vmseed blueprints new <name> --from <existing>`. If you get one working,
         a pull request is the fastest way to get it shipped (see CONTRIBUTING.md, "Adding a blueprint").
 
   - type: input

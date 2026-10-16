@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt status`: what each VM is, where to reach it, and how bootstrap is
+//`vmseed status`: what each VM is, where to reach it, and how bootstrap is
 //going. The hypervisor is the truth for hardware,
 //config fills in what it can't know, and the guest (over ssh, when reachable)
 //says what is really installed. Every fact is optional: an unreachable guest

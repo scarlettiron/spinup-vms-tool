@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -6,7 +6,7 @@
 //Scarlett A. Scott (codescarlett)
 
 //Where the program starts. It reads the command line, runs the command, and
-//turns the result into an exit code. The design is in docs/vmynt-design.md.
+//turns the result into an exit code. The design is in docs/vmseed-design.md.
 
 mod blueprint;
 mod brand;
@@ -33,7 +33,7 @@ use errors::AppError;
 use utilities::ui::{self, Ui};
 
 fn main() {
-    //Plain `vmynt` shows the help and succeeds, like ddev, rather than exiting
+    //Plain `vmseed` shows the help and succeeds, like ddev, rather than exiting
     //with clap's "missing command" code.
     if std::env::args_os().len() == 1 {
         let _ = cli::help::command().print_help();

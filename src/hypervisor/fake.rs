@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -8,7 +8,7 @@
 //A pretend hypervisor for tests. It keeps its VMs in a JSON file in the user
 //folder, so the real program can be run command after command (create, then
 //status, then stop) without a real VM. Only debug builds accept it: set
-//VMYNT_HYPERVISOR=fake.
+//VMSEED_HYPERVISOR=fake.
 //
 //An install "finishes" the first time anyone asks for the state after it
 //starts, which is all `create`'s wait loop needs.

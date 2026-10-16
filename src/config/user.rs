@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//The per-user settings file, ~/.vmynt/config.yaml. Today it holds the default
+//The per-user settings file, ~/.vmseed/config.yaml. Today it holds the default
 //identity `init` offers for new projects, so people type their username and
 //password once rather than in every project.
 

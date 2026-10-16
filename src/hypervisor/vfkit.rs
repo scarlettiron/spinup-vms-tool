@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -8,7 +8,7 @@
 //Apple Virtualization on macOS, through vfkit (brew install vfkit).
 //
 //vfkit is one process per running VM, so there is no service holding VM
-//definitions: each VM's settings live in ~/.vmynt/vms/<name>/vfkit.json, and
+//definitions: each VM's settings live in ~/.vmseed/vms/<name>/vfkit.json, and
 //`start` launches vfkit from them, detached, with a REST socket that `stop`
 //and `status` talk to. Disks are sparse raw files in the same folder.
 //Snapshots are APFS clones of those files (`cp -c`), taken while the VM is off.
@@ -584,7 +584,7 @@ mod tests {
 
     fn machine() -> Machine {
         Machine {
-            tag: "vmynt::/Users/me/acme".to_string(),
+            tag: "vmseed::/Users/me/acme".to_string(),
             cpus: 4,
             memory_mb: 8192,
             mac: mac_for("acme"),
@@ -642,7 +642,7 @@ mod tests {
 
     #[test]
     fn long_folders_get_a_short_socket() {
-        let long = PathBuf::from(format!("/Users/{}/.vmynt/vms/x", "a".repeat(100)));
+        let long = PathBuf::from(format!("/Users/{}/.vmseed/vms/x", "a".repeat(100)));
         assert!(socket_path(&long, "x").starts_with("/tmp"));
     }
 }

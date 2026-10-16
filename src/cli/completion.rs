@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt completion <shell>`: prints a script that teaches the shell the commands
+//`vmseed completion <shell>`: prints a script that teaches the shell the commands
 //and options, so Tab completes them. Package managers call this at install time.
 
 use super::args::CompletionArgs;

@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -9,12 +9,12 @@
 //unattended. Code only ever asks for one by name, and this module decides where
 //it comes from. First match wins:
 //
-//  1. <project>/.vmynt/blueprints/<name>/      custom, committed with the project
-//  2. ~/.vmynt/blueprints/<name>/<version>/    downloaded (nothing downloads yet)
+//  1. <project>/.vmseed/blueprints/<name>/      custom, committed with the project
+//  2. ~/.vmseed/blueprints/<name>/<version>/    downloaded (nothing downloads yet)
 //  3. built into the program
 //
 //Splitting blueprints out of the program later means filling in step 2 and
-//dropping step 3. Callers don't change. See docs/vmynt-design.md section 9.
+//dropping step 3. Callers don't change. See docs/vmseed-design.md section 9.
 
 pub mod resolve;
 

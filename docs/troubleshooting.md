@@ -4,7 +4,7 @@
 
 ### Which step failed?
 
-`vmynt create` numbers its steps as it goes, so the last `[n/8]` line before the
+`vmseed create` numbers its steps as it goes, so the last `[n/8]` line before the
 error is the step that failed:
 
 ```
@@ -18,23 +18,23 @@ error: <what went wrong>
 The steps depend on each other, so the build stops at the first failure instead
 of carrying on. Nothing is rolled back: with `create --all`, machines that finished
 before the failure are left in place and named in a warning, so build the rest by
-name (`vmynt create <machine>`). Add `--verbose` for the full chain of causes.
+name (`vmseed create <machine>`). Add `--verbose` for the full chain of causes.
 
-Run `vmynt doctor` first if the error is about the hypervisor itself: it checks
+Run `vmseed doctor` first if the error is about the hypervisor itself: it checks
 the same things `create` does before touching anything, and says how to fix each.
 
 ### "Hyper-V refused: you are not allowed to manage VMs"
 
 On Windows, managing VMs needs Administrator or membership of the
-**Hyper-V Administrators** group. Vmynt never elevates itself. Join the group
+**Hyper-V Administrators** group. Vmseed never elevates itself. Join the group
 once, from an administrator PowerShell, then sign out and back in:
 
 ```powershell
 Add-LocalGroupMember -Group 'Hyper-V Administrators' -Member $env:USERNAME
 ```
 
-After that every command works from an ordinary terminal. `vmynt doctor` checks
-this. `vmynt create --render` touches no hypervisor, so it works without it.
+After that every command works from an ordinary terminal. `vmseed doctor` checks
+this. `vmseed create --render` touches no hypervisor, so it works without it.
 
 If the error says the Hyper-V PowerShell module is not installed, Hyper-V
 itself is off; the message gives the `Enable-WindowsOptionalFeature` line to run.
@@ -65,7 +65,7 @@ which package provides it if it is missing.
 The seed disk was not picked up, so the installer fell back to interactive mode.
 In order of likelihood:
 
-1. **Look at the installer.** `vmynt open --console` shows where it stopped.
+1. **Look at the installer.** `vmseed open --console` shows where it stopped.
 2. **Check the seed disk is attached.** During the install the VM has a second,
    small disk, `<name>-seed.vhd` on Hyper-V or `<name>-seed.img` elsewhere. On
    Hyper-V, `Get-VMHardDiskDrive -VMName <name>` lists it; on Linux,
@@ -91,7 +91,7 @@ Logs worth reading from the installer shell: `/var/log/cloud-init.log` on Ubuntu
 and RHEL.
 
 On Ubuntu, a prompt reading "Continue with autoinstall? (yes|no)" is expected.
-Vmynt types `yes` into the VM's keyboard from about 75 seconds in. On macOS it
+Vmseed types `yes` into the VM's keyboard from about 75 seconds in. On macOS it
 can't, so the install window opens and you type `yes` and Enter yourself.
 
 ### The install times out
@@ -99,13 +99,13 @@ can't, so the install window opens and you type `yes` and Enter yourself.
 The blueprint sets the limit (`provisioning.installTimeoutMinutes`): 60 minutes
 for Ubuntu, 90 for the Red Hat family and Fedora, which download their packages
 from a mirror during the install. A slow mirror or a bad connection can exceed
-it. Run `vmynt open --console` and look before raising it - a hung installer
+it. Run `vmseed open --console` and look before raising it - a hung installer
 looks quite different from a slow one.
 
 ### "A VM named 'x' already exists"
 
-`vmynt create --force` deletes and rebuilds it. Without `--force` nothing is
-destroyed, which is the intended default. To use the existing VM, `vmynt start`.
+`vmseed create --force` deletes and rebuilds it. Without `--force` nothing is
+destroyed, which is the intended default. To use the existing VM, `vmseed start`.
 
 ### "The hostname 'x' already answers on this network"
 
@@ -117,7 +117,7 @@ config, or check with `ping <hostname>.local`.
 
 The ISO is verified against the checksum file the vendor publishes beside it; a
 mismatched file is deleted rather than used. Re-run to try again. Downloads are
-cached in `iso.directory` (default `~/.vmynt/isos`), so a finished one is not
+cached in `iso.directory` (default `~/.vmseed/isos`), so a finished one is not
 fetched twice. To use a file you already have:
 
 ```yaml
@@ -172,7 +172,7 @@ sudo vm-bootstrap --list                # per-step state
 journalctl -u vm-bootstrap.service -f
 ```
 
-From the host: `vmynt status --follow`, or `vmynt logs -f` for the log itself.
+From the host: `vmseed status --follow`, or `vmseed logs -f` for the log itself.
 
 ### A step failed
 
@@ -215,9 +215,9 @@ sudo vm-bootstrap --only 10-desktop --force && sudo reboot
 
 ### The desktop does not connect
 
-`vmynt open` waits until the guest is ready, then opens the desktop over RDP:
+`vmseed open` waits until the guest is ready, then opens the desktop over RDP:
 Enhanced Session on Hyper-V, FreeRDP or Remmina on Linux, Microsoft's Windows
-App on macOS. Check what it is waiting for with `vmynt status`.
+App on macOS. Check what it is waiting for with `vmseed status`.
 
 On Linux and macOS xrdp listens on TCP 3389 in the guest:
 
@@ -229,7 +229,7 @@ grep WaylandEnable /etc/gdm3/custom.conf     # expect WaylandEnable=false
 sudo vm-bootstrap --only 20-guest-tools --force
 ```
 
-On Linux, `vmynt open` needs `xfreerdp3`, `xfreerdp`, `wlfreerdp` or `remmina`
+On Linux, `vmseed open` needs `xfreerdp3`, `xfreerdp`, `wlfreerdp` or `remmina`
 on the PATH; without one it prints the address to connect to.
 
 ### Enhanced Session does not connect
@@ -274,7 +274,7 @@ sudo vm-bootstrap --only 00-disks --force
 
 The step looks a disk up by its label first (`virtio-<label>` or
 `scsi-0QEMU_QEMU_HARDDISK_<label>` under `/dev/disk/by-id/`, on Linux and macOS
-hosts), then by SCSI location and size. `vmynt status` lists the disks the host
+hosts), then by SCSI location and size. `vmseed status` lists the disks the host
 has attached.
 
 On Hyper-V, check the disk is attached at the location the guest expects
@@ -360,14 +360,14 @@ are in [repos.md](repos.md#private-repositories).
 
 If `70-repos` is the failed step, that is by design - a repo you asked for is
 missing, so the machine is not finished. `/var/lib/vm-bootstrap/complete` is
-deliberately not written, which is why `vmynt status` reports
+deliberately not written, which is why `vmseed status` reports
 `finished with failed step(s)` rather than complete. Everything that did clone
 stayed cloned.
 
 From the host, `status` will fetch the guest's report for you:
 
 ```sh
-vmynt status --report
+vmseed status --report
 ```
 
 ### A clone hung
@@ -507,9 +507,9 @@ sudo vm-bootstrap --only 80-hooks --force
 ```
 
 The script itself is at `/usr/local/lib/vm-bootstrap/hooks/post-start.sh` and can
-be run directly while you work out what is wrong. `vmynt create --render` writes
-the seed to `~/.vmynt/vms/<vm>/build/` with the hook script inside it, so you can
-read exactly what will run before building. `vmynt logs` shows the hook's log
+be run directly while you work out what is wrong. `vmseed create --render` writes
+the seed to `~/.vmseed/vms/<vm>/build/` with the hook script inside it, so you can
+read exactly what will run before building. `vmseed logs` shows the hook's log
 from the host.
 
 ### A hook cannot find nvm, node or ddev
@@ -566,23 +566,23 @@ virsh -c qemu:///system domifaddr fedora-dev --source lease
 ```
 
 The NAT networks hand out addresses over DHCP, and Hyper-V's `Default Switch`
-changes its subnet across host reboots - which is exactly why Vmynt addresses
+changes its subnet across host reboots - which is exactly why Vmseed addresses
 guests by `<hostname>.local` rather than by IP.
 
-### `vmynt status` says it "can't reach it over ssh yet"
+### `vmseed status` says it "can't reach it over ssh yet"
 
-It probes over SSH with `BatchMode=yes`, so it needs key auth. Vmynt adds its own
-key (`~/.vmynt/ssh/id_ed25519`) to every guest, so this usually means the guest
-is still booting. If it persists, check `vmynt ssh` works. A VM built without
-`ssh-keygen` on the host has no Vmynt key; add your public key to
-`guest.primaryUser.authorizedKeys` (or drop it in `.vmynt/ssh_keys/`) and
+It probes over SSH with `BatchMode=yes`, so it needs key auth. Vmseed adds its own
+key (`~/.vmseed/ssh/id_ed25519`) to every guest, so this usually means the guest
+is still booting. If it persists, check `vmseed ssh` works. A VM built without
+`ssh-keygen` on the host has no Vmseed key; add your public key to
+`guest.primaryUser.authorizedKeys` (or drop it in `.vmseed/ssh_keys/`) and
 rebuild, or copy it up:
 
 ```bash
 ssh-copy-id dev@acme-fedora-workstation.local
 ```
 
-`vmynt status --no-ssh` skips the probe. Everything the host can see is reported regardless: state, uptime, address,
+`vmseed status --no-ssh` skips the probe. Everything the host can see is reported regardless: state, uptime, address,
 blueprint, CPU, memory, and every attached disk with its allocated size and what
 it currently costs on the host. What needs the guest is the OS release actually
 running, the kernel, real disk usage, the account list, and bootstrap state.
@@ -591,18 +591,18 @@ running, the kernel, real disk usage, the account list, and bootstrap state.
 
 ### It will not shut down
 
-`vmynt stop` waits two minutes and then tells you the guest is ignoring the
+`vmseed stop` waits two minutes and then tells you the guest is ignoring the
 request. That usually means a service is hung or something is holding a
 filesystem. Look first, since the console often shows exactly what is blocking:
 
 ```sh
-vmynt open --console acme-fedora-workstation
+vmseed open --console acme-fedora-workstation
 ```
 
 Then force it, accepting the same risk as pulling the plug on a real machine:
 
 ```sh
-vmynt stop --force acme-fedora-workstation
+vmseed stop --force acme-fedora-workstation
 ```
 
 If graceful shutdown never works on Hyper-V, the integration services may not be
@@ -615,13 +615,13 @@ sudo vm-bootstrap --only 20-guest-tools --force
 
 ### It started but nothing answers
 
-`vmynt start` waits up to three minutes for an address and warns if none
+`vmseed start` waits up to three minutes for an address and warns if none
 arrives. mDNS takes a few seconds longer than the address does, so
 `<host>.local` failing immediately after boot is normal. Check what state it
 reached:
 
 ```sh
-vmynt status
+vmseed status
 ```
 
 ### Did starting it re-run provisioning and overwrite my work?
@@ -635,8 +635,8 @@ ls -l /var/lib/vm-bootstrap/complete
 systemctl status vm-bootstrap.service     # expect "condition failed"
 ```
 
-Only `vmynt create --force` rebuilds a machine, and only
-`vmynt remove --delete-disks` deletes disks.
+Only `vmseed create --force` rebuilds a machine, and only
+`vmseed remove --delete-disks` deletes disks.
 
 ### The disks still take up space after shutting down
 
@@ -646,10 +646,10 @@ what was written to them, and deleting files inside the guest does not shrink
 them on their own. On Hyper-V, with the VM off:
 
 ```powershell
-Optimize-VHD -Path $HOME\.vmynt\vms\acme-fedora-workstation\acme-fedora-workstation.vhdx -Mode Full
+Optimize-VHD -Path $HOME\.vmseed\vms\acme-fedora-workstation\acme-fedora-workstation.vhdx -Mode Full
 ```
 
-`vmynt clean` deletes cached ISOs and leftover build files.
+`vmseed clean` deletes cached ISOs and leftover build files.
 
 ## Recovering
 
@@ -659,19 +659,19 @@ was used), so a bad bootstrap does not cost you the OS install. Restoring it giv
 a clean OS that provisions itself again on the next boot:
 
 ```sh
-vmynt snapshot list fedora-dev
-vmynt stop fedora-dev                  # libvirt and macOS need the VM off
-vmynt snapshot restore clean-install fedora-dev
-vmynt start fedora-dev
+vmseed snapshot list fedora-dev
+vmseed stop fedora-dev                 # libvirt and macOS need the VM off
+vmseed snapshot restore clean-install fedora-dev
+vmseed start fedora-dev
 ```
 
 To start over completely:
 
 ```sh
-vmynt remove --delete-disks ubuntu-gui
-vmynt create ubuntu-gui
+vmseed remove --delete-disks ubuntu-gui
+vmseed create ubuntu-gui
 ```
 
-or `vmynt create --force ubuntu-gui`, which does both. On Hyper-V, `remove`
+or `vmseed create --force ubuntu-gui`, which does both. On Hyper-V, `remove`
 leaves the VM folder alone if it still contains files it does not recognise, so
 it will not take your data with it.

@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -6,14 +6,14 @@
 //Scarlett A. Scott (codescarlett)
 
 //Runs the real program the way a person would, in throwaway folders. Each test
-//points VMYNT_HOME at its own folder, so nothing touches the real ~/.vmynt.
+//points VMSEED_HOME at its own folder, so nothing touches the real ~/.vmseed.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-//The binary cargo built for these tests, and its name ("vmynt"), which follows
+//The binary cargo built for these tests, and its name ("vmseed"), which follows
 //the package name so a rename does not break the tests.
-const BINARY: &str = env!("CARGO_BIN_EXE_vmynt");
+const BINARY: &str = env!("CARGO_BIN_EXE_vmseed");
 const NAME: &str = env!("CARGO_PKG_NAME");
 
 //A fresh folder for one test, with a project folder and a home folder inside.

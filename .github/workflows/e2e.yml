@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -71,7 +71,7 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -l /dev/kvm
 
-      #vmynt uses the system connection (qemu:///system), like a desktop install.
+      #vmseed uses the system connection (qemu:///system), like a desktop install.
       #A real user is in the libvirt group; here the socket is opened up instead,
       #for the same reason as /dev/kvm above.
       - name: Start libvirt and its default network

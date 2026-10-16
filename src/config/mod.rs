@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -9,8 +9,8 @@
 //merge the layers.
 //
 //Layers, lowest to highest:
-//  1. .vmynt/vm.config.yaml        shared, committed
-//  2. .vmynt/vm.config.local.yaml  personal, git-ignored
+//  1. .vmseed/vm.config.yaml        shared, committed
+//  2. .vmseed/vm.config.local.yaml  personal, git-ignored
 //  3. the chosen Machines: entry, if any
 //
 //Built-in and blueprint defaults (the layers below these) arrive with `create`

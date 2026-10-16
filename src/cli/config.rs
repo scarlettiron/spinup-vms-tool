@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt config`: shows the project's merged config, with secrets hidden, and
+//`vmseed config`: shows the project's merged config, with secrets hidden, and
 //`--validate` runs every check `create` runs, and reports all of them.
 
 use anstream::print;

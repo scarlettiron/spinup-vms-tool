@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -12,9 +12,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        Check the [roadmap](https://github.com/scarlettiron/vmynt/blob/main/docs/vmynt-design.md#16-milestones)
+        Check the [roadmap](https://github.com/scarlettiron/vmseed/blob/main/docs/vmseed-design.md#16-milestones)
         first. Many commands are already planned. For an open-ended idea, a
-        [discussion](https://github.com/scarlettiron/vmynt/discussions) is often a better start.
+        [discussion](https://github.com/scarlettiron/vmseed/discussions) is often a better start.
 
   - type: textarea
     id: problem
@@ -30,7 +30,7 @@ body:
       label: What you'd like
       description: How you imagine it working. Example commands or config are very welcome.
       placeholder: |
-        vmynt snapshot restore before-upgrade
+        vmseed snapshot restore before-upgrade
     validations:
       required: true
 

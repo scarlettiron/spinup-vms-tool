@@ -1,20 +1,20 @@
 # Configuration
 
-Two layers of YAML in the project's `.vmynt/` folder. The team standard is
+Two layers of YAML in the project's `.vmseed/` folder. The team standard is
 committed; your own overrides are not.
 
 | Layer | File | Committed? |
 | --- | --- | --- |
-| team standard | `.vmynt/vm.config.yaml` | yes |
-| per-developer | `.vmynt/vm.config.local.yaml` | no, git-ignored |
+| team standard | `.vmseed/vm.config.yaml` | yes |
+| per-developer | `.vmseed/vm.config.local.yaml` | no, git-ignored |
 
-`vmynt init` writes both, plus `vm.config.example.yaml` and
+`vmseed init` writes both, plus `vm.config.example.yaml` and
 `vm.config.local.example.yaml` beside them with every setting documented. To
-reuse config files from another project, use `vmynt init --import <folder>`.
+reuse config files from another project, use `vmseed init --import <folder>`.
 
 Your local file only names what you want to differ. Everything else falls through
-to `vm.config.yaml`. `vmynt config` shows the merged result, and
-`vmynt config --validate` checks it.
+to `vm.config.yaml`. `vmseed config` shows the merged result, and
+`vmseed config --validate` checks it.
 
 ## Reading the config file
 
@@ -28,7 +28,7 @@ Every section carries a tag saying whether it is meant to be edited:
 Grep for the tag when you are looking for somewhere to change something:
 
 ```sh
-grep -n '@user-editable' .vmynt/vm.config.example.yaml
+grep -n '@user-editable' .vmseed/vm.config.example.yaml
 ```
 
 `@user-editable` covers: the quick settings block, `vm.dataDisks`,
@@ -132,7 +132,7 @@ The example files use camelCase throughout.
 suggestion, rather than being silently ignored:
 
 ```
-error: unknown setting 'cpuz' in .vmynt/vm.config.local.yaml. Did you mean 'cpus'?
+error: unknown setting 'cpuz' in .vmseed/vm.config.local.yaml. Did you mean 'cpus'?
 Every setting is listed in vm.config.example.yaml beside it.
 ```
 
@@ -177,7 +177,7 @@ different collisions:
 
 | Clash | Detected by | Result |
 | --- | --- | --- |
-| a VM of that name exists | the hypervisor | fails; `vmynt create --force` replaces it |
+| a VM of that name exists | the hypervisor | fails; `vmseed create --force` replaces it |
 | `<hostname>.local` already answers | the OS resolver, which does mDNS | fails |
 
 The second matters because two machines claiming one mDNS name means avahi
@@ -246,12 +246,12 @@ inherited:
 
 | | Layer | Purpose |
 | --- | --- | --- |
-| 0 | built in | Vmynt's own defaults, some worked out for this computer (paths, time zone) |
+| 0 | built in | Vmseed's own defaults, some worked out for this computer (paths, time zone) |
 | 1 | the blueprint's `defaults` | what the OS *suggests* - sizing, nice-to-haves |
 | 2 | `vm.config.yaml` | the team standard |
 | 3 | the blueprint's `overrides` | what the OS *is* - a server blueprint has no desktop |
 | 4 | `vm.config.local.yaml` | per-developer |
-| 5 | `machines.<name>` | the per-machine block, when a command names that machine (`vmynt create ubuntu-gui`) |
+| 5 | `machines.<name>` | the per-machine block, when a command names that machine (`vmseed create ubuntu-gui`) |
 
 Layers 1 and 3 both come from the selected blueprint and deliberately sit on
 opposite sides of the team standard - see
@@ -267,13 +267,13 @@ shorten a package list rather than only ever growing it.
 ## Seeing the result
 
 ```sh
-vmynt config               # the merged config, every layer applied
-vmynt create --render      # the plan, plus the rendered seed files
+vmseed config              # the merged config, every layer applied
+vmseed create --render     # the plan, plus the rendered seed files
 ```
 
 `create --render` prints the resolved plan and writes the fully rendered seed
 (cloud-init or kickstart) plus every generated bootstrap file to the VM folder's
-`build/` (by default `~/.vmynt/vms/<vm-name>/build/`). No hypervisor changes -
+`build/` (by default `~/.vmseed/vms/<vm-name>/build/`). No hypervisor changes -
 the fastest way to check a config edit did what you meant.
 
 ## YAML notes

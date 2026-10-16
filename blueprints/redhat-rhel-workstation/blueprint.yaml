@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -82,7 +82,7 @@ os:
 media:
   # Deliberately no IsoBaseUrl and no ChecksumFile. There is no anonymous
   # URL to resolve and no published checksum to verify against, so the
-  # download-and-verify path does not apply. Vmynt reads these two keys to
+  # download-and-verify path does not apply. Vmseed reads these two keys to
   # explain that instead of failing with a generic message.
   requiresManualDownload: true
   downloadPage: 'https://developers.redhat.com/products/rhel/download'

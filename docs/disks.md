@@ -103,13 +103,13 @@ with any partition or any filesystem is never formatted.
 
 ## Changing the layout
 
-Edit `dataDisks` and rebuild (`vmynt create --force`), or for an existing VM add
+Edit `dataDisks` and rebuild (`vmseed create --force`), or for an existing VM add
 the disk on the host by hand and re-run the step. On Hyper-V, for example, where
-the VM's folder is under `vm.path` (`~/.vmynt/vms/<name>/` by default):
+the VM's folder is under `vm.path` (`~/.vmseed/vms/<name>/` by default):
 
 ```powershell
 $vm  = 'fedora-dev'
-$dir = "$HOME\.vmynt\vms\$vm"
+$dir = "$HOME\.vmseed\vms\$vm"
 New-VHD -Path "$dir\$vm-drive-f.vhdx" -SizeBytes 100GB -Dynamic
 Add-VMHardDiskDrive -VMName $vm -Path "$dir\$vm-drive-f.vhdx" -ControllerNumber 0 -ControllerLocation 5
 ```
@@ -132,17 +132,17 @@ Stop the VM, grow the disk with the hypervisor's own tool, and start it again.
 On Hyper-V:
 
 ```powershell
-vmynt stop fedora-dev
-Resize-VHD -Path "$HOME\.vmynt\vms\fedora-dev\fedora-dev-drive-e.vhdx" -SizeBytes 100GB
-vmynt start fedora-dev
+vmseed stop fedora-dev
+Resize-VHD -Path "$HOME\.vmseed\vms\fedora-dev\fedora-dev-drive-e.vhdx" -SizeBytes 100GB
+vmseed start fedora-dev
 ```
 
 Under libvirt the volume is in the storage pool:
 
 ```sh
-vmynt stop fedora-dev
+vmseed stop fedora-dev
 virsh -c qemu:///system vol-resize fedora-dev-drive-e.qcow2 100G --pool default
-vmynt start fedora-dev
+vmseed start fedora-dev
 ```
 
 Then in the guest:
@@ -189,5 +189,5 @@ mount point production does not have, which is the trade-off to weigh.
 
 Each is checked when config loads, by `data_disks` in
 [src/plans.rs](../src/plans.rs), so a bad entry fails during
-`vmynt config --validate` or `vmynt create --render` rather than halfway through
+`vmseed config --validate` or `vmseed create --render` rather than halfway through
 a first boot.

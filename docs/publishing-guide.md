@@ -1,6 +1,6 @@
-# Publishing Vmynt, step by step
+# Publishing Vmseed, step by step
 
-This is the walkthrough for getting Vmynt into winget, Chocolatey, Homebrew and apt
+This is the walkthrough for getting Vmseed into winget, Chocolatey, Homebrew and apt
 for the first time. It assumes you've never published anything to a package manager.
 Every click is spelled out. [releasing.md](releasing.md) is the full reference; this
 guide links to it when there's more detail.
@@ -21,13 +21,13 @@ button.
 | winget (`winget install`) | GitHub: a copy (fork) of Microsoft's list | free | robots, then a Microsoft moderator | hours to a few days |
 | Code signing (optional) | Azure and/or Apple | ~US$10/month Windows, US$99/year Mac | Microsoft / Apple check your ID | days |
 
-**You don't need npm.** npm is for JavaScript packages. Vmynt doesn't use it, so that
+**You don't need npm.** npm is for JavaScript packages. Vmseed doesn't use it, so that
 account isn't needed for any of this. (Rust tools can be published there too, but
 none of the four stores above need it.)
 
 ### Words you'll see
 
-- **Repository (repo):** a project on GitHub. `scarlettiron/vmynt` is one.
+- **Repository (repo):** a project on GitHub. `scarlettiron/vmseed` is one.
 - **Workflow / Actions:** the robots in `.github/workflows/`. GitHub runs them for you.
   The **Actions** tab on the repo shows them running.
 - **Secret:** a password you give GitHub so the robots can log in somewhere for you. Once
@@ -42,7 +42,7 @@ none of the four stores above need it.)
 
 You'll do this several times, so here it is once:
 
-1. Open `https://github.com/scarlettiron/vmynt`.
+1. Open `https://github.com/scarlettiron/vmseed`.
 2. **Settings** (the tab at the top right of the repo, not your profile settings).
 3. Left sidebar: **Secrets and variables → Actions**.
 4. Green **New repository secret** button.
@@ -53,16 +53,16 @@ You'll do this several times, so here it is once:
 
 ## Part 1: Get the GitHub repo ready
 
-### 1.1 Rename the repo to `vmynt`
+### 1.1 Rename the repo to `vmseed`
 
 Everything (the website, the apt address, the Homebrew formula) already says
-`scarlettiron/vmynt`.
+`scarlettiron/vmseed`.
 
-1. Repo → **Settings → General**. At the top, **Repository name** → type `vmynt` →
+1. Repo → **Settings → General**. At the top, **Repository name** → type `vmseed` →
    **Rename**.
 2. On your computer, point your copy at the new name:
    ```bash
-   git remote set-url origin git@github.com:scarlettiron/vmynt.git
+   git remote set-url origin git@github.com:scarlettiron/vmseed.git
    ```
 
 Do this before the first release. GitHub forwards the old repo name, but **not** the
@@ -70,7 +70,7 @@ old website address, and the apt repository lives on the website.
 
 ### 1.2 Make it public
 
-The stores download Vmynt straight from your GitHub Releases page, so that page has to
+The stores download Vmseed straight from your GitHub Releases page, so that page has to
 be public. **Settings → General →** scroll to the bottom, **Danger Zone → Change
 visibility → Make public**.
 
@@ -84,14 +84,14 @@ Everything in the git history becomes public too. Look through it first (see
    branch").
 3. **Actions** tab → **Deploy site and apt repository** (left sidebar) → **Run
    workflow** → **Run workflow**.
-4. When it goes green, `https://scarlettiron.github.io/vmynt/` is live.
+4. When it goes green, `https://scarlettiron.github.io/vmseed/` is live.
 
 ---
 
 ## Part 2: Homebrew (Mac and Linux)
 
 Homebrew lets anyone make their own mini app store (a "tap"), which is just a GitHub
-repo with a particular name. Vmynt's release robot writes the install recipe (the
+repo with a particular name. Vmseed's release robot writes the install recipe (the
 "formula") into it.
 
 ### 2.1 Make the tap repo
@@ -106,7 +106,7 @@ repo with a particular name. Vmynt's release robot writes the install recipe (th
 1. Your profile picture (top right) → **Settings** → bottom of the left sidebar
    **Developer settings → Personal access tokens → Fine-grained tokens → Generate new
    token**.
-2. **Token name** `vmynt homebrew`. **Expiration**: a year (put a reminder in your
+2. **Token name** `vmseed homebrew`. **Expiration**: a year (put a reminder in your
    calendar to make a new one).
 3. **Repository access → Only select repositories →** pick `homebrew-tap`.
 4. **Permissions → Repository permissions → Contents → Read and write**.
@@ -120,10 +120,10 @@ That's Homebrew done. Nobody reviews a tap, so each release is installable the m
 the robot finishes:
 
 ```bash
-brew install scarlettiron/tap/vmynt
+brew install scarlettiron/tap/vmseed
 ```
 
-(Getting into Homebrew's main list so people can type just `brew install vmynt`
+(Getting into Homebrew's main list so people can type just `brew install vmseed`
 needs 75+ stars and a from-source build. That's for later, if at all.)
 
 ---
@@ -144,7 +144,7 @@ PASS='pick-a-long-passphrase-here'
 
 # Make the key. "never" = it doesn't expire; an expired key breaks apt for everyone.
 gpg --batch --pinentry-mode loopback --passphrase "$PASS" \
-    --quick-gen-key "Vmynt apt repository" rsa4096 sign never
+    --quick-gen-key "Vmseed apt repository" rsa4096 sign never
 
 # Save the private key and the "cancel this key" certificate to files.
 gpg --pinentry-mode loopback --passphrase "$PASS" \
@@ -198,9 +198,9 @@ You don't upload anything by hand; the robot does. Then:
    few days to a couple of weeks. They may leave comments on the package page asking
    for changes. **Answer them**: a package waiting on you is rejected after about 35
    days.
-3. Once it's approved, `choco install vmynt` works. Later versions go through faster.
+3. Once it's approved, `choco install vmseed` works. Later versions go through faster.
 
-Nobody can reserve the name `vmynt` ahead of time. Whoever's first version is approved
+Nobody can reserve the name `vmseed` ahead of time. Whoever's first version is approved
 gets it. Right now nobody has it.
 
 ---
@@ -225,7 +225,7 @@ winget's tools don't work with the newer fine-grained tokens, so this one is
 
 1. Profile picture → **Settings → Developer settings → Personal access tokens →
    Tokens (classic) → Generate new token → Generate new token (classic)**.
-2. **Note** `vmynt winget`. **Expiration**: a year.
+2. **Note** `vmseed winget`. **Expiration**: a year.
 3. Tick **`public_repo`** and **`workflow`**. Nothing else.
 4. **Generate token**, copy it.
 5. Save it as the secret **`WINGET_TOKEN`**. Also keep a copy in your password manager.
@@ -247,7 +247,7 @@ but doesn't touch Homebrew, winget, Chocolatey or apt. It's a free rehearsal.
 5. Open the repo's **Releases** page (right-hand side of the repo's front page). You
    should see `0.2.0-rc.1` with zips, tarballs, `.deb`/`.rpm` files and `SHA256SUMS`.
 
-Download the file for your computer, unzip it, and run `vmynt --version` to check it.
+Download the file for your computer, unzip it, and run `vmseed --version` to check it.
 
 The Homebrew, winget, Chocolatey and apt jobs show as **skipped**. That's correct for a
 prerelease.
@@ -267,7 +267,7 @@ When the prerelease looks right:
 
    | Job | What you should see |
    |---|---|
-   | Homebrew | green. `Formula/vmynt.rb` appears in `homebrew-tap`. |
+   | Homebrew | green. `Formula/vmseed.rb` appears in `homebrew-tap`. |
    | apt repository | green. It starts **Deploy site and apt repository**, which publishes `/apt/`. |
    | Chocolatey | green. You get emails from Chocolatey over the next hour (Part 4.3). |
    | winget | green with a **warning**: "not in winget-pkgs yet. Submit this first version by hand". Expected, see Part 8. |
@@ -297,7 +297,7 @@ them in.
      "packaging/winget/installer.yaml.tmpl=winget/{{winget_id}}.installer.yaml" \
      "packaging/winget/locale.en-US.yaml.tmpl=winget/{{winget_id}}.locale.en-US.yaml"
    ```
-   That makes a `winget` folder with three `CodeScarlett.Vmynt…yaml` files. Copy the
+   That makes a `winget` folder with three `CodeScarlett.Vmseed…yaml` files. Copy the
    folder to the Windows computer if you're not on it.
 
 **On Windows**, in PowerShell, in the folder that holds `winget`:
@@ -310,8 +310,8 @@ winget validate --manifest .\winget\
 #    administrator PowerShell.
 winget settings --enable LocalManifestFiles
 winget install --manifest .\winget\
-vmynt --version
-winget uninstall CodeScarlett.Vmynt
+vmseed --version
+winget uninstall CodeScarlett.Vmseed
 
 # 3. Install Microsoft's submission tool and send them in, with the classic token
 #    from Part 5.2.
@@ -335,7 +335,7 @@ Then:
   [microsoft.com/wdsi/filesubmission](https://www.microsoft.com/en-us/wdsi/filesubmission).
   Code signing (Part 11) makes this much less likely.
 
-Once it's merged, `winget install CodeScarlett.Vmynt` works, and **every later release
+Once it's merged, `winget install CodeScarlett.Vmseed` works, and **every later release
 updates winget automatically**.
 
 [Komac](https://github.com/russellbanks/Komac) (`komac new`) is another way to build
@@ -350,23 +350,23 @@ Give each store its review time, then try it on a real computer:
 
 ```powershell
 # Windows
-winget install CodeScarlett.Vmynt
-choco install vmynt          # in an administrator terminal
-vmynt --version
+winget install CodeScarlett.Vmseed
+choco install vmseed         # in an administrator terminal
+vmseed --version
 ```
 
 ```bash
 # Mac or Linux with Homebrew
-brew install scarlettiron/tap/vmynt
-vmynt --version
+brew install scarlettiron/tap/vmseed
+vmseed --version
 
 # Debian / Ubuntu
-curl -fsSL https://scarlettiron.github.io/vmynt/apt/vmynt-archive-keyring.gpg \
-  | sudo tee /usr/share/keyrings/vmynt-archive-keyring.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/vmynt-archive-keyring.gpg] https://scarlettiron.github.io/vmynt/apt stable main" \
-  | sudo tee /etc/apt/sources.list.d/vmynt.list
-sudo apt update && sudo apt install vmynt
-vmynt --version
+curl -fsSL https://scarlettiron.github.io/vmseed/apt/vmseed-archive-keyring.gpg \
+  | sudo tee /usr/share/keyrings/vmseed-archive-keyring.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/vmseed-archive-keyring.gpg] https://scarlettiron.github.io/vmseed/apt stable main" \
+  | sudo tee /etc/apt/sources.list.d/vmseed.list
+sudo apt update && sudo apt install vmseed
+vmseed --version
 ```
 
 Each should print the version you released.
@@ -387,7 +387,7 @@ Each should print the version you released.
 
 Tick **Dry run** to see what a bump would do without changing anything.
 
-**1.0.0** is the "this is stable" promise. Hold it until Vmynt has been run for real on
+**1.0.0** is the "this is stable" promise. Hold it until Vmseed has been run for real on
 Windows (Hyper-V) and a Mac. Until 1.0, a `minor` version is allowed to change how
 things work.
 
@@ -422,7 +422,7 @@ the secrets are saved, the next release is signed automatically.
 
 ---
 
-## Part 12 (optional): crates.io (`cargo install vmynt`)
+## Part 12 (optional): crates.io (`cargo install vmseed`)
 
 Rust developers can install straight from crates.io, Rust's package site. It isn't
 wired into the release robot, and it's optional.
@@ -454,7 +454,7 @@ wired up.
 | winget job: warning "**not in winget-pkgs yet**" | the first version hasn't been merged | do Part 8 |
 | winget job: "Bad credentials" / 401 | the classic token expired | new classic token (Part 5.2), replace `WINGET_TOKEN` |
 | Chocolatey push: **409 Conflict** | that version is already on Chocolatey | nothing to do; release a new version to change anything |
-| Chocolatey push: **403** | wrong API key, or someone else owns the `vmynt` name | check the key on your account page |
+| Chocolatey push: **403** | wrong API key, or someone else owns the `vmseed` name | check the key on your account page |
 | apt: users get "**NO_PUBKEY**" or "**not signed**" | the Pages deploy didn't run, or the key secret is wrong | **Actions → Deploy site and apt repository → Run workflow**; check `APT_GPG_PRIVATE_KEY` is the whole block |
 | **Release** fails at "Check the tag matches the version" | a tag was pushed by hand with a different number than `Cargo.toml` | delete that tag; use **Version bump** instead |
 | **Version bump** fails pushing to `main` | `main` has branch protection | see `RELEASE_TOKEN` in [releasing.md](releasing.md#every-secret) |

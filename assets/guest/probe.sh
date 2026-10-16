@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
 #Contributors:
 #Scarlett A. Scott (codescarlett)
 
-#The status probe. `vmynt status` and `vmynt list --live` send this to a running
+#The status probe. `vmseed status` and `vmseed list --live` send this to a running
 #guest over ssh and read back tab-separated "key<TAB>field..." lines. One round
 #trip collects everything, so a slow guest is slow once. Every fact is optional:
 #a missing file prints nothing rather than failing.

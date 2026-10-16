@@ -1,12 +1,12 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt clean`: deletes the downloaded ISO cache and leftover temporary files in
-//~/.vmynt. It never touches VMs, their disks, or any project.
+//`vmseed clean`: deletes the downloaded ISO cache and leftover temporary files in
+//~/.vmseed. It never touches VMs, their disks, or any project.
 
 use std::path::{Path, PathBuf};
 

@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -24,7 +24,7 @@ pub const SECTIONS: &[&str] = &[
     "Iso",
     "Machines",
     "RedHat",
-    //New in Vmynt (docs/vmynt-design.md section 8.3).
+    //New in Vmseed (docs/vmseed-design.md section 8.3).
     "Hypervisor",
     "Arch",
 ];

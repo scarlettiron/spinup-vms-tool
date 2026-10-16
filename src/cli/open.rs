@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt open`: from a cold computer to a desktop in one command. Starts the VM
+//`vmseed open`: from a cold computer to a desktop in one command. Starts the VM
 //if needed, waits until the guest can actually serve a desktop, then opens it.
 //The waiting matters: on Hyper-V a window opened while the guest is still booting is stuck in a basic session with no clipboard.
 

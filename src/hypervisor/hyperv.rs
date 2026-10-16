@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -514,9 +514,9 @@ mod tests {
             switch_name: "Default Switch".to_string(),
             network: "default".to_string(),
             storage_pool: "default".to_string(),
-            vm_dir: PathBuf::from(r"C:\Users\me\.vmynt\vms\acme-rocky"),
-            iso: PathBuf::from(r"C:\Users\me\.vmynt\isos\Rocky.iso"),
-            seed: PathBuf::from(r"C:\Users\me\.vmynt\vms\acme-rocky\acme-rocky-seed.vhd"),
+            vm_dir: PathBuf::from(r"C:\Users\me\.vmseed\vms\acme-rocky"),
+            iso: PathBuf::from(r"C:\Users\me\.vmseed\isos\Rocky.iso"),
+            seed: PathBuf::from(r"C:\Users\me\.vmseed\vms\acme-rocky\acme-rocky-seed.vhd"),
             project: PathBuf::from(r"C:\work\o'brien"),
             machine: None,
             display: (1920, 1080),

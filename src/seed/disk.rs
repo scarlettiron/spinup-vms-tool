@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn the_seed_disk_holds_the_files_under_its_label() {
-        let path = std::env::temp_dir().join(format!("vmynt-seed-{}.img", std::process::id()));
+        let path = std::env::temp_dir().join(format!("vmseed-seed-{}.img", std::process::id()));
         let files = vec![
             ("ks.cfg".to_string(), b"text\n".to_vec()),
             ("bootstrap/assets/x.sh".to_string(), b"echo hi\n".to_vec()),

@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt doctor`: checks this computer can run VMs, and says how to fix what it
+//`vmseed doctor`: checks this computer can run VMs, and says how to fix what it
 //can't. Each check is one line. A failed required check makes the command exit
 //with 1, so scripts and CI can use it.
 

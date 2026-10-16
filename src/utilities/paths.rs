@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -20,7 +20,7 @@ pub fn home_dir() -> Result<PathBuf> {
     std::env::home_dir().ok_or_else(|| anyhow!("could not find your home folder"))
 }
 
-//The per-user folder, ~/.vmynt. The VMYNT_HOME environment variable moves it,
+//The per-user folder, ~/.vmseed. The VMSEED_HOME environment variable moves it,
 //which the tests use so they never touch the real one.
 pub fn user_dir() -> Result<PathBuf> {
     if let Some(custom) = std::env::var_os(brand::env_var("HOME"))
@@ -36,8 +36,8 @@ pub fn user_path(name: &str) -> Result<PathBuf> {
     Ok(user_dir()?.join(name))
 }
 
-//Walks up from `start` looking for a .vmynt folder that holds a config file, the
-//way git looks for .git. Returns the project folder (the parent of .vmynt).
+//Walks up from `start` looking for a .vmseed folder that holds a config file, the
+//way git looks for .git. Returns the project folder (the parent of .vmseed).
 pub fn find_project_root(start: &Path) -> Option<PathBuf> {
     let mut current = Some(start);
     while let Some(dir) = current {
@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn finds_project_root_from_a_nested_folder() {
-        let root = std::env::temp_dir().join(format!("vmynt-paths-test-{}", std::process::id()));
+        let root = std::env::temp_dir().join(format!("vmseed-paths-test-{}", std::process::id()));
         let nested = root.join("a").join("b");
         std::fs::create_dir_all(root.join(brand::DIR)).unwrap();
         std::fs::create_dir_all(&nested).unwrap();

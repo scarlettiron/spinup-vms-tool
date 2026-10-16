@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -22,7 +22,7 @@ use crate::brand;
     about = brand::TAGLINE,
     //-v, -V and --version are defined below, so turn off clap's own flag.
     disable_version_flag = true,
-    //Plain `vmynt` prints the help.
+    //Plain `vmseed` prints the help.
     arg_required_else_help = true,
 )]
 pub struct Cli {
@@ -69,7 +69,7 @@ pub struct GlobalArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Create .vmynt/ config in this folder
+    /// Create .vmseed/ config in this folder
     Init(InitArgs),
 
     /// Show the merged config; --validate to check it
@@ -177,7 +177,7 @@ pub struct InitArgs {
     #[arg(long, value_name = "FOLDER", conflicts_with_all = ["blueprint", "from"])]
     pub import: Option<std::path::PathBuf>,
 
-    /// Rewrite the example files in an existing .vmynt/ (your config is never touched)
+    /// Rewrite the example files in an existing .vmseed/ (your config is never touched)
     #[arg(long)]
     pub force: bool,
 }
@@ -193,7 +193,7 @@ pub struct ConfigArgs {
     pub machine: Option<String>,
 }
 
-//Which VM a command acts on. See docs/vmynt-design.md section 12.2.
+//Which VM a command acts on. See docs/vmseed-design.md section 12.2.
 #[derive(Debug, Args)]
 pub struct TargetArgs {
     /// VM or machine name (default: the project in this folder)
@@ -351,7 +351,7 @@ pub enum BlueprintsAction {
     /// List the blueprints visible from here (the default)
     #[command(visible_alias = "ls")]
     List,
-    /// Copy a blueprint into this project's .vmynt/blueprints/ to edit
+    /// Copy a blueprint into this project's .vmseed/blueprints/ to edit
     New {
         /// Name for your blueprint
         name: String,

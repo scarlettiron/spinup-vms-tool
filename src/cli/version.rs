@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt version`: the same line as --version, or the parts as JSON.
+//`vmseed version`: the same line as --version, or the parts as JSON.
 
 use anstream::println;
 

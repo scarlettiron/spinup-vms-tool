@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -71,7 +71,7 @@ provisioning:
 
   # Ubuntu's installer stops at "Continue with autoinstall? (yes|no)"
   # unless the word 'autoinstall' is on the kernel command line, and a
-  # stock ISO's boot menu can't have it. Vmynt types this answer into the
+  # stock ISO's boot menu can't have it. Vmseed types this answer into the
   # VM's keyboard once the boot menu has passed (on macOS, where it can't,
   # the install window opens so you can type it).
   confirmText: 'yes'

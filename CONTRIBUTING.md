@@ -1,10 +1,10 @@
-# Contributing to Vmynt
+# Contributing to Vmseed
 
-Thanks for helping. Vmynt is young and has one maintainer, so small, focused pull requests
+Thanks for helping. Vmseed is young and has one maintainer, so small, focused pull requests
 are the easiest to review and the quickest to land. If you're planning something big, open an
 issue or a discussion first so we can agree on the shape before you write the code.
 
-The plan for the whole project lives in [docs/vmynt-design.md](docs/vmynt-design.md). Read the
+The plan for the whole project lives in [docs/vmseed-design.md](docs/vmseed-design.md). Read the
 part that touches your change before you start. It explains why things are the way they are.
 
 ## Code conventions
@@ -36,7 +36,7 @@ These rules are partly enforced by `cargo fmt` and `cargo clippy`, and partly by
 
 ### Never hard-code the product name
 
-The name Vmynt is expected to change, so nothing may spell it out by hand:
+The name Vmseed is expected to change, so nothing may spell it out by hand:
 
 - In Rust, use `brand::NAME`, `brand::DISPLAY_NAME` and `brand::DIR` from `src/brand.rs`.
 - In embedded templates, help text and generated files, use the `{{app}}`, `{{App}}` and
@@ -50,13 +50,13 @@ product in plain text and get updated with a search and replace on a rename.
 
 ## License watermark
 
-Vmynt is published under the MIT License. See the [LICENSE](LICENSE) file for the full text.
+Vmseed is published under the MIT License. See the [LICENSE](LICENSE) file for the full text.
 
 Every source file must start with the license watermark. It names the license and lists the
 people who have worked on the file. In Rust, JavaScript and CSS it looks like this:
 
 ```rust
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -78,7 +78,7 @@ For example, in a bash script:
 
 ```bash
 #!/usr/bin/env bash
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -97,7 +97,7 @@ Rules for the watermark:
   Keep Scarlett A. Scott (codescarlett) at the top of the list.
 - Use the format `Full Name (handle)`, one contributor per line.
 - Only add your name once per file. If it is already in the list, leave it as it is.
-- Some older guest scripts, written before Vmynt, don't have a watermark yet. If you edit one,
+- Some older guest scripts, written before Vmseed, don't have a watermark yet. If you edit one,
   add the watermark with both names.
 
 For example, after a second person edits a file, the contributors section would look like this:
@@ -117,8 +117,8 @@ For example, after a second person edits a file, the contributors section would 
 2. Clone the repository and build:
 
    ```bash
-   git clone https://github.com/scarlettiron/vmynt.git
-   cd vmynt
+   git clone https://github.com/scarlettiron/vmseed.git
+   cd vmseed
    cargo build
    cargo run -- --help
    ```
@@ -141,7 +141,7 @@ one platform can still fail on another. If it does, the CI log says which.
 
 ## How the code is laid out
 
-[docs/vmynt-design.md §5](docs/vmynt-design.md#5-architecture) has the full source layout. The
+[docs/vmseed-design.md §5](docs/vmseed-design.md#5-architecture) has the full source layout. The
 short version:
 
 - `src/cli/` holds one module per command (`init`, `create`, `list`, …).
@@ -182,7 +182,7 @@ A blueprint is one operating system and how to install it unattended.
 5. Build a VM with it on at least one host platform, and say which in the pull request.
 
 [docs/adding-an-os.md](docs/adding-an-os.md) walks through this in more detail, and
-[the design](docs/vmynt-design.md#9-blueprints) describes the format.
+[the design](docs/vmseed-design.md#9-blueprints) describes the format.
 
 ## The website
 
@@ -203,7 +203,7 @@ the README in the same pull request.
 - Add an entry under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md) for anything a user would
   notice: a new command or flag, a changed default, a fixed bug. Internal refactors don't need
   one.
-- Don't include generated files, build output, or anything from your own `.vmynt/` folder.
+- Don't include generated files, build output, or anything from your own `.vmseed/` folder.
   Never commit a real `vm.config.local.yaml`, password, token or private key.
 
 ## Reporting security problems

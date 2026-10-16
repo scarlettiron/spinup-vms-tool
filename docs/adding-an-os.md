@@ -8,9 +8,9 @@ than a change to the tooling.
 Blueprints live in two places:
 
 - **Built in**: `blueprints/<name>/` in this repository, embedded into the
-  binary at build time. Adding one here means rebuilding Vmynt.
-- **In a project**: `.vmynt/blueprints/<name>/`, committed with the project.
-  `vmynt blueprints new <name> --from <base>` copies a built-in one there to edit.
+  binary at build time. Adding one here means rebuilding Vmseed.
+- **In a project**: `.vmseed/blueprints/<name>/`, committed with the project.
+  `vmseed blueprints new <name> --from <base>` copies a built-in one there to edit.
   A project blueprint wins over a built-in one with the same name, and any file
   it doesn't have falls through to the built-in copy.
 
@@ -55,7 +55,7 @@ Every bootstrap step is shared, so adding a distro is mostly about the installer
 not the toolchain. Three things to do:
 
 1. **Create the blueprint folder** with a `blueprint.yaml` and a `seed/`
-   template. `vmynt blueprints new <name> --from ubuntu-desktop` makes a copy to
+   template. `vmseed blueprints new <name> --from ubuntu-desktop` makes a copy to
    start from. The keys that matter are below.
 2. **Teach `_lib.sh` its package manager**, if it is not apt or dnf. `pkg_install`
    and friends dispatch on `$PKG_MANAGER`, which `detect_pkg_manager` sets.
@@ -257,14 +257,14 @@ Helpers available from `_lib.sh`: `log`, `warn`, `die`, `have_cmd`, `is_true`,
 ## Verifying a change without building
 
 Point a project at the blueprint (`blueprint: my-new-os` in
-`.vmynt/vm.config.yaml`), then:
+`.vmseed/vm.config.yaml`), then:
 
 ```sh
-vmynt config --validate
-vmynt create --render
+vmseed config --validate
+vmseed create --render
 ```
 
 `--render` writes the seed files into the VM folder's `build/` (by default
-`~/.vmynt/vms/<name>/build/`) and touches no hypervisor. Read the generated
+`~/.vmseed/vms/<name>/build/`) and touches no hypervisor. Read the generated
 `user-data` or `ks.cfg`, confirm your step was embedded and your variables are
 set in `vm-bootstrap.env`, then build for real.

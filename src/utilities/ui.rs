@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -67,7 +67,7 @@ impl Ui {
         }
     }
 
-    //A dimmed hint, like "Next: run vmynt create".
+    //A dimmed hint, like "Next: run vmseed create".
     pub fn hint(&self, message: &str) {
         if !self.quiet && !self.json {
             println!("{DIM}{message}{DIM:#}");

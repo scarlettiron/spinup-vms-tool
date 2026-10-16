@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -10,9 +10,9 @@
 //
 //  1. built-in defaults (assets/defaults.yaml)
 //  2. the blueprint's Defaults
-//  3. .vmynt/vm.config.yaml
+//  3. .vmseed/vm.config.yaml
 //  4. the blueprint's Overrides (what the OS *is*, above the shared file)
-//  5. .vmynt/vm.config.local.yaml
+//  5. .vmseed/vm.config.local.yaml
 //  6. the chosen Machines: entry
 //  7. command-line overrides
 
@@ -338,7 +338,7 @@ impl Effective {
     }
 
     //Relative paths in config are relative to the project folder (the one
-    //holding .vmynt), so `copyFrom: config/certs` means what it says.
+    //holding .vmseed), so `copyFrom: config/certs` means what it says.
     pub fn config_path(&self, value: &str) -> PathBuf {
         let expanded = expand_env(value);
         let path = PathBuf::from(&expanded);
@@ -457,7 +457,7 @@ mod tests {
             }
         }
         let root = std::env::temp_dir().join(format!(
-            "vmynt-effective-{}-{}",
+            "vmseed-effective-{}-{}",
             std::process::id(),
             rand_suffix()
         ));
@@ -533,9 +533,9 @@ mod tests {
     #[test]
     fn environment_variables_expand() {
         // SAFETY: tests in this module don't read this variable concurrently.
-        unsafe { std::env::set_var("VMYNT_TEST_DIR", "/x") };
-        assert_eq!(expand_env("%VMYNT_TEST_DIR%/a"), "/x/a");
-        assert_eq!(expand_env("${VMYNT_TEST_DIR}/b"), "/x/b");
+        unsafe { std::env::set_var("VMSEED_TEST_DIR", "/x") };
+        assert_eq!(expand_env("%VMSEED_TEST_DIR%/a"), "/x/a");
+        assert_eq!(expand_env("${VMSEED_TEST_DIR}/b"), "/x/b");
         assert_eq!(expand_env("$NOT_SET_ANYWHERE"), "$NOT_SET_ANYWHERE");
     }
 }

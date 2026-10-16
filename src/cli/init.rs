@@ -1,16 +1,16 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt init`: turns the current folder into a project. It asks for a project
+//`vmseed init`: turns the current folder into a project. It asks for a project
 //name, a blueprint (or makes a custom one), and the VM's user, then writes the
-//.vmynt/ folder and registers the project so `list` can find it.
+//.vmseed/ folder and registers the project so `list` can find it.
 //
 //Every question has an option, so it also runs unattended:
-//  vmynt init --name acme --blueprint redhat-rocky-workstation \
+//  vmseed init --name acme --blueprint redhat-rocky-workstation \
 //             --username wxs --password-hash '$6$...' --yes
 
 use std::path::{Path, PathBuf};

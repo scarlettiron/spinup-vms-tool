@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -738,7 +738,7 @@ pub struct KeyMaterial {
     pub ambiguity: Option<String>,
 }
 
-//What is in the project's .vmynt/ssh_keys/ drop folder.
+//What is in the project's .vmseed/ssh_keys/ drop folder.
 pub fn key_material(config: &Effective, prefer: &str) -> Result<KeyMaterial> {
     let dir = config
         .project_root
@@ -969,7 +969,7 @@ pub fn key_source(config: &Effective) -> Result<KeySource> {
     }
     if mode == "copy" {
         bail!(
-            "github.sshKey.mode is 'copy' but no private key was found. Drop one into .vmynt/ssh_keys/, set privateKeyPath, \
+            "github.sshKey.mode is 'copy' but no private key was found. Drop one into .vmseed/ssh_keys/, set privateKeyPath, \
              or use mode 'auto'."
         );
     }
@@ -1033,7 +1033,7 @@ pub fn check_all(config: &Effective) -> Result<Vec<String>> {
 pub fn check_user(config: &Effective) -> Result<()> {
     if config.username().is_none() {
         bail!(
-            "no username is set. Add `username:` and `passwordHash:` to .vmynt/{} (make a hash with `{} hash`).",
+            "no username is set. Add `username:` and `passwordHash:` to .vmseed/{} (make a hash with `{} hash`).",
             files::LOCAL_CONFIG_FILE,
             brand::NAME
         );
@@ -1043,7 +1043,7 @@ pub fn check_user(config: &Effective) -> Result<()> {
     if !has_password {
         bail!(
             "the user has no password: the installers will not create a passwordless account. Add `passwordHash:` to \
-             .vmynt/{} (make one with `{} hash`).",
+             .vmseed/{} (make one with `{} hash`).",
             files::LOCAL_CONFIG_FILE,
             brand::NAME
         );
@@ -1065,7 +1065,7 @@ mod tests {
 
     fn load(yaml: &str) -> (Effective, PathBuf) {
         let root = std::env::temp_dir().join(format!(
-            "vmynt-plans-{}-{}",
+            "vmseed-plans-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -43,7 +43,7 @@ fn main() {
         println!("cargo:rustc-env={env_name}={value}");
     }
 
-    //The commit and its date make `vmynt --version` precise enough for a bug report.
+    //The commit and its date make `vmseed --version` precise enough for a bug report.
     //A build from a source archive has no .git folder, so both fall back to "unknown".
     let sha = git(&["rev-parse", "--short=7", "HEAD"]).unwrap_or_else(|| "unknown".to_string());
     let date = git(&["log", "-1", "--format=%cs"]).unwrap_or_else(|| "unknown".to_string());

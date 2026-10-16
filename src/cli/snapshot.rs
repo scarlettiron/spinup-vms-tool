@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt snapshot create|list|restore|delete`. Hyper-V checkpoints, libvirt
+//`vmseed snapshot create|list|restore|delete`. Hyper-V checkpoints, libvirt
 //disk snapshots, or APFS clones on macOS; the last two need the VM stopped,
 //and the command says so. `create` takes one automatically after the install,
 //called clean-install.

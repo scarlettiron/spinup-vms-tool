@@ -1,14 +1,14 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//File and folder names. The project folder itself (.vmynt) comes from
+//File and folder names. The project folder itself (.vmseed) comes from
 //brand::DIR, because it follows the product name.
 
-//Inside a project's .vmynt/ folder.
+//Inside a project's .vmseed/ folder.
 pub const CONFIG_FILE: &str = "vm.config.yaml";
 pub const LOCAL_CONFIG_FILE: &str = "vm.config.local.yaml";
 pub const EXAMPLE_CONFIG_FILE: &str = "vm.config.example.yaml";
@@ -20,7 +20,7 @@ pub const README_FILE: &str = "README.md";
 //Shared by the project folder and the per-user folder.
 pub const BLUEPRINTS_DIR: &str = "blueprints";
 
-//Inside the per-user ~/.vmynt/ folder.
+//Inside the per-user ~/.vmseed/ folder.
 pub const USER_CONFIG_FILE: &str = "config.yaml";
 pub const REGISTRY_FILE: &str = "projects.yaml";
 pub const ISO_CACHE_DIR: &str = "isos";
@@ -28,7 +28,7 @@ pub const TEMP_DIR: &str = "tmp";
 
 //Blueprints.
 pub const BLUEPRINT_MANIFEST: &str = "blueprint.yaml";
-//What the PowerShell tool and Vmynt before 1.0 used, recognised only to say so.
+//What the PowerShell tool and Vmseed before 1.0 used, recognised only to say so.
 pub const OLD_BLUEPRINT_MANIFEST: &str = "blueprint.psd1";
 //The bootstrap steps every blueprint shares. It sits beside the blueprints but is
 //not one itself.

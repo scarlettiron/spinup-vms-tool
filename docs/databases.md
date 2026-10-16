@@ -30,7 +30,7 @@ Defaults when `dbVersion` is blank:
 `dbServer: true` on its own is enough.
 
 Everything is validated when config loads, so a wrong engine name or an
-unsupported version fails during `vmynt config --validate` or `vmynt create --render` rather than twenty minutes into a
+unsupported version fails during `vmseed config --validate` or `vmseed create --render` rather than twenty minutes into a
 first boot.
 
 ## Where the packages come from
@@ -246,7 +246,7 @@ database:  postgres 17 running on port 5432
 From the host:
 
 ```sh
-vmynt status
+vmseed status
 ```
 
 ```

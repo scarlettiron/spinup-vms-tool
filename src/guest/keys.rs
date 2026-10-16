@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -7,7 +7,7 @@
 
 //SSH keys on this computer.
 //
-//Vmynt keeps a key pair of its own in ~/.vmynt/ssh/ and puts the public half in
+//Vmseed keeps a key pair of its own in ~/.vmseed/ssh/ and puts the public half in
 //every guest it builds, so `ssh`, `exec`, `logs` and `status` work without any
 //setup. Its own known_hosts file sits beside it: a rebuilt VM gets a new host
 //key under the same name, and keeping that out of ~/.ssh/known_hosts means a
@@ -34,7 +34,7 @@ pub fn known_hosts() -> Result<PathBuf> {
     Ok(ssh_dir()?.join("known_hosts"))
 }
 
-//Vmynt's public key, made on first use. None when ssh-keygen is not installed.
+//Vmseed's public key, made on first use. None when ssh-keygen is not installed.
 pub fn ensure_own_key() -> Result<Option<String>> {
     let private = private_key()?;
     let public = PathBuf::from(format!("{}.pub", private.display()));
@@ -76,7 +76,7 @@ pub fn public_from_private(path: &Path) -> Option<Option<String>> {
     }
 }
 
-//Forgets a host in Vmynt's known_hosts, after a rebuild or a removal.
+//Forgets a host in Vmseed's known_hosts, after a rebuild or a removal.
 pub fn forget_host(names: &[&str]) -> Result<bool> {
     let path = known_hosts()?;
     let Ok(text) = std::fs::read_to_string(&path) else {
@@ -162,10 +162,10 @@ mod tests {
 
     #[test]
     fn forgetting_a_host_removes_only_its_lines() {
-        let dir = std::env::temp_dir().join(format!("vmynt-kh-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("vmseed-kh-{}", std::process::id()));
         std::fs::create_dir_all(dir.join("ssh")).unwrap();
-        // SAFETY: only this test in the binary sets VMYNT_HOME.
-        unsafe { std::env::set_var("VMYNT_HOME", &dir) };
+        // SAFETY: only this test in the binary sets VMSEED_HOME.
+        unsafe { std::env::set_var("VMSEED_HOME", &dir) };
         std::fs::write(
             known_hosts().unwrap(),
             "acme.local ssh-ed25519 AAA\nother.local ssh-ed25519 BBB\n[acme.local]:22,10.0.0.5 ssh-rsa CCC\n",
@@ -176,7 +176,7 @@ mod tests {
             std::fs::read_to_string(known_hosts().unwrap()).unwrap(),
             "other.local ssh-ed25519 BBB\n"
         );
-        unsafe { std::env::remove_var("VMYNT_HOME") };
+        unsafe { std::env::remove_var("VMSEED_HOME") };
         let _ = std::fs::remove_dir_all(dir);
     }
 }

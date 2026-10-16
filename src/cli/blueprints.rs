@@ -1,12 +1,12 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt blueprints`: lists the blueprints visible from here, and
-//`vmynt blueprints new` copies one into the project to customize.
+//`vmseed blueprints`: lists the blueprints visible from here, and
+//`vmseed blueprints new` copies one into the project to customize.
 
 use anstream::print;
 

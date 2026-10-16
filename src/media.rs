@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -6,7 +6,7 @@
 //Scarlett A. Scott (codescarlett)
 
 //Install media: find the ISO a blueprint describes, download it into the cache
-//(~/.vmynt/isos), and check it against the vendor's published SHA-256. A
+//(~/.vmseed/isos), and check it against the vendor's published SHA-256. A
 //blueprint describes its media one of three ways:
 //
 //  1. iso.path in config               a local .iso, used as it is

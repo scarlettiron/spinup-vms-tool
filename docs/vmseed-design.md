@@ -1,8 +1,8 @@
-# Vmynt — design
+# Vmseed — design
 
 Status: **M0–M3 built; M4 (1.0) in progress** · Drafted 2026-10-13 · Replaced the PowerShell tool, removed at M4
 
-Vmynt is the Rust rewrite of this repo's original PowerShell tool (`vm.ps1` + `scripts/`, removed
+Vmseed is the Rust rewrite of this repo's original PowerShell tool (`vm.ps1` + `scripts/`, removed
 before 1.0 and still in git history). It keeps what that tool did — describe a dev VM in YAML, run one command, get a fully
 provisioned desktop — and makes it:
 
@@ -10,8 +10,8 @@ provisioned desktop — and makes it:
   (Apple Virtualization.framework via vfkit), on x86_64 and arm64;
 - **installable**: one self-contained binary from winget, Homebrew, `.deb`/`.rpm`, or a
   one-line install script — users never install Rust, PowerShell or anything else to run it;
-- **project-based like ddev**: `vmynt init` in any folder, then `vmynt start`, `vmynt list`,
-  `vmynt ssh` from anywhere.
+- **project-based like ddev**: `vmseed init` in any folder, then `vmseed start`, `vmseed list`,
+  `vmseed ssh` from anywhere.
 
 All three host platforms are in scope for 1.0. The milestones in §16 only order the work.
 
@@ -22,7 +22,7 @@ All three host platforms are in scope for 1.0. The milestones in §16 only order
 **Goals**
 
 - Same YAML config, same blueprints, same guest bootstrap scripts as the PowerShell tool had —
-  a VM built by Vmynt is the same machine that tool built.
+  a VM built by Vmseed is the same machine that tool built.
 - One binary per platform, no runtime dependencies beyond the hypervisor itself (and vfkit on
   macOS, pulled in by Homebrew).
 - Every user-facing name comes from one constant (§2).
@@ -41,16 +41,16 @@ All three host platforms are in scope for 1.0. The milestones in §16 only order
 
 ## 2. Naming: one place to change it
 
-The product name is **Vmynt**; the command, package and folders are `vmynt`. The name is
+The product name is **Vmseed**; the command, package and folders are `vmseed`. The name is
 expected to change, so nothing hard-codes it.
 
 ```rust
 // src/brand.rs — the only place the name lives in code
-pub const DISPLAY_NAME: &str = "Vmynt";                          // prose, help header, messages
-pub const NAME: &str = env!("CARGO_PKG_NAME");                   // "vmynt": binary, tags, registry
-pub const DIR: &str = concat!(".", env!("CARGO_PKG_NAME"));      // ".vmynt"
+pub const DISPLAY_NAME: &str = "Vmseed";                         // prose, help header, messages
+pub const NAME: &str = env!("CARGO_PKG_NAME");                   // "vmseed": binary, tags, registry
+pub const DIR: &str = concat!(".", env!("CARGO_PKG_NAME"));      // ".vmseed"
 
-pub fn env_var(key: &str) -> String {                            // VMYNT_HOME, VMYNT_DEBUG, …
+pub fn env_var(key: &str) -> String {                            // VMSEED_HOME, VMSEED_DEBUG, …
     format!("{}_{}", NAME.to_uppercase(), key)
 }
 ```
@@ -91,7 +91,7 @@ Crates actually used (see `Cargo.toml`):
 
 Not crates, on purpose:
 
-- **SSH:** Vmynt runs the system `ssh` (present on Windows 10+, macOS and every Linux), so
+- **SSH:** Vmseed runs the system `ssh` (present on Windows 10+, macOS and every Linux), so
   users' keys, agent and `~/.ssh/config` still work.
 - **Hypervisors:** each backend runs the hypervisor's own tool — `powershell.exe` (Hyper-V
   cmdlets), `virsh`, `vfkit` — so there is no C library to link and every backend compiles on
@@ -108,7 +108,7 @@ Hand-written GitHub Actions workflows in `.github/workflows/` (no `dist`):
 - `release.yml` (on a `v*` tag): checks the tag matches `Cargo.toml`, builds six targets on
   native runners, then `.deb` (cargo-deb), `.rpm` (cargo-generate-rpm) and `SHA256SUMS`, and
   publishes a GitHub Release. Stable versions then go to the Homebrew tap
-  (`scarlettiron/homebrew-tap`), winget (`CodeScarlett.Vmynt`), Chocolatey (`vmynt`) and a
+  (`scarlettiron/homebrew-tap`), winget (`CodeScarlett.Vmseed`), Chocolatey (`vmseed`) and a
   signed apt repository served from GitHub Pages. A version with a hyphen (`-rc.1`) is a
   GitHub prerelease only.
 
@@ -128,18 +128,18 @@ Hand-written GitHub Actions workflows in `.github/workflows/` (no `dist`):
   secrets are set; unsigned Windows binaries trigger SmartScreen. Homebrew installs are not
   quarantined.
 - **Provenance:** every release gets GitHub build-provenance attestations, checked with
-  `gh attestation verify <file> --repo scarlettiron/vmynt`.
+  `gh attestation verify <file> --repo scarlettiron/vmseed`.
 
 `docs/releasing.md` is the operational guide.
 
-## 4. Host requirements (what `vmynt doctor` checks)
+## 4. Host requirements (what `vmseed doctor` checks)
 
 | Host | Needs | Notes |
 |---|---|---|
 | Windows 10/11 Pro, Enterprise, Education; Server | Hyper-V enabled; user is admin or in **Hyper-V Administrators** | Windows **Home has no Hyper-V** — doctor says so plainly. `vmconnect.exe` (Hyper-V management tools) shows both the console and the Enhanced Session desktop. |
 | Linux | `/dev/kvm`, libvirt + QEMU + OVMF, user in the `libvirt` group, libvirt's `default` network and a storage pool | `virt-viewer` for the console (optional); FreeRDP (`xfreerdp3`/`xfreerdp`) or Remmina for the desktop. |
 | macOS 13+ (Apple Silicon or Intel) | `vfkit` (`brew install vfkit`; the Homebrew formula depends on it) | Desktop through Microsoft's *Windows App* (an `.rdp` file is opened); console only for a VM started with a window. |
-| All | `ssh` on PATH; `ssh-keygen` recommended | `ssh-keygen` makes Vmynt's own key (§11.5). |
+| All | `ssh` on PATH; `ssh-keygen` recommended | `ssh-keygen` makes Vmseed's own key (§11.5). |
 
 `doctor` prints one line per check with a fix for each failure and exits non-zero if anything
 required is missing. Its last check calls the backend's `preflight()` — the same call `create`
@@ -172,7 +172,7 @@ src/
   config/
     mod.rs                one layer: read, expand quick settings, merge
     effective.rs          every layer + the blueprint, names checked
-    user.rs               ~/.vmynt/config.yaml: the saved default identity
+    user.rs               ~/.vmseed/config.yaml: the saved default identity
   plans.rs                data disks, database, files, Red Hat, hooks, repos, ssh keys
   blueprint/
     mod.rs                list, find, copy (project → downloaded → embedded, §9.2);
@@ -184,7 +184,7 @@ src/
   media.rs                ISO lookup, download, SHA-256 check, cache
   guest/
     mod.rs                ssh wrapper, the status probe and its parser
-    keys.rs               Vmynt's own key pair and known_hosts (§11.5)
+    keys.rs               Vmseed's own key pair and known_hosts (§11.5)
   hypervisor/
     mod.rs                trait Hypervisor, VmSpec, shared helpers (run, RDP launch, tags)
     hyperv.rs             PowerShell + Hyper-V cmdlets
@@ -192,7 +192,7 @@ src/
     vfkit.rs              detached vfkit + REST over a unix socket
     fake.rs               in-memory backend for tests (debug builds only)
   vms.rs                  VM records and "which VM does this command mean" (§12.2)
-  registry.rs             ~/.vmynt/projects.yaml (§13)
+  registry.rs             ~/.vmseed/projects.yaml (§13)
   passwd.rs               SHA-512 crypt
   constants/, utilities/  file names, config vocabulary, help groups; paths, templates,
                           names, tables, atomic writes, ui
@@ -251,8 +251,8 @@ Changed from the plan:
   platform-specific to link; the few OS calls (unix sockets, process groups, file allocation)
   are `#[cfg]`-guarded inside. This lets the XML, PowerShell and vfkit command lines be unit
   tested on any computer. `hypervisor::host()` picks the backend for this OS;
-  `VMYNT_HYPERVISOR` overrides it, and `hypervisor:` in config is checked against the host.
-- **`fake`** keeps its VMs in `~/.vmynt/fake-hypervisor.json`, so the real binary can be run
+  `VMSEED_HYPERVISOR` overrides it, and `hypervisor:` in config is checked against the host.
+- **`fake`** keeps its VMs in `~/.vmseed/fake-hypervisor.json`, so the real binary can be run
   command after command in tests. It is only accepted in debug builds.
 - `VmSpec` is everything a backend needs (hardware, disks, firmware, switch/network/pool, the
   VM folder, ISO and seed paths, and the project path for the tag); `create` builds it from
@@ -281,10 +281,10 @@ Everything above the trait — config, blueprints, seed, media, guest probing, t
 | Console | `vmconnect.exe` | `virt-viewer --attach` (VNC on 127.0.0.1) | `vfkit --gui`, only if started with it |
 | Snapshots | Hyper-V checkpoints | external disk-only snapshots, VM off | APFS clones (`cp -c`), VM off |
 | Tag for discovery | VM **Notes** | domain `<metadata>` | `tag` in `vfkit.json` |
-| Process lifetime | Hyper-V service | libvirtd | Vmynt spawns vfkit detached; PID + socket in the VM folder |
+| Process lifetime | Hyper-V service | libvirtd | Vmseed spawns vfkit detached; PID + socket in the VM folder |
 | `stop --save` | Save-VM | `virsh managedsave` | not supported (says so) |
 
-The tag text is `vmynt:<machine>:<project folder>` on every backend.
+The tag text is `vmseed:<machine>:<project folder>` on every backend.
 
 ### 6.2 Hyper-V notes
 
@@ -299,14 +299,14 @@ The tag text is `vmynt:<machine>:<project folder>` on every backend.
 
 ### 6.3 libvirt notes
 
-- Uses the **system** connection (`qemu:///system`, override with `VMYNT_LIBVIRT_URI`) so VMs
+- Uses the **system** connection (`qemu:///system`, override with `VMSEED_LIBVIRT_URI`) so VMs
   get the `default` NAT network and a host-reachable IP; `qemu:///session` only gets user-mode
   networking, which breaks `.local`.
 - **Disks live in a storage pool** (`vm.storagePool`, default `default`, created at
-  `/var/lib/libvirt/images` if missing), not in `~/.vmynt`: the system qemu runs as its own
+  `/var/lib/libvirt/images` if missing), not in `~/.vmseed`: the system qemu runs as its own
   user and usually can't read a home folder. The seed is uploaded with `vol-upload`; the ISO is
   uploaded once and reused while its size matches.
-- Domain XML is generated in code (`domain_xml`), with a UUID Vmynt keeps in the VM folder so
+- Domain XML is generated in code (`domain_xml`), with a UUID Vmseed keeps in the VM folder so
   the domain can be redefined after the install with the same identity.
 - Disks sit on a virtio-scsi controller at Hyper-V's LUNs, so `00-disks.sh` finds data disks the
   same way on both; each disk's `<serial>` is its label as well.
@@ -317,7 +317,7 @@ The tag text is `vmynt:<machine>:<project folder>` on every backend.
 ### 6.4 vfkit notes
 
 - No service holds VM definitions, so each VM's settings live in
-  `~/.vmynt/vms/<name>/vfkit.json` (CPUs, memory, MAC, disks with device ids, ISO, display) and
+  `~/.vmseed/vms/<name>/vfkit.json` (CPUs, memory, MAC, disks with device ids, ISO, display) and
   `start` launches vfkit from them, detached in its own process group, with
   `--restful-uri unix://…`. Socket paths over ~100 bytes fall back to a short `/tmp` path.
 - `stop` asks via REST (`Stop` = ACPI shutdown, `HardStop` = force), falling back to the PID.
@@ -333,7 +333,7 @@ The tag text is `vmynt:<machine>:<project folder>` on every backend.
 
 ## 7. Opening the desktop
 
-`vmynt open` starts the VM if needed, waits until `desktop_ready` (Hyper-V: an IP and a
+`vmseed open` starts the VM if needed, waits until `desktop_ready` (Hyper-V: an IP and a
 healthy heartbeat; libvirt/vfkit: TCP 3389 answers), gives the display manager a few seconds,
 then opens the platform's client:
 
@@ -352,10 +352,10 @@ then opens the platform's client:
 The schema is the one documented in `docs/configuration.md`, the PowerShell tool's schema
 unchanged except for the additions in §8.3. Layers, lowest to highest:
 
-1. Vmynt's built-in defaults
+1. Vmseed's built-in defaults
 2. the blueprint's defaults
-3. `.vmynt/vm.config.yaml` — shared, committed
-4. `.vmynt/vm.config.local.yaml` — personal, git-ignored (username, password hash, keys, paths)
+3. `.vmseed/vm.config.yaml` — shared, committed
+4. `.vmseed/vm.config.local.yaml` — personal, git-ignored (username, password hash, keys, paths)
 5. the selected `Machines:` entry, if any
 6. command-line overrides
 
@@ -369,11 +369,11 @@ the merge; `plans.rs` checks every section.
 
 Relative paths in config (`copyFrom`, `hooks.postStartFile`, `githubTokenFile`,
 `redHat.activationKeyFile`, `iso.path`, …) are relative to the **project folder** — the one
-holding `.vmynt/` — and may start with `~/` or use `%VAR%`/`$VAR`.
+holding `.vmseed/` — and may start with `~/` or use `%VAR%`/`$VAR`.
 
 ### 8.2 Validation
 
-`vmynt config --validate` and every `create` run the same checks the PowerShell tool ran
+`vmseed config --validate` and every `create` run the same checks the PowerShell tool ran
 (unknown keys with did-you-mean, ranges, blueprint/version match, database engine/version,
 disk letters, files, hooks, repos, keys) through `plans::check_all`. As built, `--validate`
 collects the quick checks (project name, blueprint, hostname, password) all at once, then
@@ -386,10 +386,10 @@ warning for `--validate` and an error for `create`.
 |---|---|---|
 | `hypervisor` | `auto` | backend; only the host's is accepted (`hyperv`, `libvirt`, `vfkit`) |
 | `arch` | `auto` (host arch) | guest architecture, `x86_64` or `arm64`; must match the host on macOS |
-| `vm.path` | `~/.vmynt/vms` | where a VM's folder lives (was `C:\VMs`). On libvirt only the build files and state are here; disks are in the pool |
+| `vm.path` | `~/.vmseed/vms` | where a VM's folder lives (was `C:\VMs`). On libvirt only the build files and state are here; disks are in the pool |
 | `vm.network` | `default` | libvirt network |
 | `vm.storagePool` | `default` | libvirt storage pool for disks, seed and ISO |
-| `iso.directory` | `~/.vmynt/isos` | download cache (was `C:\ISO`) |
+| `iso.directory` | `~/.vmseed/isos` | download cache (was `C:\ISO`) |
 | `guest.timezone` | this computer's zone, else `UTC` | read from `/etc/localtime`/`TZ`; Windows falls back to UTC |
 
 ### 8.4 `password` vs `passwordHash`
@@ -417,7 +417,7 @@ blueprints and config merge with one function.
 **Changed from the plan:** until M4 blueprints were PowerShell data files (`blueprint.psd1`),
 because the PowerShell tool read the same files. They became YAML when that tool was removed.
 A project blueprint folder that still has only a `blueprint.psd1` gets an error saying to
-recreate it with `vmynt blueprints new` and move the changes across.
+recreate it with `vmseed blueprints new` and move the changes across.
 
 Per-architecture media is a top-level **`arm64`** block rather than per-arch `media:` sections:
 
@@ -439,7 +439,7 @@ replace); otherwise it is dropped. A blueprint without one refuses arm64 with a 
 Seed templates keep their `{{PLACEHOLDER}}` syntax (`ks.cfg.tmpl`, `user-data.tmpl`), rendered
 by plain substitution; an unreplaced token is an error.
 
-Two `provisioning` keys are new in Vmynt:
+Two `provisioning` keys are new in Vmseed:
 
 - **`confirmText`** (Ubuntu blueprints: `'yes'`). Ubuntu's installer stops at "Continue with
   autoinstall? (yes|no)" unless `autoinstall` is on the kernel command line, which a stock ISO's
@@ -460,19 +460,19 @@ All five blueprints are embedded: `redhat-rocky-workstation` (the default),
 
 A blueprint is only ever requested **by name**. The resolver checks, first match wins:
 
-1. `<project>/.vmynt/blueprints/<name>/` — custom or overridden, committed with the project
-2. `~/.vmynt/blueprints/<name>/<version>/` — downloaded (empty in 1.0)
+1. `<project>/.vmseed/blueprints/<name>/` — custom or overridden, committed with the project
+2. `~/.vmseed/blueprints/<name>/<version>/` — downloaded (empty in 1.0)
 3. embedded in the binary
 
-`vmynt blueprints` lists everything visible from the current folder and where each comes from.
+`vmseed blueprints` lists everything visible from the current folder and where each comes from.
 
 ### 9.3 Custom blueprints
 
 ```
-vmynt blueprints new my-rocky --from redhat-rocky-workstation
+vmseed blueprints new my-rocky --from redhat-rocky-workstation
 ```
 
-copies the embedded blueprint into `.vmynt/blueprints/my-rocky/` for editing. `init` offers the
+copies the embedded blueprint into `.vmseed/blueprints/my-rocky/` for editing. `init` offers the
 same thing (§12.4). A custom blueprint can override any file; anything it doesn't contain falls
 through to the built-in file at the same place (`blueprint/resolve.rs`). Bootstrap folders
 layer: the built-in steps first, then the project's, so a project replaces one step without
@@ -489,7 +489,7 @@ shared bootstrap (`assets/blueprints/bootstrap/`, ~180 KB) stays embedded regard
 ## 10. Seed disk
 
 The PowerShell tool created a VHDX, then ran `Mount-VHD` + `Initialize-Disk` + `New-Partition` +
-`Format-Volume` — Windows-only and needing admin. Vmynt builds it in-process (`seed/disk.rs`):
+`Format-Volume` — Windows-only and needing admin. Vmseed builds it in-process (`seed/disk.rs`):
 
 1. A 256 MB file with an **MBR and one FAT32 (LBA) partition** starting at 1 MiB — the same
    shape the PowerShell tool made, rather than the unpartitioned volume first planned.
@@ -506,7 +506,7 @@ The PowerShell tool created a VHDX, then ran `Mount-VHD` + `Initialize-Disk` + `
    reads it back as a 256 MiB disk; `blkid` sees the label and `fsck.vfat` finds no errors.
 
 The seed holds the password hash and any secrets in plain text, so **every backend detaches it
-and Vmynt deletes the file after the install** (the PowerShell tool left it attached). The
+and Vmseed deletes the file after the install** (the PowerShell tool left it attached). The
 installed system already has everything it needs.
 
 `create --render` writes only the review copy and touches no hypervisor.
@@ -549,15 +549,15 @@ Required on Apple Silicon, optional on arm Linux/Windows hosts.
 ### 11.4 Status probe
 
 The PowerShell tool's bash status probe is now `assets/guest/probe.sh` (plus `browser` and
-`ip` lines). Vmynt sends it over `ssh -o BatchMode=yes -o ConnectTimeout=4 … 'bash -s'` with a
+`ip` lines). Vmseed sends it over `ssh -o BatchMode=yes -o ConnectTimeout=4 … 'bash -s'` with a
 30-second limit and parses the same tab-separated output (`guest::Facts`). Every fact stays
 optional: an unreachable guest yields a partial status, never an error.
 
-### 11.5 Vmynt's own SSH key
+### 11.5 Vmseed's own SSH key
 
-Vmynt keeps a key pair in `~/.vmynt/ssh/id_ed25519` (made with `ssh-keygen` on first `create`)
+Vmseed keeps a key pair in `~/.vmseed/ssh/id_ed25519` (made with `ssh-keygen` on first `create`)
 and adds the public half to every guest's authorized keys, alongside keys from config and
-`.vmynt/ssh_keys/`. Its own `~/.vmynt/ssh/known_hosts` is used for every connection
+`.vmseed/ssh_keys/`. Its own `~/.vmseed/ssh/known_hosts` is used for every connection
 (`StrictHostKeyChecking=accept-new`, `HashKnownHosts=no`, and `HostKeyAlias=<hostname>`, so keys
 are filed under the VM's hostname whether it was reached as `<hostname>.local` or by IP, and a
 DHCP address reused by another VM never collides), and `create`/`remove` forget the host there — so `ssh`,
@@ -569,15 +569,15 @@ IDENTIFICATION HAS CHANGED" warning or touches `~/.ssh/known_hosts`. Without `ss
 
 ### 12.1 Commands
 
-The real `vmynt --help`:
+The real `vmseed --help`:
 
 ```
 Reproducible dev VMs from a config file
 
-Usage: vmynt <command> [name] [options]
+Usage: vmseed <command> [name] [options]
 
 Project:
-  init        Create .vmynt/ config in this folder
+  init        Create .vmseed/ config in this folder
   config      Show the merged config; --validate to check it
 
 Lifecycle:
@@ -619,8 +619,8 @@ Global options:
   -y, --yes       Answer yes to every confirmation, and never prompt
   -h, --help      Print help
 
-Run `vmynt help <command>` or `vmynt <command> -h` for a command's options.
-Docs: https://scarlettiron.github.io/vmynt/
+Run `vmseed help <command>` or `vmseed <command> -h` for a command's options.
+Docs: https://scarlettiron.github.io/vmseed/
 ```
 
 Command-specific flags, as built: `create --render` (render the seed, touch no hypervisor),
@@ -632,7 +632,7 @@ Command-specific flags, as built: `create --render` (render the seed, touch no h
 `--all` (every VM on this computer) belongs to `start`, `stop`, `restart`, `remove` and
 `status`. On `create`, `--all` builds every machine of the project in the current folder.
 
-`-v` means **version**, so verbose has no short flag. `vmynt` with no arguments prints the help.
+`-v` means **version**, so verbose has no short flag. `vmseed` with no arguments prints the help.
 Typos get "did you mean …" suggestions (clap).
 
 Long commands (`create`) print numbered steps on stderr, so `--json` output on stdout stays
@@ -642,16 +642,16 @@ clean.
 
 As implemented in `src/vms.rs`:
 
-1. `vmynt <cmd> <name>` — matched against the current project's VM names, machine keys and
-   hostnames first, then VM records (`~/.vmynt/vms/<name>/vm.json`), then every registered
-   project. A name nobody knows is still passed to the hypervisor, so a VM Vmynt didn't build can
+1. `vmseed <cmd> <name>` — matched against the current project's VM names, machine keys and
+   hostnames first, then VM records (`~/.vmseed/vms/<name>/vm.json`), then every registered
+   project. A name nobody knows is still passed to the hypervisor, so a VM Vmseed didn't build can
    be started or removed.
-2. `vmynt <cmd>` inside a project — finds `.vmynt/` in the current folder or a parent. If the
+2. `vmseed <cmd>` inside a project — finds `.vmseed/` in the current folder or a parent. If the
    project defines `Machines:`, the command acts on all of them; `open`, `ssh`, `exec`, `logs`
    and `snapshot` need one VM and ask for a name.
 3. `--all` — every VM with a record on this computer.
 
-Outside a project with no name and no `--all`, the command errors and suggests `vmynt list`.
+Outside a project with no name and no `--all`, the command errors and suggests `vmseed list`.
 
 ### 12.3 Exit codes and output
 
@@ -661,13 +661,13 @@ Outside a project with no name and no `--all`, the command errors and suggests `
   unless `-y`; without a terminal and without `-y` they exit 2 instead of guessing.
 - `ssh` and `exec` exit with the remote command's code; ssh's own 255 becomes a message.
 
-### 12.4 `vmynt init`
+### 12.4 `vmseed init`
 
-Runs in the current folder; creates `.vmynt/` there.
+Runs in the current folder; creates `.vmseed/` there.
 
 ```
 $ cd ~/work/acme
-$ vmynt init
+$ vmseed init
 ? Project name: acme                      ← default: folder name; checked hostname-safe
 ? Blueprint:
   › redhat-rocky-workstation   Rocky Linux 9 + GNOME
@@ -675,37 +675,37 @@ $ vmynt init
     fedora-workstation         Fedora + GNOME
     ubuntu-desktop             Ubuntu LTS + GNOME
     ubuntu-server              Ubuntu LTS, no desktop
-    Create my own…             copy one of the above into .vmynt/blueprints to edit
+    Create my own…             copy one of the above into .vmseed/blueprints to edit
 ? Username: scarlett                       ← skipped if a default identity exists (below)
 ? Full name: Scarlett Scott
 ? Password: ********                       ← hidden, asked twice, stored only as a hash
 ? Save this user as your default for future projects? (Y/n)
 
-✔ .vmynt/vm.config.yaml                   project settings — commit this
-✔ .vmynt/vm.config.local.yaml             your user and password hash — git-ignored
-✔ .vmynt/vm.config.example.yaml           every option, documented
-✔ .vmynt/vm.config.local.example.yaml
-✔ .vmynt/ssh_keys/                        drop .pub files here
-✔ .vmynt/.gitignore                       ignores the local file and private keys
-✔ registered "acme" in ~/.vmynt/projects.yaml
+✔ .vmseed/vm.config.yaml                   project settings — commit this
+✔ .vmseed/vm.config.local.yaml             your user and password hash — git-ignored
+✔ .vmseed/vm.config.example.yaml           every option, documented
+✔ .vmseed/vm.config.local.example.yaml
+✔ .vmseed/ssh_keys/                        drop .pub files here
+✔ .vmseed/.gitignore                       ignores the local file and private keys
+✔ registered "acme" in ~/.vmseed/projects.yaml
 
-Next: check it with `vmynt config --validate`, then build the VM with `vmynt create`.
+Next: check it with `vmseed config --validate`, then build the VM with `vmseed create`.
 ```
 
 - **"Create my own…"** asks for a base blueprint and a new name, then does
   `blueprints new` (§9.3) and sets `blueprint:` to it.
-- **"If needed"** — the user questions are skipped when `~/.vmynt/config.yaml` holds a default
+- **"If needed"** — the user questions are skipped when `~/.vmseed/config.yaml` holds a default
   identity (username, full name, password hash, authorized keys); `init` offers to reuse or
   replace it. They can also be skipped with `--no-user` and filled in later.
 - The password is hashed immediately (SHA-512 crypt, `passwd.rs`) and never written in plain
   text.
-- **Non-interactive:** `vmynt init --name acme --blueprint redhat-rocky-workstation
+- **Non-interactive:** `vmseed init --name acme --blueprint redhat-rocky-workstation
   --username wxs --password-hash '$6$…' --yes`. With no TTY, missing required answers are an
   error, not a prompt.
-- **Re-running:** refuses if `.vmynt/` exists; `--force` rewrites the example files only and
+- **Re-running:** refuses if `.vmseed/` exists; `--force` rewrites the example files only and
   never touches `vm.config.local.yaml`.
-- **Migrating:** `vmynt init --import <path>` copies an existing `vm.config.yaml` /
-  `vm.config.local.yaml` from another project or an old PowerShell-tool checkout into `.vmynt/`.
+- **Migrating:** `vmseed init --import <path>` copies an existing `vm.config.yaml` /
+  `vm.config.local.yaml` from another project or an old PowerShell-tool checkout into `.vmseed/`.
 
 ---
 
@@ -714,7 +714,7 @@ Next: check it with `vmynt config --validate`, then build the VM with `vmynt cre
 ### 13.1 Layout
 
 ```
-<project>/.vmynt/                    made by `vmynt init`, committed (except the local file)
+<project>/.vmseed/                    made by `vmseed init`, committed (except the local file)
     vm.config.yaml
     vm.config.local.yaml             git-ignored
     vm.config.example.yaml
@@ -723,11 +723,11 @@ Next: check it with `vmynt config --validate`, then build the VM with `vmynt cre
     blueprints/                      only if the project has custom blueprints
     .gitignore
 
-~/.vmynt/                            per user; VMYNT_HOME overrides
+~/.vmseed/                            per user; VMSEED_HOME overrides
     config.yaml                      the saved default identity
     projects.yaml                    project registry (§13.2)
     isos/                            download cache (iso.directory)
-    ssh/                             Vmynt's key pair and known_hosts (§11.5)
+    ssh/                             Vmseed's key pair and known_hosts (§11.5)
     blueprints/                      downloaded blueprints (empty in 1.0)
     tmp/                             scratch files (`clean` empties it)
     vms/<name>/
@@ -739,25 +739,25 @@ Next: check it with `vmynt config --validate`, then build the VM with `vmynt cre
         console.log, vfkit.log, snapshots/, desktop.rdp     vfkit
 ```
 
-`vm.path` moves the VM folders elsewhere; `vm.json` always stays under `~/.vmynt/vms/<name>/`
-and records where the folder is. `~/.vmynt` is the same on every OS so it's always easy to
+`vm.path` moves the VM folders elsewhere; `vm.json` always stays under `~/.vmseed/vms/<name>/`
+and records where the folder is. `~/.vmseed` is the same on every OS so it's always easy to
 find. Disks stay out of project folders so cloud sync and backups don't pick up 25 GB files.
 
 ### 13.2 Registry and `list`
 
 Two lists:
 
-- `~/.vmynt/projects.yaml` maps project names to folders. `init` adds the project; `create`
+- `~/.vmseed/projects.yaml` maps project names to folders. `init` adds the project; `create`
   adds it too if it is missing.
-- `~/.vmynt/vms/<name>/vm.json` is written by `create` and deleted by `remove`: name,
+- `~/.vmseed/vms/<name>/vm.json` is written by `create` and deleted by `remove`: name,
   hostname, user, project folder, machine, hypervisor, blueprint, VM folder, created time,
   whether the install finished, and the `VmSpec` it was built from.
 
-Every VM is also **tagged in the hypervisor** (§6.1). `vmynt list --rescan` reads the tags
+Every VM is also **tagged in the hypervisor** (§6.1). `vmseed list --rescan` reads the tags
 and recreates missing projects and records.
 
 ```
-$ vmynt list
+$ vmseed list
 NAME                 STATUS       BLUEPRINT                 URL                              ADMINER                               PROJECT
 acme-rocky           running      redhat-rocky-workstation  http://acme-rocky.local          http://acme-rocky.local:3800/         ~/work/acme
 shop-ubuntu-server   stopped      ubuntu-server             http://shop-ubuntu-server.local  —                                     ~/work/shop
@@ -772,7 +772,7 @@ old                  missing      ubuntu-desktop            —                 
 
 ## 14. Status
 
-`vmynt status` reproduces the PowerShell tool's status report: state and uptime, OS and kernel
+`vmseed status` reproduces the PowerShell tool's status report: state and uptime, OS and kernel
 (from the guest, or the blueprint from config), blueprint, address and whether `.local`
 resolves, the ssh command, users, hardware, guest uptime, disks with usage, database, Adminer,
 hooks, GitHub auth, browser, and bootstrap progress. The hypervisor gives host-side facts and
@@ -785,11 +785,11 @@ hooks, GitHub auth, browser, and bootstrap progress. The hypervisor gives host-s
 
 ## 15. The PowerShell tool
 
-Vmynt started as a port of the PowerShell tool (`vm.ps1`, `scripts/*.ps1`, `scripts/lib/*.psm1`)
+Vmseed started as a port of the PowerShell tool (`vm.ps1`, `scripts/*.ps1`, `scripts/lib/*.psm1`)
 that built these VMs on Windows and Hyper-V. The config schema, blueprints, seed templates and
 guest bootstrap steps carried over; the PowerShell modules became `config/`, `plans.rs`,
 `blueprint/`, `seed/`, `media.rs` and `hypervisor/hyperv.rs`. The tool was removed at M4 and
-remains in git history. `vmynt init --import <folder>` copies `vm.config.yaml` and
+remains in git history. `vmseed init --import <folder>` copies `vm.config.yaml` and
 `vm.config.local.yaml` from an old checkout of it.
 
 ---
@@ -809,7 +809,7 @@ Full config resolution (`config/effective.rs`, `plans.rs`, built-in defaults); t
 reader (`.psd1` at the time) and blueprint inheritance; `media` (download, checksum, cache);
 `seed` (rendering, FAT32 + MBR, VHD footer); `hyperv.rs`; `create`, `start`, `stop`,
 `restart`, `poweroff`, `remove`, `open`, `ssh`, `exec`, `logs`, `status`, `list` with live
-state, `snapshot`; VM records and target resolution; Vmynt's own SSH key; `doctor`'s hypervisor check; the fake backend and a
+state, `snapshot`; VM records and target resolution; Vmseed's own SSH key; `doctor`'s hypervisor check; the fake backend and a
 lifecycle integration test.
 
 **M2 — Linux / libvirt. Done.**
@@ -838,7 +838,7 @@ passes on Hyper-V and on a Mac, and the first stable release with the final name
   geometry, Hyper-V scripts, libvirt XML and `virsh` output parsing, vfkit command lines, MACs,
   DHCP leases and REST states, ISO checksum files and wildcards, probe parsing, known_hosts
   editing, ssh quoting, tags.
-- **CLI (`tests/cli.rs`):** the real binary in throwaway folders with `VMYNT_HOME` set,
+- **CLI (`tests/cli.rs`):** the real binary in throwaway folders with `VMSEED_HOME` set,
   including a full lifecycle on the fake backend: `init` → `create --render` → `create` →
   `status --json` → `list --json` → `stop` → snapshots → `start` → `restart` → `remove`.
 - **Seed disks by hand:** `blkid`, `fsck.vfat` and a loop mount for the FAT image;
@@ -853,7 +853,7 @@ passes on Hyper-V and on a Mac, and the first stable release with the final name
   elsewhere, the MAC changing on redefine, the clean-install snapshot taken before the install
   was finished, snapshot files left by `remove`, hashed known_hosts entries defeating
   `forget_host` (now `HostKeyAlias`), and the probe calling a finished bootstrap "in progress". All are fixed and have tests where a
-  unit test can express them. Verified on the real guest: mDNS `.local` from the host, Vmynt's
+  unit test can express them. Verified on the real guest: mDNS `.local` from the host, Vmseed's
   ssh key (`status`, `exec`, `logs`), the data disk found by label and mounted, all 23 bootstrap
   steps, Docker, ddev, PostgreSQL from PGDG, Python, Node via nvm, Adminer reachable from the
   host, `sudo` with the configured password, the Ubuntu confirmation typed automatically, and

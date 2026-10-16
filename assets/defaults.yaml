@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -10,8 +10,8 @@
 #what differs from these. vm.config.example.yaml documents every key.
 #
 #Two defaults depend on the computer and are filled in by the program instead:
-#  VM.Path        ~/.vmynt/vms
-#  Iso.Directory  ~/.vmynt/isos
+#  VM.Path        ~/.vmseed/vms
+#  Iso.Directory  ~/.vmseed/isos
 #  Guest.Timezone this computer's time zone, or UTC
 
 Hypervisor: auto

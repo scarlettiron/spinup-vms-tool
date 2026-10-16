@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -6,14 +6,14 @@
 #Scarlett A. Scott (codescarlett)
 
 name: Bug report
-description: Something in Vmynt doesn't work the way it should.
+description: Something in Vmseed doesn't work the way it should.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for reporting. **Security problems go to the
-        [private advisory form](https://github.com/scarlettiron/vmynt/security/advisories/new), not here.**
+        [private advisory form](https://github.com/scarlettiron/vmseed/security/advisories/new), not here.**
 
         Before you paste config or logs below, remove passwords, password hashes, tokens and private keys.
 
@@ -23,7 +23,7 @@ body:
       label: What happened
       description: What you ran, what you expected, and what you got instead.
       placeholder: |
-        I ran `vmynt create` and expected …, but instead …
+        I ran `vmseed create` and expected …, but instead …
     validations:
       required: true
 
@@ -31,9 +31,9 @@ body:
     id: reproduce
     attributes:
       label: Steps to reproduce
-      description: The smallest set of steps that shows the problem, ideally starting from `vmynt init` in an empty folder.
+      description: The smallest set of steps that shows the problem, ideally starting from `vmseed init` in an empty folder.
       placeholder: |
-        1. vmynt init --name demo --blueprint ubuntu-server --yes
+        1. vmseed init --name demo --blueprint ubuntu-server --yes
         2. …
     validations:
       required: true
@@ -41,8 +41,8 @@ body:
   - type: textarea
     id: version
     attributes:
-      label: vmynt --version
-      description: Paste the output of `vmynt --version`.
+      label: vmseed --version
+      description: Paste the output of `vmseed --version`.
       render: text
     validations:
       required: true
@@ -83,7 +83,7 @@ body:
     id: blueprint
     attributes:
       label: Blueprint
-      description: Which blueprint, and whether it's a built-in one or a custom one in `.vmynt/blueprints/`.
+      description: Which blueprint, and whether it's a built-in one or a custom one in `.vmseed/blueprints/`.
       placeholder: e.g. redhat-rocky-workstation (built-in)
 
   - type: textarea
@@ -91,7 +91,7 @@ body:
     attributes:
       label: Config
       description: |
-        The relevant part of `.vmynt/vm.config.yaml` and `vm.config.local.yaml`, or the output of `vmynt config`.
+        The relevant part of `.vmseed/vm.config.yaml` and `vm.config.local.yaml`, or the output of `vmseed config`.
         **Remove passwords, password hashes, tokens and keys first.**
       render: yaml
 
@@ -109,4 +109,4 @@ body:
       options:
         - label: I removed passwords, password hashes, tokens and private keys from everything above.
           required: true
-        - label: I ran `vmynt doctor` and it passes, or I've pasted what it reports.
+        - label: I ran `vmseed doctor` and it passes, or I've pasted what it reports.

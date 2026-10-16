@@ -1,27 +1,27 @@
 # GitHub access
 
 Everything here is optional - a VM builds and works with all of it turned off.
-Configured in the `git` and `github` blocks of `.vmynt/vm.config.yaml` (or the
+Configured in the `git` and `github` blocks of `.vmseed/vm.config.yaml` (or the
 `gitName`, `gitEmail` and `githubUsername` quick settings), and applied by
 bootstrap steps [52-git.sh](../blueprints/bootstrap/52-git.sh) and
 [55-github.sh](../blueprints/bootstrap/55-github.sh).
 
 ## The drop directory
 
-Copy your key files into the project's `.vmynt/ssh_keys/` and there is nothing to
+Copy your key files into the project's `.vmseed/ssh_keys/` and there is nothing to
 configure:
 
 ```sh
-cp ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub .vmynt/ssh_keys/
+cp ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub .vmseed/ssh_keys/
 ```
 
 or on Windows:
 
 ```powershell
-Copy-Item $HOME\.ssh\id_ed25519, $HOME\.ssh\id_ed25519.pub .\.vmynt\ssh_keys\
+Copy-Item $HOME\.ssh\id_ed25519, $HOME\.ssh\id_ed25519.pub .\.vmseed\ssh_keys\
 ```
 
-Nothing in that folder except its README is committed; `vmynt init` writes a
+Nothing in that folder except its README is committed; `vmseed init` writes a
 `.gitignore` that makes sure of it.
 
 `sshKey.mode` defaults to `auto`: a private key in there becomes the guest's identity,
@@ -38,8 +38,8 @@ laptop needs no password.
 | a standalone `.pub` | added to the guest's `authorized_keys` |
 | several private keys | set `github.sshKey.name`, or name one `id_ed25519` |
 
-Vmynt also adds its own public key (`~/.vmynt/ssh/id_ed25519.pub`) to every
-guest's `authorized_keys`, so `vmynt ssh`, `exec`, `logs` and `status` work
+Vmseed also adds its own public key (`~/.vmseed/ssh/id_ed25519.pub`) to every
+guest's `authorized_keys`, so `vmseed ssh`, `exec`, `logs` and `status` work
 without any of this.
 
 ## Your GitHub username
@@ -62,7 +62,7 @@ githubUsername: adalovelace     # or github.username long-hand
   ```
 
   If they differ you get a warning, which is the useful case: it means the key in
-  `.vmynt/ssh_keys/` belongs to a different account than you thought.
+  `.vmseed/ssh_keys/` belongs to a different account than you thought.
 
   ```
   ! GitHub greeted 'olduser' but GitHub.Username says 'adalovelace'
@@ -77,7 +77,7 @@ rather than treated as a failure.
 
 ## Keeping the private key off the seed disk
 
-Leave `.vmynt/ssh_keys/` empty (or set `mode: generate`) and put your identity in
+Leave `.vmseed/ssh_keys/` empty (or set `mode: generate`) and put your identity in
 config instead:
 
 ```yaml
@@ -126,7 +126,7 @@ open a terminal. `gh auth setup-git` runs too, so HTTPS remotes work.
 
 ## Bringing your own key
 
-Drop it into `.vmynt/ssh_keys/` as above, or point at a path if you would rather
+Drop it into `.vmseed/ssh_keys/` as above, or point at a path if you would rather
 not copy it into the project at all:
 
 ```yaml
@@ -148,10 +148,10 @@ warning: embedding a secret in the seed disk: private SSH key from /home/ada/.ss
 
 The key travels on the seed disk in plain text. Step 55 installs it to
 `~/.ssh/`, then `shred`s the staged copy (`github.shredSecretsAfterUse`).
-Vmynt detaches the seed disk and deletes its file once the install has finished,
+Vmseed detaches the seed disk and deletes its file once the install has finished,
 so it does not linger on the host. What remains is the installer's own record of
 the payload in the guest, such as `/var/lib/cloud/instance/user-data.txt` on
-Ubuntu (root-readable only), and the review copy `vmynt create` keeps in the VM's
+Ubuntu (root-readable only), and the review copy `vmseed create` keeps in the VM's
 `build/` folder on the host (private permissions).
 
 If any of that is uncomfortable, use `mode: generate` - it has none of these

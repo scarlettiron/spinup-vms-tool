@@ -16,8 +16,8 @@ repos:
 That clones into `~/src/web` and `~/src/private-api`. `reposRoot` (long-hand
 `repos.root`) is relative to the user's home unless it starts with `/`.
 
-Put this in `.vmynt/vm.config.yaml` for repos the whole team needs, or in
-`.vmynt/vm.config.local.yaml` for your own. Because it merges like everything else, a
+Put this in `.vmseed/vm.config.yaml` for repos the whole team needs, or in
+`.vmseed/vm.config.local.yaml` for your own. Because it merges like everything else, a
 single machine in a fleet can have its own list:
 
 ```yaml
@@ -44,8 +44,8 @@ repos:
 `nvm`-managed `node`, `pipx` tools, and `ddev` are all on `PATH`. It is
 deliberately explicit - nothing is auto-detected or run behind your back.
 
-Everything is validated at build time, so a typo fails during `vmynt config --validate`
-or `vmynt create --render` rather than twenty minutes into a first boot: URLs must be a scheme git accepts,
+Everything is validated at build time, so a typo fails during `vmseed config --validate`
+or `vmseed create --render` rather than twenty minutes into a first boot: URLs must be a scheme git accepts,
 directories must be relative and free of `..`, and two entries cannot target the
 same directory.
 

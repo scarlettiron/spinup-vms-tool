@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -81,7 +81,7 @@ media:
   # The wildcard is what makes this survive a version bump: the file is
   # found by scraping the release directory, so no build number is
   # hard-coded. A point release changes the file behind the stable name,
-  # the cached ISO then fails verification, and Vmynt downloads the new
+  # the cached ISO then fails verification, and Vmseed downloads the new
   # one by itself.
   isoBaseUrl: 'https://download.rockylinux.org/pub/rocky/{Release}/isos/x86_64/'
   isoNamePattern: '*-boot.iso'

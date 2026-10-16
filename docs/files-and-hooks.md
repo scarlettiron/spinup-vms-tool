@@ -16,7 +16,7 @@ copyTo:   ''            # blank means the primary user's home
 ```
 
 The *contents* of `files/` are copied, not the directory itself. A relative path
-is relative to the project folder (the one holding `.vmynt/`), so a committed
+is relative to the project folder (the one holding `.vmseed/`), so a committed
 `files/` directory works the same for everyone on the team.
 
 For more than one destination, use the list:
@@ -153,7 +153,7 @@ Both show up in the bootstrap report alongside every other step, and in the
 status:
 
 ```sh
-vmynt status
+vmseed status
 ```
 
 ```
@@ -164,7 +164,7 @@ Before a machine is up, both are reported from config instead, so you can see wh
 a build will do without building it:
 
 ```sh
-vmynt create --render
+vmseed create --render
 ```
 
 ```
@@ -175,6 +175,6 @@ vmynt create --render
 ```
 
 `--render` also writes the rendered seed to the VM's `build/` folder
-(`~/.vmynt/vms/<name>/build/` by default). The generated hook script is in it,
+(`~/.vmseed/vms/<name>/build/` by default). The generated hook script is in it,
 installed at `/usr/local/lib/vm-bootstrap/hooks/post-start.sh`, and is worth
 reading before a real build: it is exactly what the guest will run.

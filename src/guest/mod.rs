@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -251,7 +251,7 @@ pub fn require_user(user: Option<String>, vm: &str) -> Result<String> {
     match user {
         Some(user) => Ok(user),
         None => bail!(
-            "no username is known for '{vm}'. Set `username:` in the project's .vmynt/vm.config.local.yaml \
+            "no username is known for '{vm}'. Set `username:` in the project's .vmseed/vm.config.local.yaml \
              (see `{} config`).",
             brand::NAME
         ),

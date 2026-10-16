@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -7,13 +7,13 @@
 
 //The VMs this computer has built, and working out which one a command means.
 //
-//Every VM `create` builds gets a record, ~/.vmynt/vms/<name>/vm.json, naming
+//Every VM `create` builds gets a record, ~/.vmseed/vms/<name>/vm.json, naming
 //its project, user and hypervisor. Commands then find a VM three ways
-//(docs/vmynt-design.md section 12.2):
+//(docs/vmseed-design.md section 12.2):
 //
-//  vmynt <cmd> <name>   a VM name or a Machines: key, from any folder
-//  vmynt <cmd>          the project in this folder (all of its machines)
-//  vmynt <cmd> --all    every VM on this computer
+//  vmseed <cmd> <name>   a VM name or a Machines: key, from any folder
+//  vmseed <cmd>          the project in this folder (all of its machines)
+//  vmseed <cmd> --all    every VM on this computer
 
 use std::path::{Path, PathBuf};
 

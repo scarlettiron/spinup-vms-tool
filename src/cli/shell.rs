@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -6,7 +6,7 @@
 //Scarlett A. Scott (codescarlett)
 
 //ssh, exec and logs: reaching into a running guest with the computer's own
-//ssh program, using Vmynt's key (added to every guest it builds).
+//ssh program, using Vmseed's key (added to every guest it builds).
 
 use super::args::{ExecArgs, LogsArgs, NameArgs};
 use super::common::{again, existing_state, guest_target, hypervisor_for};

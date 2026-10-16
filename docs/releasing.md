@@ -1,6 +1,6 @@
 # Releasing
 
-How Vmynt gets from a git tag to `winget install`, `choco install`, `brew install`
+How Vmseed gets from a git tag to `winget install`, `choco install`, `brew install`
 and `apt install`, what has to be set up once before that works, and what to do when
 it doesn't.
 
@@ -25,17 +25,17 @@ which builds and publishes everything. Details in
 | Channel | Users run | What the workflow does | Secret | Visible to users after |
 |---|---|---|---|---|
 | GitHub Release | download from the releases page | builds 6 archives, 2 `.deb`, 2 `.rpm`, writes `SHA256SUMS` | none (uses `GITHUB_TOKEN`) | the run finishes |
-| Homebrew (macOS, Linux) | `brew install scarlettiron/tap/vmynt` | writes `Formula/vmynt.rb` in the tap repo | `HOMEBREW_TAP_TOKEN` | the push (minutes) |
-| winget (Windows) | `winget install CodeScarlett.Vmynt` | opens a PR on `microsoft/winget-pkgs` | `WINGET_TOKEN` | Microsoft merges the PR (hours to a few days) |
-| Chocolatey (Windows) | `choco install vmynt` | packs, test-installs and pushes the `.nupkg` | `CHOCOLATEY_API_KEY` | moderation passes (first version: days; later: often minutes) |
+| Homebrew (macOS, Linux) | `brew install scarlettiron/tap/vmseed` | writes `Formula/vmseed.rb` in the tap repo | `HOMEBREW_TAP_TOKEN` | the push (minutes) |
+| winget (Windows) | `winget install CodeScarlett.Vmseed` | opens a PR on `microsoft/winget-pkgs` | `WINGET_TOKEN` | Microsoft merges the PR (hours to a few days) |
+| Chocolatey (Windows) | `choco install vmseed` | packs, test-installs and pushes the `.nupkg` | `CHOCOLATEY_API_KEY` | moderation passes (first version: days; later: often minutes) |
 | apt (Debian, Ubuntu) | see below | re-runs the Pages workflow, which rebuilds the signed repo at `/apt/` | `APT_GPG_PRIVATE_KEY` (+ `APT_GPG_PASSPHRASE`) | Pages deploys (minutes) |
 
 apt install, as published on the site:
 
 ```bash
-curl -fsSL https://scarlettiron.github.io/vmynt/apt/vmynt-archive-keyring.gpg | sudo tee /usr/share/keyrings/vmynt-archive-keyring.gpg >/dev/null
-echo "deb [signed-by=/usr/share/keyrings/vmynt-archive-keyring.gpg] https://scarlettiron.github.io/vmynt/apt stable main" | sudo tee /etc/apt/sources.list.d/vmynt.list
-sudo apt update && sudo apt install vmynt
+curl -fsSL https://scarlettiron.github.io/vmseed/apt/vmseed-archive-keyring.gpg | sudo tee /usr/share/keyrings/vmseed-archive-keyring.gpg >/dev/null
+echo "deb [signed-by=/usr/share/keyrings/vmseed-archive-keyring.gpg] https://scarlettiron.github.io/vmseed/apt stable main" | sudo tee /etc/apt/sources.list.d/vmseed.list
+sudo apt update && sudo apt install vmseed
 ```
 
 Every package manager job checks for its secret first. A missing secret skips that
@@ -108,12 +108,12 @@ Do these in order. Each step says which secret it produces. Secrets go in
 
 ### 1. Rename the repository
 
-The urls in `Cargo.toml` already point at `scarlettiron/vmynt`.
+The urls in `Cargo.toml` already point at `scarlettiron/vmseed`.
 
 1. GitHub → the repository → **Settings → General → Repository name** →
-   `vmynt` → Rename. GitHub redirects the old name, but update your clone anyway:
+   `vmseed` → Rename. GitHub redirects the old name, but update your clone anyway:
    ```bash
-   git remote set-url origin git@github.com:scarlettiron/vmynt.git
+   git remote set-url origin git@github.com:scarlettiron/vmseed.git
    ```
 2. Add `Cargo.lock` to git if it isn't already. Every build uses `--locked`.
 
@@ -121,7 +121,7 @@ The urls in `Cargo.toml` already point at `scarlettiron/vmynt`.
 
 **Settings → Pages → Build and deployment → Source: GitHub Actions.**
 
-The site then deploys at `https://scarlettiron.github.io/vmynt/` on the next push that
+The site then deploys at `https://scarlettiron.github.io/vmseed/` on the next push that
 touches `site/`, or from **Actions → Deploy site and apt repository → Run workflow**.
 
 Leave **Settings → Environments → github-pages** at its default (deployments from
@@ -143,7 +143,7 @@ this reason.
      shows up as a 403 in the Homebrew job.
 3. Save it as the secret **`HOMEBREW_TAP_TOKEN`**.
 
-The workflow creates `Formula/vmynt.rb` on the first release.
+The workflow creates `Formula/vmseed.rb` on the first release.
 
 ### 4. winget → `WINGET_TOKEN`
 
@@ -168,7 +168,7 @@ The workflow creates `Formula/vmynt.rb` on the first release.
 2. Copy the API key from your account page.
 3. Save it as the secret **`CHOCOLATEY_API_KEY`**.
 
-The package id `vmynt` is reserved by the first push.
+The package id `vmseed` is reserved by the first push.
 
 ### 6. apt signing key → `APT_GPG_PRIVATE_KEY`, `APT_GPG_PASSPHRASE`
 
@@ -183,7 +183,7 @@ export GNUPGHOME="$(mktemp -d)"
 # an expired key breaks "apt update" for every user until they re-download the
 # keyring, so rotate it deliberately instead (see "Rotating the apt key").
 gpg --batch --pinentry-mode loopback --passphrase 'CHOOSE-A-PASSPHRASE' \
-    --quick-gen-key "Vmynt apt repository" rsa4096 sign never
+    --quick-gen-key "Vmseed apt repository" rsa4096 sign never
 
 gpg --list-secret-keys --keyid-format long          # note the fingerprint
 
@@ -205,7 +205,7 @@ cp "$GNUPGHOME"/openpgp-revocs.d/*.rev apt-signing-key-revoke.asc
    ```
 
 The public half is exported by the workflow on every deploy, to
-`/apt/vmynt-archive-keyring.gpg` (and `.asc`), and the fingerprint is shown on
+`/apt/vmseed-archive-keyring.gpg` (and `.asc`), and the fingerprint is shown on
 `/apt/`.
 
 ### 7. Code signing (optional) → `AZURE_*`, `APPLE_*`
@@ -279,7 +279,7 @@ With only the first two secrets, the binary is signed but not notarized.
 GitHub attestation for each file, and anyone can check a download with:
 
 ```bash
-gh attestation verify vmynt-1.0.0-x86_64-unknown-linux-gnu.tar.gz --repo scarlettiron/vmynt
+gh attestation verify vmseed-1.0.0-x86_64-unknown-linux-gnu.tar.gz --repo scarlettiron/vmseed
 ```
 
 ### Every secret
@@ -314,7 +314,7 @@ ruleset (or allow the GitHub Actions app), otherwise the release commit is refus
 
 ### The rules
 
-- **One source of truth:** `version` in `Cargo.toml`. The binary (`vmynt --version`),
+- **One source of truth:** `version` in `Cargo.toml`. The binary (`vmseed --version`),
   every package, the archive names and the release notes read it from there.
   `packaging/version.py` is the only thing that writes it.
 - **Semantic versioning.** `MAJOR.MINOR.PATCH`, with prereleases as
@@ -427,7 +427,7 @@ python3 packaging/check_site.py
 ### End-to-end test
 
 **Actions → End-to-end** runs every night (and on demand, with a blueprint of your
-choice). On a Linux runner with KVM it installs libvirt, builds `vmynt`, and runs
+choice). On a Linux runner with KVM it installs libvirt, builds `vmseed`, and runs
 `init`, `create`, waits for the guest's bootstrap through `status --json`, then `exec`,
 `snapshot`, `stop` and `remove`. On failure it uploads the VM folder, the libvirt logs,
 a console screenshot and the guest's bootstrap report as an artifact. Look at its
@@ -438,14 +438,14 @@ virtualization), so before a release that touches them, run the same sequence by
 hand on Windows and on a Mac:
 
 ```text
-vmynt doctor
-vmynt init --name relcheck --blueprint ubuntu-server
-vmynt create
-vmynt status --follow          # until bootstrap: complete
-vmynt open                     # the desktop opens (desktop blueprints)
-vmynt exec -- uname -a
-vmynt stop && vmynt snapshot create pre && vmynt snapshot restore pre && vmynt start
-vmynt remove --delete-disks
+vmseed doctor
+vmseed init --name relcheck --blueprint ubuntu-server
+vmseed create
+vmseed status --follow         # until bootstrap: complete
+vmseed open                    # the desktop opens (desktop blueprints)
+vmseed exec -- uname -a
+vmseed stop && vmseed snapshot create pre && vmseed snapshot restore pre && vmseed start
+vmseed remove --delete-disks
 ```
 
 ---
@@ -468,8 +468,8 @@ that release with a warning). You need a Windows machine with winget.
    winget validate --manifest .\winget\
    winget settings --enable LocalManifestFiles     # once, in an admin terminal
    winget install --manifest .\winget\
-   vmynt --version
-   winget uninstall CodeScarlett.Vmynt
+   vmseed --version
+   winget uninstall CodeScarlett.Vmseed
    ```
 3. Submit with [wingetcreate](https://github.com/microsoft/winget-create)
    (`winget install Microsoft.WingetCreate`), using the classic token from setup step 4:
@@ -479,7 +479,7 @@ that release with a warning). You need a Windows machine with winget.
    Or let [Komac](https://github.com/russellbanks/Komac) build the manifests
    interactively instead of steps 1–3:
    ```powershell
-   komac new CodeScarlett.Vmynt --version 0.1.0 `
+   komac new CodeScarlett.Vmseed --version 0.1.0 `
      --urls <x86_64-pc-windows-msvc.zip url> <aarch64-pc-windows-msvc.zip url> --submit
    ```
 4. Wait for the pull request to be merged. Bots validate it and run the installer in a
@@ -496,8 +496,8 @@ new installer switch) has to be made in a manual PR once and is then carried for
 
 - **Homebrew.** The tap is yours, so there is no review: the formula is live as soon
   as the job pushes it. The formula installs the prebuilt binary and generates bash,
-  zsh and fish completions by running `vmynt completion <shell>`. Getting into
-  homebrew-core (plain `brew install vmynt`) is a separate application with notability
+  zsh and fish completions by running `vmseed completion <shell>`. Getting into
+  homebrew-core (plain `brew install vmseed`) is a separate application with notability
   requirements and a from-source build; the tap works without it.
 - **winget.** Every version is a pull request to `microsoft/winget-pkgs`, validated by
   bots and merged by a moderator. Usually hours, sometimes a few days. Microsoft's
@@ -510,7 +510,7 @@ new installer switch) has to be made in a manual PR once and is then carried for
   a bad package, release a new version.
 - **apt.** The Pages workflow rebuilds the repository from the `.deb` files of
   **every** published non-prerelease release, so all versions stay installable
-  (`apt install vmynt=1.2.3-1`). Deleting a GitHub Release removes its version from apt
+  (`apt install vmseed=1.2.3-1`). Deleting a GitHub Release removes its version from apt
   on the next deploy. Pages sites are limited to 1 GB; at roughly 1–5 MB per `.deb`
   pair that is hundreds of releases away.
 - **Linux compatibility.** Linux binaries are built on Ubuntu 22.04 (glibc 2.35), so
@@ -534,11 +534,11 @@ What a rename **cannot** carry over once a stable version is published:
 
 | Published as | After a rename |
 |---|---|
-| winget `CodeScarlett.Vmynt` | a new package id; the old one has to be deprecated in a winget-pkgs PR |
-| Chocolatey `vmynt` | a new package; the old one can be unlisted and pointed at the new one in its description |
-| Homebrew `scarlettiron/tap/vmynt` | the tap can redirect with a `formula_renames.json` file |
-| apt package `vmynt` | a transitional package named `vmynt` that depends on the new name |
-| apt keyring `vmynt-archive-keyring.gpg` | users' `sources.list` entries point at the old url until they re-run the install lines |
+| winget `CodeScarlett.Vmseed` | a new package id; the old one has to be deprecated in a winget-pkgs PR |
+| Chocolatey `vmseed` | a new package; the old one can be unlisted and pointed at the new one in its description |
+| Homebrew `scarlettiron/tap/vmseed` | the tap can redirect with a `formula_renames.json` file |
+| apt package `vmseed` | a transitional package named `vmseed` that depends on the new name |
+| apt keyring `vmseed-archive-keyring.gpg` | users' `sources.list` entries point at the old url until they re-run the install lines |
 
 ---
 
@@ -565,7 +565,7 @@ Only needed if the key leaks or you want to retire it.
 | *Homebrew*: 403 on push | `HOMEBREW_TAP_TOKEN` expired or lacks Contents write on `homebrew-tap`. |
 | *winget*: package not found / cannot find existing manifests | The first version has not been submitted by hand yet. See [First winget submission](#first-winget-submission). |
 | *Chocolatey*: 409 Conflict on push | That version already exists on Chocolatey (perhaps from an earlier re-run). Release a new version. |
-| *Chocolatey*: test install fails | The url or hash in the rendered install script is wrong, or the zip does not contain `vmynt.exe` at its root. Check the archive and `SHA256SUMS` on the release. |
+| *Chocolatey*: test install fails | The url or hash in the rendered install script is wrong, or the zip does not contain `vmseed.exe` at its root. Check the archive and `SHA256SUMS` on the release. |
 | *apt* job succeeded but `/apt/` is missing | The Pages run printed a notice: either `APT_GPG_PRIVATE_KEY` is not set or no release has a `.deb` yet. |
 | Pages: "Branch is not allowed to deploy to github-pages" | Someone added `workflow_call` usage from a tag run. Run the Pages workflow on `main` instead (that's what the release does). |
 | Users: `The following signatures couldn't be verified because the public key is not available` | The key was rotated, or they have an old keyring file. They re-run the `curl ... keyring` line. |

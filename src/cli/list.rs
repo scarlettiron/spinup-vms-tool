@@ -1,16 +1,16 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt list`: every VM on this computer, with its state, URLs and project,
-//the way `ddev list` shows projects. Projects come from ~/.vmynt/projects.yaml
+//`vmseed list`: every VM on this computer, with its state, URLs and project,
+//the way `ddev list` shows projects. Projects come from ~/.vmseed/projects.yaml
 //(written by `init` and `create`) and VMs from their records; the state comes
 //from the hypervisor. `--live` also asks each running guest about its database
 //and bootstrap, in parallel. `--rescan` rebuilds the lists from the tags the
-//hypervisor keeps on each VM, for when ~/.vmynt was lost.
+//hypervisor keeps on each VM, for when ~/.vmseed was lost.
 
 use std::path::{Path, PathBuf};
 

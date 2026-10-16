@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -485,7 +485,7 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # CodeScarlett.Vmynt lives at manifests/c/CodeScarlett/Vmynt.
+          # CodeScarlett.Vmseed lives at manifests/c/CodeScarlett/Vmseed.
           first="${WINGET_ID:0:1}"
           folder="manifests/${first,,}/${WINGET_ID//.//}"
           if ! gh api "repos/microsoft/winget-pkgs/contents/$folder" --silent 2> /dev/null; then

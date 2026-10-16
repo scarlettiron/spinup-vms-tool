@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -12,15 +12,15 @@
 //change Cargo.toml. See docs/releasing.md for what cannot be renamed once
 //published.
 
-//Shown in prose and the help header, for example "Vmynt".
+//Shown in prose and the help header, for example "Vmseed".
 pub const DISPLAY_NAME: &str = env!("APP_DISPLAY_NAME");
 
 //The command people type, and the prefix for files, tags and environment
-//variables, for example "vmynt".
+//variables, for example "vmseed".
 pub const NAME: &str = env!("CARGO_PKG_NAME");
 
 //The folder made in a project by `init`, and the per-user folder in the home
-//directory, for example ".vmynt".
+//directory, for example ".vmseed".
 pub const DIR: &str = concat!(".", env!("CARGO_PKG_NAME"));
 
 //One line saying what the tool does.
@@ -47,7 +47,7 @@ pub const BUILD_DATE: &str = env!("APP_BUILD_DATE");
 pub const TARGET: &str = env!("APP_TARGET");
 
 //Builds an environment variable name with the product prefix, so
-//env_var("HOME") is "VMYNT_HOME".
+//env_var("HOME") is "VMSEED_HOME".
 pub fn env_var(key: &str) -> String {
     format!("{}_{}", NAME.to_uppercase(), key)
 }

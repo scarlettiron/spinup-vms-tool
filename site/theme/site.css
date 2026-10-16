@@ -1,11 +1,11 @@
-/*Vmynt
+/*Vmseed
   Licensed under the MIT License. See the LICENSE file in the project root.
   Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 
   Contributors:
   Scarlett A. Scott (codescarlett)*/
 
-/*Shared look for every page of the Vmynt site: the color tokens, base type, the
+/*Shared look for every page of the Vmseed site: the color tokens, base type, the
   top bar and footer, and the small content components (pills, buttons, badges,
   code blocks, tables, callouts, tabs, cards). Page layout lives in docs.css and
   the terminal demo lives in demo.css. See README.md in this folder for the

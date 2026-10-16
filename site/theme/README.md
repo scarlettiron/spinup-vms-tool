@@ -1,5 +1,5 @@
 <!--
-  Vmynt
+  Vmseed
   Licensed under the MIT License. See the LICENSE file in the project root.
   Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 
@@ -9,7 +9,7 @@
 
 # Site theme
 
-Everything that gives the Vmynt site its look lives in this folder, so it can be copied into
+Everything that gives the Vmseed site its look lives in this folder, so it can be copied into
 another repository or site as is. The pages only link to these files. They hold no styles or
 scripts of their own, and nothing here loads from a CDN or a font service.
 
@@ -45,14 +45,14 @@ because white text on mint is hard to read).
   <!--Hidden until a keyboard user tabs to it.-->
   <a class="skip-link" href="#content">Skip to content</a>
   <header class="site">
-    <a class="brand" href="./" aria-label="Vmynt home">
-      <img src="./theme/logo/wordmark-header.png" alt="Vmynt" width="288" height="96" />
+    <a class="brand" href="./" aria-label="Vmseed home">
+      <img src="./theme/logo/wordmark-header.png" alt="Vmseed" width="327" height="96" />
     </a>
     <nav class="links" aria-label="Main">
       <a href="./docs/" aria-current="page">Docs</a>
       <!--hide-sm links are hidden on phones to keep the bar on one line.-->
       <a class="hide-sm" href="./commands/">Commands</a>
-      <a href="https://github.com/scarlettiron/vmynt">GitHub</a>
+      <a href="https://github.com/scarlettiron/vmseed">GitHub</a>
     </nav>
   </header>
 
@@ -104,7 +104,7 @@ because white text on mint is hard to read).
   </nav>
   <main>
     <section id="first">
-      <p class="crumbs"><a href="../">Vmynt</a> / Docs</p>
+      <p class="crumbs"><a href="../">Vmseed</a> / Docs</p>
       <h1>Title</h1>
     </section>
   </main>
@@ -129,7 +129,7 @@ because white text on mint is hard to read).
 
 <div class="code">
   <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
-  <pre>vmynt init</pre>
+  <pre>vmseed init</pre>
 </div>
 
 <!--Wrap wide tables so they scroll sideways on phones.-->
@@ -146,7 +146,7 @@ because white text on mint is hard to read).
 </ol>
 
 <!--A command heading with a badge, and a list of flags.-->
-<div class="cmd-head"><h2>vmynt stop</h2> <span class="badge planned">coming in 1.0</span></div>
+<div class="cmd-head"><h2>vmseed stop</h2> <span class="badge planned">coming in 1.0</span></div>
 <p class="aliases">Aliases: <code>halt</code>, <code>down</code></p>
 <dl class="flags">
   <dt>--force</dt>
@@ -188,8 +188,8 @@ well on its own. Keep each output block in one `<span>` so it appears together.
     <span class="term-title">~/work/acme</span>
     <button class="replay" type="button">Replay</button>
   </div>
-  <pre aria-label="What the terminal shows, in one sentence"><span class="prompt">$ </span><span class="cmd">vmynt --version</span>
-<span class="out">vmynt 0.1.0</span></pre>
+  <pre aria-label="What the terminal shows, in one sentence"><span class="prompt">$ </span><span class="cmd">vmseed --version</span>
+<span class="out">vmseed 0.1.0</span></pre>
 </div>
 ```
 
@@ -201,8 +201,8 @@ The pages are plain static files with relative links, so the whole site folder c
 any path or domain. To put it on a subdomain of another site (the way codescarlett.com serves its
 project sites):
 
-1. Copy the site folder into the other site's static files, for example `public/vmynt/`.
-2. Rewrite the absolute Pages URL, `https://scarlettiron.github.io/vmynt/`, to the new address in
+1. Copy the site folder into the other site's static files, for example `public/vmseed/`.
+2. Rewrite the absolute Pages URL, `https://scarlettiron.github.io/vmseed/`, to the new address in
    the `.html`, `.xml` and `.txt` files. It appears in canonical links, Open Graph and JSON-LD,
    `robots.txt`, `sitemap.xml` and `404.html`. Relative links need no change.
 3. Route the subdomain to that folder.
@@ -213,9 +213,9 @@ Copy only this `theme/` folder to reuse the look on unrelated pages.
 
 | File                         | Use it for                                                            |
 | ---------------------------- | --------------------------------------------------------------------- |
-| `vmynt-icon.svg`             | The icon (a VM window with a sprout), any size                        |
-| `vmynt-wordmark.svg`         | Icon plus "vmynt", for dark backgrounds. Uses system fonts for the text |
-| `vmynt-icon.png`             | The icon at 512px                                                     |
+| `vmseed-icon.svg`            | The icon (a VM window with a sprout), any size                        |
+| `vmseed-wordmark.svg`        | Icon plus "vmseed", for dark backgrounds. Uses system fonts for the text |
+| `vmseed-icon.png`            | The icon at 512px                                                     |
 | `wordmark-header.png`        | The wordmark at 3x the size the top bar shows it                      |
 | `favicon.svg`                | Browser tab icon for modern browsers                                  |
 | `favicon-32.png`             | Browser tab icon, fallback                                            |

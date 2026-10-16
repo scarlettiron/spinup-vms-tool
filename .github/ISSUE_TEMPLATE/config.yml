@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -8,11 +8,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/scarlettiron/vmynt/security/advisories/new
+    url: https://github.com/scarlettiron/vmseed/security/advisories/new
     about: Please report security problems privately, never in a public issue.
   - name: Questions and ideas
-    url: https://github.com/scarlettiron/vmynt/discussions
+    url: https://github.com/scarlettiron/vmseed/discussions
     about: Ask a question, share a setup, or talk through an idea before opening an issue.
   - name: Documentation
-    url: https://scarlettiron.github.io/vmynt/
+    url: https://scarlettiron.github.io/vmseed/
     about: Install steps, quick start, commands and configuration.

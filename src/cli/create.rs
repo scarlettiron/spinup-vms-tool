@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt create`: builds a VM from the project's config. The steps:
+//`vmseed create`: builds a VM from the project's config. The steps:
 //
 //  1. plan        load and check the config, show what will be built
 //  2. name        refuse a VM name or hostname that is already taken
@@ -264,7 +264,7 @@ fn build(
     ui.step(4, total, "Building the seed disk");
     let own_key = keys::ensure_own_key()?;
     if own_key.is_none() {
-        ui.warn("ssh-keygen was not found, so `ssh`, `exec` and `status` will need your own key in .vmynt/ssh_keys/");
+        ui.warn("ssh-keygen was not found, so `ssh`, `exec` and `status` will need your own key in .vmseed/ssh_keys/");
     }
     let spec = spec_for(&config, hv.as_ref(), iso)?;
     let target = seed::Target {

@@ -1,11 +1,11 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
 //Contributors:
 //Scarlett A. Scott (codescarlett)
 
-//`vmynt hash`: turns a password into a SHA-512 crypt hash for passwordHash in
+//`vmseed hash`: turns a password into a SHA-512 crypt hash for passwordHash in
 //vm.config.local.yaml, so the plain password never has to be written down.
 
 use std::io::Read;
@@ -56,7 +56,7 @@ pub fn run(args: HashArgs, ui: Ui) -> AppResult<()> {
         if !std::io::IsTerminal::is_terminal(&std::io::stdout()) {
             return Ok(());
         }
-        ui.hint("Paste it into .vmynt/vm.config.local.yaml as:  passwordHash: '<the line above>'");
+        ui.hint("Paste it into .vmseed/vm.config.local.yaml as:  passwordHash: '<the line above>'");
     }
     Ok(())
 }

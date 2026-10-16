@@ -1,4 +1,4 @@
-//Vmynt
+//Vmseed
 //Licensed under the MIT License. See the LICENSE file in the project root.
 //Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 //
@@ -10,7 +10,7 @@
 //Uses the system connection (qemu:///system): only that one gets the `default`
 //NAT network, which gives the guest an address this computer can reach and
 //makes <hostname>.local work. Disks live in a libvirt storage pool (`default`,
-//in /var/lib/libvirt/images) rather than in ~/.vmynt, because the system qemu
+//in /var/lib/libvirt/images) rather than in ~/.vmseed, because the system qemu
 //runs as its own user and usually cannot read a home folder.
 //
 //Disks sit on a virtio-scsi controller at the same unit numbers Hyper-V uses,
@@ -29,7 +29,7 @@ use crate::plans::{LOCATION_DVD, LOCATION_OS, LOCATION_SEED};
 use crate::platform::{Arch, HypervisorKind};
 use crate::seed::disk::DiskFormat;
 
-const NAMESPACE: &str = "https://scarlettiron.github.io/vmynt/ns/1";
+const NAMESPACE: &str = "https://scarlettiron.github.io/vmseed/ns/1";
 
 pub struct Libvirt {
     uri: String,
@@ -241,7 +241,7 @@ pub fn domain_xml(spec: &VmSpec, uuid: &str, disks: &Disks) -> String {
         escape(&spec.name)
     ));
     x.push_str(&format!(
-        "  <metadata>\n    <vmynt:vm xmlns:vmynt='{NAMESPACE}'>{}</vmynt:vm>\n  </metadata>\n",
+        "  <metadata>\n    <vmseed:vm xmlns:vmseed='{NAMESPACE}'>{}</vmseed:vm>\n  </metadata>\n",
         escape(&tag(&spec.project, spec.machine.as_deref()))
     ));
     x.push_str(&format!(
@@ -831,9 +831,9 @@ mod tests {
             switch_name: String::new(),
             network: "default".to_string(),
             storage_pool: "default".to_string(),
-            vm_dir: PathBuf::from("/home/me/.vmynt/vms/acme-ubuntu"),
-            iso: PathBuf::from("/home/me/.vmynt/isos/u.iso"),
-            seed: PathBuf::from("/home/me/.vmynt/vms/acme-ubuntu/acme-ubuntu-seed.img"),
+            vm_dir: PathBuf::from("/home/me/.vmseed/vms/acme-ubuntu"),
+            iso: PathBuf::from("/home/me/.vmseed/isos/u.iso"),
+            seed: PathBuf::from("/home/me/.vmseed/vms/acme-ubuntu/acme-ubuntu-seed.img"),
             project: PathBuf::from("/home/me/work/a&b"),
             machine: None,
             display: (1920, 1080),

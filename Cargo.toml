@@ -1,4 +1,4 @@
-#Vmynt
+#Vmseed
 #Licensed under the MIT License. See the LICENSE file in the project root.
 #Copyright (c) 2026 Scarlett A. Scott (codescarlett)
 #
@@ -6,19 +6,19 @@
 #Scarlett A. Scott (codescarlett)
 
 [package]
-#The package name is also the command name, the folder name (.vmynt) and the
+#The package name is also the command name, the folder name (.vmseed) and the
 #prefix of every environment variable. To rename the product, change it here
 #and in [package.metadata.brand] below. See docs/releasing.md before you do.
-name = "vmynt"
+name = "vmseed"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 description = "Reproducible, fully provisioned dev VMs from one YAML file — on Hyper-V, KVM and Apple Virtualization."
 license = "MIT"
 authors = ["Scarlett A. Scott (codescarlett)"]
-repository = "https://github.com/scarlettiron/vmynt"
-homepage = "https://scarlettiron.github.io/vmynt/"
-documentation = "https://scarlettiron.github.io/vmynt/docs/"
+repository = "https://github.com/scarlettiron/vmseed"
+homepage = "https://scarlettiron.github.io/vmseed/"
+documentation = "https://scarlettiron.github.io/vmseed/docs/"
 readme = "README.md"
 keywords = ["vm", "hyper-v", "kvm", "devtools", "provisioning"]
 categories = ["command-line-utilities", "development-tools"]
@@ -36,20 +36,20 @@ include = [
 ]
 
 [[bin]]
-name = "vmynt"
+name = "vmseed"
 path = "src/main.rs"
 
 #Everything that names the product outside the Rust code. build.rs, the release
 #workflows and packaging/render.py all read these, so nothing else hard-codes them.
 [package.metadata.brand]
-display-name = "Vmynt"
+display-name = "Vmseed"
 tagline = "Reproducible dev VMs from a config file"
-winget-id = "CodeScarlett.Vmynt"
+winget-id = "CodeScarlett.Vmseed"
 winget-publisher = "Scarlett A. Scott"
-chocolatey-id = "vmynt"
+chocolatey-id = "vmseed"
 homebrew-tap = "scarlettiron/homebrew-tap"
-site-url = "https://scarlettiron.github.io/vmynt/"
-apt-url = "https://scarlettiron.github.io/vmynt/apt"
+site-url = "https://scarlettiron.github.io/vmseed/"
+apt-url = "https://scarlettiron.github.io/vmseed/apt"
 
 #.deb packages, built with cargo-deb in the release workflow.
 [package.metadata.deb]
@@ -62,21 +62,21 @@ depends = "$auto"
 recommends = "openssh-client"
 suggests = "libvirt-daemon-system, qemu-system, ovmf, freerdp3-x11 | remmina"
 extended-description = """\
-Vmynt builds fully provisioned development virtual machines from one YAML file. \
-Run vmynt init in a project folder, describe the machine, and get the same desktop \
+Vmseed builds fully provisioned development virtual machines from one YAML file. \
+Run vmseed init in a project folder, describe the machine, and get the same desktop \
 with git, Node, Python, Docker, ddev, VS Code and a database on every computer."""
 assets = [
-    ["target/release/vmynt", "usr/bin/", "755"],
-    ["README.md", "usr/share/doc/vmynt/README.md", "644"],
-    ["LICENSE", "usr/share/doc/vmynt/copyright", "644"],
+    ["target/release/vmseed", "usr/bin/", "755"],
+    ["README.md", "usr/share/doc/vmseed/README.md", "644"],
+    ["LICENSE", "usr/share/doc/vmseed/copyright", "644"],
 ]
 
 #.rpm packages, built with cargo-generate-rpm in the release workflow.
 [package.metadata.generate-rpm]
 assets = [
-    { source = "target/release/vmynt", dest = "/usr/bin/vmynt", mode = "755" },
-    { source = "README.md", dest = "/usr/share/doc/vmynt/README.md", mode = "644", doc = true },
-    { source = "LICENSE", dest = "/usr/share/licenses/vmynt/LICENSE", mode = "644" },
+    { source = "target/release/vmseed", dest = "/usr/bin/vmseed", mode = "755" },
+    { source = "README.md", dest = "/usr/share/doc/vmseed/README.md", mode = "644", doc = true },
+    { source = "LICENSE", dest = "/usr/share/licenses/vmseed/LICENSE", mode = "644" },
 ]
 
 [dependencies]

@@ -4,40 +4,49 @@
 
 ### Which step failed?
 
-The build prints a report before it exits, so start there rather than reading back
-through the output:
+`vmynt create` numbers its steps as it goes, so the last `[n/8]` line before the
+error is the step that failed:
 
 ```
-  #   STEP                                     STATUS     TIME
-  --- ---------------------------------------- ---------- -----
-  3   Resolving install media                  ok         41s
-  4   Building the seed disk                   FAILED     2s
-  5-8 4 remaining step(s)                      not reached
-
-  FAILED at: Building the seed disk
-  New-VHD: there is not enough space on the disk.
+[3/8] Resolving install media
+      ...
+[4/8] Building the seed disk
+error: <what went wrong>
+  <its first cause>
 ```
 
-Host steps depend on each other, so the build stops at the first failure instead
-of carrying on. Nothing is rolled back: with `-All`, machines that finished before
-the failure are left in place and named in the report, so re-run the rest with
-`-Machine`. Add `-Verbose` for a stack trace.
+The steps depend on each other, so the build stops at the first failure instead
+of carrying on. Nothing is rolled back: with `create --all`, machines that finished
+before the failure are left in place and named in a warning, so build the rest by
+name (`vmynt create <machine>`). Add `--verbose` for the full chain of causes.
 
-A failure before step 1 (a bad blueprint name, a missing prerequisite) prints the
-message on its own, since there is nothing yet to tabulate.
+Run `vmynt doctor` first if the error is about the hypervisor itself: it checks
+the same things `create` does before touching anything, and says how to fix each.
 
-### "This script must run in an elevated PowerShell session"
+### "Hyper-V refused: you are not allowed to manage VMs"
 
-The Hyper-V cmdlets require Administrator. Start PowerShell with "Run as
-administrator". `-RenderOnly` is the one mode that works unelevated.
+On Windows, managing VMs needs Administrator or membership of the
+**Hyper-V Administrators** group. Vmynt never elevates itself. Join the group
+once, from an administrator PowerShell, then sign out and back in:
+
+```powershell
+Add-LocalGroupMember -Group 'Hyper-V Administrators' -Member $env:USERNAME
+```
+
+After that every command works from an ordinary terminal. `vmynt doctor` checks
+this. `vmynt create --render` touches no hypervisor, so it works without it.
+
+If the error says the Hyper-V PowerShell module is not installed, Hyper-V
+itself is off; the message gives the `Enable-WindowsOptionalFeature` line to run.
 
 ### "Virtual switch 'Default Switch' does not exist"
 
-`Default Switch` is Hyper-V's built-in NAT switch. It is normally present on
-Windows Pro, but it can be missing. Either point at an existing switch:
+Hyper-V only. `Default Switch` is Hyper-V's built-in NAT switch. It is normally
+present on Windows Pro, but it can be missing. Either point at an existing switch:
 
-```powershell
-VM = @{ SwitchName = 'My External Switch' }
+```yaml
+vm:
+  switchName: My External Switch
 ```
 
 or create one:
@@ -47,59 +56,73 @@ New-VMSwitch -Name 'dev-nat' -SwitchType Internal
 ```
 
 Every machine in a fleet must share one switch, or mDNS (`<host>.local`) will
-not work between them.
-
-### "openssl.exe was not found"
-
-Password hashing uses the `openssl` bundled with Git for Windows. Install Git
-for Windows, or generate a hash elsewhere and set
-`Guest.PrimaryUser.PasswordHash` instead of `Password`.
+not work between them. On Linux the equivalent is the libvirt network,
+`vm.network` (default `default`); `create` starts it if it is stopped, and says
+which package provides it if it is missing.
 
 ### The installer stops at a prompt instead of running unattended
 
 The seed disk was not picked up, so the installer fell back to interactive mode.
 In order of likelihood:
 
-1. **Check the seed disk is attached.** `Get-VMHardDiskDrive -VMName <name>`
-   should list `<name>-seed.vhdx` alongside the system disk.
-2. **Check the label.** In the installer, switch to a shell (Ctrl+Alt+F2) and run
+1. **Look at the installer.** `vmynt open --console` shows where it stopped.
+2. **Check the seed disk is attached.** During the install the VM has a second,
+   small disk, `<name>-seed.vhd` on Hyper-V or `<name>-seed.img` elsewhere. On
+   Hyper-V, `Get-VMHardDiskDrive -VMName <name>` lists it; on Linux,
+   `virsh -c qemu:///system domblklist <name>`. It is removed once the install
+   finishes.
+3. **Check the label.** In the installer, switch to a shell (Ctrl+Alt+F2) and run
    `lsblk -f`. One small vfat volume must carry exactly the right label, because
    that label is the whole contract:
 
    | Blueprint | Label | File the installer reads |
    | --- | --- | --- |
    | Ubuntu | `CIDATA` | `user-data` |
-   | Fedora | `OEMDRV` | `ks.cfg` |
+   | Fedora, Rocky, RHEL | `OEMDRV` | `ks.cfg` |
 
-3. **The manual fallback**, which takes fifteen seconds. At the boot menu press
+4. **The manual fallback**, which takes fifteen seconds. At the boot menu press
    `e` and add to the kernel line: `autoinstall` for Ubuntu, or
-   `inst.ks=hd:LABEL=OEMDRV:/ks.cfg` for Fedora. Then Ctrl+X. If that is what
+   `inst.ks=hd:LABEL=OEMDRV:/ks.cfg` for Fedora, Rocky and RHEL. Then Ctrl+X. If that is what
    unsticks it, say so: it means the file was found but auto-loading was not
    triggered.
 
 Logs worth reading from the installer shell: `/var/log/cloud-init.log` on Ubuntu
-(`grep -i nocloud`), `/tmp/anaconda.log` and `/tmp/program.log` on Fedora.
+(`grep -i nocloud`), `/tmp/anaconda.log` and `/tmp/program.log` on Fedora, Rocky
+and RHEL.
+
+On Ubuntu, a prompt reading "Continue with autoinstall? (yes|no)" is expected.
+Vmynt types `yes` into the VM's keyboard from about 75 seconds in. On macOS it
+can't, so the install window opens and you type `yes` and Enter yourself.
 
 ### The install times out
 
-Default is 60 minutes (`Provisioning.InstallTimeoutMinutes`). A slow mirror or a
-`updates: security` pass on a bad connection can exceed it. Open
-`vmconnect.exe localhost <name>` and look before raising it - a hung installer
+The blueprint sets the limit (`provisioning.installTimeoutMinutes`): 60 minutes
+for Ubuntu, 90 for the Red Hat family and Fedora, which download their packages
+from a mirror during the install. A slow mirror or a bad connection can exceed
+it. Run `vmynt open --console` and look before raising it - a hung installer
 looks quite different from a slow one.
 
 ### "A VM named 'x' already exists"
 
-`-Force` deletes and rebuilds it. Without `-Force` nothing is destroyed, which
-is the intended default.
+`vmynt create --force` deletes and rebuilds it. Without `--force` nothing is
+destroyed, which is the intended default. To use the existing VM, `vmynt start`.
+
+### "The hostname 'x' already answers on this network"
+
+Something else already uses `<hostname>.local`: another VM, a teammate's
+computer, or an earlier build. Change `projectName` (or `hostname`) in the
+config, or check with `ping <hostname>.local`.
 
 ### The download fails or the checksum does not match
 
-The ISO is verified against the vendor's published `SHA256SUMS`; a mismatched
-file is deleted rather than used. Re-run to try again. BITS is used first and
-resumes across interruptions. To use a file you already have:
+The ISO is verified against the checksum file the vendor publishes beside it; a
+mismatched file is deleted rather than used. Re-run to try again. Downloads are
+cached in `iso.directory` (default `~/.vmynt/isos`), so a finished one is not
+fetched twice. To use a file you already have:
 
-```powershell
-Iso = @{ Path = 'C:\ISO\ubuntu-24.04.3-live-server-amd64.iso' }
+```yaml
+iso:
+  path: ~/Downloads/ubuntu-24.04.3-live-server-amd64.iso
 ```
 
 ## First boot and bootstrap
@@ -149,7 +172,7 @@ sudo vm-bootstrap --list                # per-step state
 journalctl -u vm-bootstrap.service -f
 ```
 
-From the host: `.\scripts\Get-DevVMStatus.ps1 -Follow`.
+From the host: `vmynt status --follow`, or `vmynt logs -f` for the log itself.
 
 ### A step failed
 
@@ -176,24 +199,44 @@ skipped once a clean run has happened - that is not a failure.
 
 ### It rebooted and I lost the console
 
-Expected: `99-finalize.sh` reboots into GDM. Set
-`Bootstrap.RebootWhenDone = $false` to stay put.
+Expected: `99-finalize.sh` reboots into GDM. Set `bootstrap.rebootWhenDone: false`
+to stay put.
 
 ## Desktop and display
 
 ### The desktop is 1024x768 and will not resize
 
 A basic session cannot be resized from inside the guest. Either use Enhanced
-Session (below), or set `Bootstrap.DisplayResolution` and re-run:
+Session (below), or set `bootstrap.displayResolution` and re-run:
 
 ```bash
 sudo vm-bootstrap --only 10-desktop --force && sudo reboot
 ```
 
+### The desktop does not connect
+
+`vmynt open` waits until the guest is ready, then opens the desktop over RDP:
+Enhanced Session on Hyper-V, FreeRDP or Remmina on Linux, Microsoft's Windows
+App on macOS. Check what it is waiting for with `vmynt status`.
+
+On Linux and macOS xrdp listens on TCP 3389 in the guest:
+
+```bash
+systemctl status xrdp
+grep -E '^port=' /etc/xrdp/xrdp.ini          # expect port=3389
+sudo firewall-cmd --list-ports               # or: sudo ufw status
+grep WaylandEnable /etc/gdm3/custom.conf     # expect WaylandEnable=false
+sudo vm-bootstrap --only 20-guest-tools --force
+```
+
+On Linux, `vmynt open` needs `xfreerdp3`, `xfreerdp`, `wlfreerdp` or `remmina`
+on the PATH; without one it prints the address to connect to.
+
 ### Enhanced Session does not connect
 
-It needs all of: `VM.EnhancedSession = $true` (sets the host transport to
-`HvSocket`), xrdp listening on a vsock in the guest, and an Xorg session.
+Hyper-V only. It needs all of: `vm.enhancedSession: true` (sets the host
+transport to `HvSocket`), xrdp listening on a vsock in the guest, and an Xorg
+session.
 
 ```powershell
 Get-VM fedora-dev | Select-Object Name, EnhancedSessionTransportType
@@ -203,7 +246,7 @@ Get-VM fedora-dev | Select-Object Name, EnhancedSessionTransportType
 systemctl status xrdp
 grep -E '^port=' /etc/xrdp/xrdp.ini          # expect port=vsock://-1:3389
 grep WaylandEnable /etc/gdm3/custom.conf     # expect WaylandEnable=false
-sudo vm-bootstrap --only 20-hyperv --force
+sudo vm-bootstrap --only 20-guest-tools --force
 ```
 
 Then close and reopen the VM window - Hyper-V decides basic vs enhanced at
@@ -211,7 +254,7 @@ connect time. Log in at the xrdp prompt, not the GDM greeter.
 
 ### A black screen or "authentication required" pop-ups over xrdp
 
-Both are Wayland or polkit issues that `20-hyperv.sh` handles; if they appear,
+Both are Wayland or polkit issues that `20-guest-tools.sh` handles; if they appear,
 that step probably failed. Re-run it as above. GNOME must be on Xorg - xrdp
 cannot attach to a Wayland session.
 
@@ -224,12 +267,17 @@ the guest:
 
 ```bash
 lsblk -o NAME,SIZE,TYPE,FSTYPE,LABEL,MOUNTPOINT
-ls -l /dev/disk/by-path/ | grep scsi
+ls -l /dev/disk/by-id/ /dev/disk/by-path/ | grep -iE 'scsi|virtio'
 cat /etc/vm-bootstrap.disks
 sudo vm-bootstrap --only 00-disks --force
 ```
 
-From the host, check the disk is attached at the location the guest expects
+The step looks a disk up by its label first (`virtio-<label>` or
+`scsi-0QEMU_QEMU_HARDDISK_<label>` under `/dev/disk/by-id/`, on Linux and macOS
+hosts), then by SCSI location and size. `vmynt status` lists the disks the host
+has attached.
+
+On Hyper-V, check the disk is attached at the location the guest expects
 (`/etc/vm-bootstrap.disks` lists the LUN per label):
 
 ```powershell
@@ -237,11 +285,12 @@ Get-VMHardDiskDrive -VMName fedora-dev |
     Format-Table ControllerNumber, ControllerLocation, Path
 ```
 
-Expected: `0:0` system, `0:2` seed, `0:3`+ data disks.
+Expected: `0:0` system, `0:3`+ data disks. (The ISO at `0:1` and the seed at
+`0:2` are removed after the install.)
 
 ### A directory looks empty after mounting a disk over it
 
-Only relevant if you pointed a `MountPoint` at a directory that already had files
+Only relevant if you pointed a `mountPoint` at a directory that already had files
 in it. The step migrates existing contents onto the new volume before mounting, so
 this should not happen; if it did, the originals are still on the system disk,
 hidden under the mount:
@@ -263,10 +312,10 @@ sudo du -xh --max-depth=1 / | sort -h | tail
 ```
 
 The system disk is 25 GB by default and Docker images live on it, in
-`/var/lib/docker`. Raise `DiskGB`, or give Docker its own volume: see
+`/var/lib/docker`. Raise `diskGB`, or give Docker its own volume: see
 [disks.md](disks.md#a-note-on-the-25-gb-system-disk).
 
-Growing one is a `Resize-VHD` plus `resize2fs` - see
+Growing one is a resize on the host plus `resize2fs` in the guest - see
 [disks.md](disks.md#growing-a-disk). There is no partition table in the way.
 
 ### The VM will not boot after removing a disk
@@ -311,14 +360,14 @@ are in [repos.md](repos.md#private-repositories).
 
 If `70-repos` is the failed step, that is by design - a repo you asked for is
 missing, so the machine is not finished. `/var/lib/vm-bootstrap/complete` is
-deliberately not written, which is why `Get-DevVMStatus.ps1` reports
+deliberately not written, which is why `vmynt status` reports
 `finished with failed step(s)` rather than complete. Everything that did clone
 stayed cloned.
 
-From the host, that same script will fetch the guest's report for you:
+From the host, `status` will fetch the guest's report for you:
 
-```powershell
-.\scripts\Get-DevVMStatus.ps1 -Report
+```sh
+vmynt status --report
 ```
 
 ### A clone hung
@@ -345,7 +394,7 @@ sudo ss -lntp | grep -E '5432|3306'    # is it listening, and on which address?
 ```
 
 `127.0.0.1:5432` means it is bound to localhost only. Set
-`Database.ListenAddress` to `'*'` and re-run `sudo vm-bootstrap --only 35-database
+`database.listenAddress` to `'*'` and re-run `sudo vm-bootstrap --only 35-database
 --force`.
 
 If it is listening on `0.0.0.0` but a remote client still cannot connect, the
@@ -358,7 +407,7 @@ sudo firewall-cmd --permanent --add-port=5432/tcp && sudo firewall-cmd --reload
 
 If the connection reaches the server and is refused, it is authentication.
 Postgres needs a `pg_hba.conf` rule for the client, MySQL needs the user to exist
-with a host of `'%'`. Both are added automatically when `ListenAddress` is `'*'`.
+with a host of `'%'`. Both are added automatically when `listenAddress` is `'*'`.
 
 ### The server will not start at all, on a non-default port
 
@@ -379,8 +428,8 @@ installed. The bootstrap report says which.
 It never will. Postgres and MySQL speak their own wire protocols, not HTTP, so
 `http://host.local:5432` fails and the server logs something like `invalid startup
 packet length`. That is the wrong client, not a broken network. Use `psql` or
-`mysql`, or `Test-NetConnection host.local -Port 5432` from Windows to test only
-whether the port is reachable.
+`mysql`, or `Test-NetConnection host.local -Port 5432` from Windows (`nc -vz
+host.local 5432` on Linux or macOS) to test only whether the port is reachable.
 
 ### I asked for MySQL 8.4 and got 8.0
 
@@ -426,7 +475,7 @@ php -m | grep -iE 'pgsql|mysql'
 ```
 
 If the driver is absent, Adminer loads but cannot offer your engine. Re-run the
-step, which installs the driver matching `Database.Engine`:
+step, which installs the driver matching `database.engine`:
 
 ```bash
 sudo vm-bootstrap --only 36-adminer --force
@@ -450,7 +499,7 @@ of tabs and an empty field would silently shift every field after it.
 
 The generated script runs with `set -euo pipefail`, so it stops at the first
 failure and the step is reported failed. Read what it printed, fix the commands in
-`Hooks.PostStart`, then re-run:
+`hooks.postStart`, then re-run:
 
 ```bash
 cat /var/log/vm-post-start.log
@@ -458,19 +507,21 @@ sudo vm-bootstrap --only 80-hooks --force
 ```
 
 The script itself is at `/usr/local/lib/vm-bootstrap/hooks/post-start.sh` and can
-be run directly while you work out what is wrong. `-RenderOnly` also writes it to
-`build/<vm>/post-start.sh`, so you can read exactly what will run before building.
+be run directly while you work out what is wrong. `vmynt create --render` writes
+the seed to `~/.vmynt/vms/<vm>/build/` with the hook script inside it, so you can
+read exactly what will run before building. `vmynt logs` shows the hook's log
+from the host.
 
 ### A hook cannot find nvm, node or ddev
 
-`RunAs = 'user'` runs through a login shell for exactly this reason, so the user's
-`PATH` is set up as if they had logged in. `RunAs = 'root'` does not: root has none
+`runAs: user` runs through a login shell for exactly this reason, so the user's
+`PATH` is set up as if they had logged in. `runAs: root` does not: root has none
 of the primary user's shell configuration. If a hook needs both, keep it as `user`
 and use `sudo` inside the hook for the parts that need it.
 
 ### Hooks ran twice, or keep running
 
-`Hooks.RunAtEveryBoot` installs `vm-post-start.service`, which runs on every start
+`hooks.runAtEveryBoot` installs `vm-post-start.service`, which runs on every start
 by design. Commands under it need to be idempotent.
 
 ```bash
@@ -491,8 +542,9 @@ grep mdns /etc/nsswitch.conf                # expect mdns4_minimal on hosts:
 
 Then check the things mDNS cannot fix:
 
-- **Both VMs must be on the same virtual switch.** Multicast does not cross
-  switches. `Get-VMNetworkAdapter -VMName *` shows what each is attached to.
+- **Both VMs must be on the same virtual switch or network.** Multicast does not
+  cross switches. On Hyper-V, `Get-VMNetworkAdapter -VMName *` shows what each is
+  attached to; on Linux, `virsh -c qemu:///system domiflist <name>`.
 - **A firewall may be dropping UDP 5353.** `15-mdns.sh` opens it if ufw is
   active, but a rule added later can close it again.
 - **Only one machine may claim a name.** Avahi renames a collision to
@@ -500,26 +552,37 @@ Then check the things mDNS cannot fix:
 
 ### The guest has no network at all
 
-Confirm the switch exists and the adapter is connected:
+Confirm the network exists and the adapter is connected. On Hyper-V:
 
 ```powershell
 Get-VMNetworkAdapter -VMName fedora-dev | Format-List Name, SwitchName, Status, IPAddresses
 ```
 
-The `Default Switch` NAT network hands out addresses over DHCP and its subnet
-changes across host reboots - which is exactly why the tooling addresses guests
-by `<hostname>.local` rather than by IP.
+On Linux:
 
-### `Get-DevVMStatus.ps1` says "no ssh access yet"
+```sh
+virsh -c qemu:///system net-list --all      # 'default' must be active
+virsh -c qemu:///system domifaddr fedora-dev --source lease
+```
 
-It probes over SSH with `BatchMode=yes`, so it needs key auth. Add your public
-key to `Guest.PrimaryUser.AuthorizedKeys` and rebuild, or copy it up:
+The NAT networks hand out addresses over DHCP, and Hyper-V's `Default Switch`
+changes its subnet across host reboots - which is exactly why Vmynt addresses
+guests by `<hostname>.local` rather than by IP.
+
+### `vmynt status` says it "can't reach it over ssh yet"
+
+It probes over SSH with `BatchMode=yes`, so it needs key auth. Vmynt adds its own
+key (`~/.vmynt/ssh/id_ed25519`) to every guest, so this usually means the guest
+is still booting. If it persists, check `vmynt ssh` works. A VM built without
+`ssh-keygen` on the host has no Vmynt key; add your public key to
+`guest.primaryUser.authorizedKeys` (or drop it in `.vmynt/ssh_keys/`) and
+rebuild, or copy it up:
 
 ```bash
 ssh-copy-id dev@acme-fedora-workstation.local
 ```
 
-Everything the host can see is reported regardless: state, uptime, address,
+`vmynt status --no-ssh` skips the probe. Everything the host can see is reported regardless: state, uptime, address,
 blueprint, CPU, memory, and every attached disk with its allocated size and what
 it currently costs on the host. What needs the guest is the OS release actually
 running, the kernel, real disk usage, the account list, and bootstrap state.
@@ -528,36 +591,37 @@ running, the kernel, real disk usage, the account list, and bootstrap state.
 
 ### It will not shut down
 
-`Stop-DevVM.ps1` polls for two minutes and then tells you the guest is ignoring
-the request. That usually means a service is hung or something is holding a
+`vmynt stop` waits two minutes and then tells you the guest is ignoring the
+request. That usually means a service is hung or something is holding a
 filesystem. Look first, since the console often shows exactly what is blocking:
 
-```powershell
-vmconnect.exe localhost acme-fedora-workstation
+```sh
+vmynt open --console acme-fedora-workstation
 ```
 
 Then force it, accepting the same risk as pulling the plug on a real machine:
 
-```powershell
-.\scripts\Stop-DevVM.ps1 -TurnOff
+```sh
+vmynt stop --force acme-fedora-workstation
 ```
 
-If graceful shutdown never works, the integration services may not be running in
-the guest:
+If graceful shutdown never works on Hyper-V, the integration services may not be
+running in the guest:
 
 ```bash
 systemctl status hv-kvp-daemon      # or hypervkvpd on Fedora
-sudo vm-bootstrap --only 20-hyperv --force
+sudo vm-bootstrap --only 20-guest-tools --force
 ```
 
 ### It started but nothing answers
 
-`Start-DevVM.ps1 -Wait` polls for an address and reports if none arrives. mDNS
-takes a few seconds longer than the address does, so `<host>.local` failing
-immediately after boot is normal. Check what state it reached:
+`vmynt start` waits up to three minutes for an address and warns if none
+arrives. mDNS takes a few seconds longer than the address does, so
+`<host>.local` failing immediately after boot is normal. Check what state it
+reached:
 
-```powershell
-.\scripts\Get-DevVMStatus.ps1
+```sh
+vmynt status
 ```
 
 ### Did starting it re-run provisioning and overwrite my work?
@@ -571,36 +635,43 @@ ls -l /var/lib/vm-bootstrap/complete
 systemctl status vm-bootstrap.service     # expect "condition failed"
 ```
 
-Only `New-DevVM.ps1 -Force` rebuilds a machine, and only
-`Remove-DevVM.ps1 -DeleteDisks` deletes disks.
+Only `vmynt create --force` rebuilds a machine, and only
+`vmynt remove --delete-disks` deletes disks.
 
 ### The disks still take up space after shutting down
 
-Expected. Stopping releases CPU and RAM, not disk. The VHDX files are dynamically
-expanding, so they cost what was written to them, and deleting files inside the
-guest does not shrink the file on its own. With the VM off:
+Expected. Stopping releases CPU and RAM, not disk. The disks are dynamically
+expanding (VHDX on Hyper-V, qcow2 on Linux, sparse files on macOS), so they cost
+what was written to them, and deleting files inside the guest does not shrink
+them on their own. On Hyper-V, with the VM off:
 
 ```powershell
-Optimize-VHD -Path C:\VMs\acme-fedora-workstation\acme-fedora-workstation.vhdx -Mode Full
+Optimize-VHD -Path $HOME\.vmynt\vms\acme-fedora-workstation\acme-fedora-workstation.vhdx -Mode Full
 ```
+
+`vmynt clean` deletes cached ISOs and leftover build files.
 
 ## Recovering
 
-A checkpoint named `clean-install (pre-bootstrap)` is taken after the OS install
-and before any tooling, so a bad bootstrap does not cost you the OS install:
+A snapshot named `clean-install` is taken after the OS install and before any
+tooling (unless `vm.checkpointAfterInstall` is off or `create --no-checkpoint`
+was used), so a bad bootstrap does not cost you the OS install. Restoring it gives
+a clean OS that provisions itself again on the next boot:
 
-```powershell
-Get-VMSnapshot -VMName fedora-dev
-Restore-VMSnapshot -VMName fedora-dev -Name 'clean-install (pre-bootstrap)' -Confirm:$false
-Start-VM fedora-dev
+```sh
+vmynt snapshot list fedora-dev
+vmynt stop fedora-dev                  # libvirt and macOS need the VM off
+vmynt snapshot restore clean-install fedora-dev
+vmynt start fedora-dev
 ```
 
 To start over completely:
 
-```powershell
-.\scripts\Remove-DevVM.ps1 -Machine ubuntu-gui -DeleteDisks
-.\scripts\New-DevVM.ps1 -Machine ubuntu-gui
+```sh
+vmynt remove --delete-disks ubuntu-gui
+vmynt create ubuntu-gui
 ```
 
-`Remove-DevVM.ps1` leaves the VM directory alone if it still contains files it
-does not recognise, so it will not take your data with it.
+or `vmynt create --force ubuntu-gui`, which does both. On Hyper-V, `remove`
+leaves the VM folder alone if it still contains files it does not recognise, so
+it will not take your data with it.

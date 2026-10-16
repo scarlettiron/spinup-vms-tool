@@ -1,0 +1,38 @@
+# {{App}} project settings, shared with everyone who works on this project.
+# Commit this file.
+#
+# Personal settings (your user, password hash, local paths) belong in
+# vm.config.local.yaml beside this file. That file is git-ignored, and anything
+# in it overrides what is here.
+#
+# Every setting, with what it does, is in vm.config.example.yaml beside this
+# file, and online at {{site}}configuration/
+#
+# See the merged result:   {{app}} config
+# Check it:                {{app}} config --validate
+
+# ---- which OS --------------------------------------------------------------
+# `{{app}} blueprints` lists the choices.
+blueprint:      {{blueprint}}
+
+# ---- names -----------------------------------------------------------------
+# The VM and its hostname become <projectName>-<blueprint>, and the desktop is
+# published as http://{{projectName}}-{{blueprint}}.local
+projectName:    {{projectName}}
+
+# ---- hardware --------------------------------------------------------------
+# cpus:         4
+# memoryGB:     8
+# diskGB:       40
+
+# ---- your code -------------------------------------------------------------
+# Repositories to clone on the first boot, into reposRoot under the user's home.
+# repos:        [git@github.com:acme/web.git]
+# reposRoot:    src
+
+# ---- database --------------------------------------------------------------
+# dbEngine:     postgres          # '', postgres or mysql
+# dbVersion:    '17'
+# dbServer:     true
+# dbClient:     true
+# dbAdminer:    true              # Adminer on http://<hostname>.local:3800/

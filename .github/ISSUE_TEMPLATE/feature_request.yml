@@ -1,0 +1,58 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: Feature request
+description: Suggest a new command, option, or improvement.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [roadmap](https://github.com/scarlettiron/vmynt/blob/main/docs/vmynt-design.md#16-milestones)
+        first. Many commands are already planned. For an open-ended idea, a
+        [discussion](https://github.com/scarlettiron/vmynt/discussions) is often a better start.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you'd like
+      description: How you imagine it working. Example commands or config are very welcome.
+      placeholder: |
+        vmynt snapshot restore before-upgrade
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Which host platforms does this matter on?
+      options:
+        - label: Windows (Hyper-V)
+        - label: Linux (libvirt)
+        - label: macOS (vfkit)
+
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to work on it?
+      options:
+        - "No"
+        - Yes, with some guidance
+        - Yes, I can open a pull request

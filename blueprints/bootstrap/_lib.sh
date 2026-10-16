@@ -10,7 +10,7 @@ die()  { printf '[%s] ERROR: %s\n' "$(date +%H:%M:%S)" "$*" >&2; exit 1; }
 
 have_cmd() { command -v "$1" >/dev/null 2>&1; }
 
-# Treat 1/true/yes/on as true so the value can come from PowerShell or a human.
+# Treat 1/true/yes/on as true so the value can come from YAML or a human.
 is_true() {
     case "${1:-}" in
         1|true|True|TRUE|yes|Yes|on|On) return 0 ;;
@@ -90,6 +90,21 @@ OS_VERSION_ID="$(. /etc/os-release 2>/dev/null && echo "${VERSION_ID:-}")"
 OS_MAJOR="${OS_VERSION_ID%%.*}"
 OS_FAMILY="$(detect_os_family)"
 export OS_ID OS_ID_LIKE OS_VERSION_ID OS_MAJOR OS_FAMILY
+
+# The guest's CPU architecture, in the two spellings downloads use:
+#
+#   GUEST_ARCH      x86_64 | aarch64   the kernel's names, used by rpm repos
+#   GUEST_DEB_ARCH  amd64  | arm64     Debian's names, used by apt lines and by
+#                                      most GitHub release assets
+#
+# The host says which in VM_ARCH; an older seed does not, so fall back to
+# asking the kernel, which is never wrong about itself.
+GUEST_ARCH="${VM_ARCH:-$(uname -m)}"
+case "$GUEST_ARCH" in
+    aarch64|arm64) GUEST_ARCH=aarch64; GUEST_DEB_ARCH=arm64 ;;
+    *)             GUEST_ARCH=x86_64;  GUEST_DEB_ARCH=amd64 ;;
+esac
+export GUEST_ARCH GUEST_DEB_ARCH
 
 pkg_update_once() {
     [[ -f /var/lib/vm-bootstrap/pkg-updated ]] && return 0
@@ -198,10 +213,14 @@ pkg_cleanup() {
 }
 
 # Run a command as the primary desktop user, with a login shell so ~/.profile
-# and ~/.bashrc (nvm, cargo, etc.) are in scope.
+# and ~/.bashrc (nvm, cargo, etc.) are in scope, starting in their home.
+#
+# Not `sudo -i`: that hands the command to the user's shell, which expands
+# every $VAR in it before bash -lc runs, so "export NVM_DIR=...; . \$NVM_DIR/x"
+# arrived as ". /x" (sudo 1.9 on Ubuntu 24.04). One shell, one expansion.
 run_as_user() {
     local user="${VM_PRIMARY_USER:?VM_PRIMARY_USER not set}"
-    sudo -iu "$user" bash -lc "$*"
+    sudo -u "$user" -H bash -lc "cd \"\$HOME\" && $*"
 }
 
 # Append a line to a file only if it is not already present.

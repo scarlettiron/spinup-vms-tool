@@ -47,8 +47,9 @@ disk_size_gb() {
 
 # Find the device for one configured disk. Preference order:
 #   1. a filesystem already carrying this label - nothing to do, reuse it
-#   2. the SCSI LUN the host attached it at (deterministic)
-#   3. the only blank disk of about the right size (belt and braces)
+#   2. the disk's serial or device id, which libvirt and vfkit set to the label
+#   3. the SCSI LUN the host attached it at (deterministic)
+#   4. the only blank disk of about the right size (belt and braces)
 resolve_disk() {
     local label="$1" lun="$2" want_gb="$3"
     local existing candidate path found actual
@@ -58,6 +59,23 @@ resolve_disk() {
         printf '%s\treuse\n' "$existing"
         return 0
     fi
+
+    # The host names each disk after its label where the hypervisor allows it:
+    # libvirt sets the disk's serial, which appears as
+    # scsi-0QEMU_QEMU_HARDDISK_<label>, and vfkit sets a virtio-blk device id,
+    # which appears as virtio-<label>. Hyper-V has no such field, so on Hyper-V
+    # this finds nothing and the LUN below does the work.
+    # Exact names, not a wildcard: a glob like *-data would also match a disk
+    # labelled big-data.
+    for path in /dev/disk/by-id/virtio-"${label}" \
+                /dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_"${label}"; do
+        [[ -e "$path" ]] || continue
+        candidate="$(readlink -f "$path")"
+        if is_blank_disk "$candidate"; then
+            printf '%s\tid\n' "$candidate"
+            return 0
+        fi
+    done
 
     for path in /dev/disk/by-path/*scsi-0:0:0:"${lun}"; do
         [[ -e "$path" ]] || continue

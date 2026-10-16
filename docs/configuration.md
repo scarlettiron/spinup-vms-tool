@@ -1,25 +1,20 @@
 # Configuration
 
-Two layers of YAML. The team standard is committed; your own overrides are not.
+Two layers of YAML in the project's `.vmynt/` folder. The team standard is
+committed; your own overrides are not.
 
 | Layer | File | Committed? |
 | --- | --- | --- |
-| team standard | `vm.config.yaml` | yes |
-| per-developer | `vm.config.local.yaml` | no, git-ignored |
+| team standard | `.vmynt/vm.config.yaml` | yes |
+| per-developer | `.vmynt/vm.config.local.yaml` | no, git-ignored |
 
-Copy the example to start:
-
-```powershell
-Copy-Item vm.config.local.example.yaml vm.config.local.yaml
-```
+`vmynt init` writes both, plus `vm.config.example.yaml` and
+`vm.config.local.example.yaml` beside them with every setting documented. To
+reuse config files from another project, use `vmynt init --import <folder>`.
 
 Your local file only names what you want to differ. Everything else falls through
-to `vm.config.yaml`.
-
-**One file per layer.** The loader also accepts `.psd1` for a layer, because
-PowerShell data files need no parser and the blueprints use that format already.
-Nothing ships in it, and if both formats exist for the same layer the build stops
-and says so rather than guessing which you meant.
+to `vm.config.yaml`. `vmynt config` shows the merged result, and
+`vmynt config --validate` checks it.
 
 ## Reading the config file
 
@@ -32,19 +27,19 @@ Every section carries a tag saying whether it is meant to be edited:
 
 Grep for the tag when you are looking for somewhere to change something:
 
-```powershell
-Select-String '@user-editable' vm.config.yaml
+```sh
+grep -n '@user-editable' .vmynt/vm.config.example.yaml
 ```
 
-`@user-editable` covers: the quick settings block, `VM.DataDisks`,
-`Guest.PrimaryUser`, `Guest.AdditionalUsers`, `Bootstrap`, `Git`, `GitHub`
-(`SshKey`, `Cli`, `UploadSshKey`), and `Machines`.
+`@user-editable` covers: the quick settings block, `vm.dataDisks`,
+`guest.primaryUser`, `guest.additionalUsers`, `bootstrap`, `git`, `github`
+(`sshKey`, `cli`, `uploadSshKey`), and `machines`.
 
-`@advanced` covers the rest of `VM`, `Guest.Ssh`, `GitHub.KnownHosts`,
-`GitHub.ShredSecretsAfterUse`, and `Iso`. Nothing there is off-limits, it just
+`@advanced` covers the rest of `vm`, `guest.ssh`, `github.knownHosts`,
+`github.shredSecretsAfterUse`, and `iso`. Nothing there is off-limits, it just
 has a default that is right unless you have a specific reason.
 
-Files under `blueprints/` are a level below all of this: they describe what an OS
+Blueprints are a level below all of this: they describe what an OS
 *is* rather than how your VM is configured. See
 [adding-an-os.md](adding-an-os.md).
 
@@ -56,65 +51,65 @@ deep. Each is a shortcut for exactly one real setting:
 
 | Quick setting | Is really | |
 | --- | --- | --- |
-| `ProjectName` | (top level) | names the project; VM and hostname default to `<ProjectName>-<Blueprint>` |
-| `VmName` | `VM.Name` | overrides the derived VM name |
-| `VmPath` | `VM.Path` | where the VM and its disks live |
-| `Cpus` | `VM.CpuCount` | |
-| `MemoryGB` | `VM.MemoryStartupGB` | |
-| `MaxMemoryGB` | `VM.MemoryMaximumGB` | dynamic-memory ceiling |
-| `DiskGB` | `VM.DiskSizeGB` | the **system** disk; others are `VM.DataDisks` |
-| `Switch` | `VM.SwitchName` | |
-| `EnhancedSession` | `VM.EnhancedSession` | clipboard + resizable desktop |
-| `Hostname` | `Guest.Hostname` | overrides the derived hostname; also `<hostname>.local` |
-| `Username` | `Guest.PrimaryUser.Username` | |
-| `RealName` | `Guest.PrimaryUser.RealName` | |
-| `Password` | `Guest.PrimaryUser.Password` | hashed at build time |
-| `PasswordHash` | `Guest.PrimaryUser.PasswordHash` | supply your own crypt hash |
-| `Timezone` | `Guest.Timezone` | |
-| `Locale` | `Guest.Locale` | |
-| `KeyboardLayout` | `Guest.KeyboardLayout` | |
-| `GitName` | `Git.UserName` | |
-| `GitEmail` | `Git.UserEmail` | |
-| `GithubUsername` | `GitHub.Username` | your GitHub account name |
-| `GithubToken` | `GitHub.Cli.Token` | put this in the local file only |
-| `GithubTokenFile` | `GitHub.Cli.TokenFile` | a path on this laptop |
-| `SshKeyMode` | `GitHub.SshKey.Mode` | `auto` / `generate` / `copy` / `none` |
-| `Repos` | `Repos.Items` | when given a list |
-| `ReposRoot` | `Repos.Root` | |
-| `OsVersion` | `Iso.Release` | the OS release; blank uses the blueprint's `Os.Version` |
-| `Release` | `Iso.Release` | synonym for `OsVersion` |
-| `UbuntuRelease` | `Iso.Release` | synonym, kept for older configs |
-| `IsoPath` | `Iso.Path` | use a local .iso |
-| `InstallDesktop` | `Bootstrap.InstallDesktop` | |
-| `InstallDocker` | `Bootstrap.InstallDocker` | |
-| `InstallDdev` | `Bootstrap.InstallDdev` | |
-| `InstallNode` | `Bootstrap.InstallNode` | |
-| `InstallPython` | `Bootstrap.InstallPython` | |
-| `InstallVSCode` | `Bootstrap.InstallVSCode` | |
-| `InstallChrome` | `Bootstrap.InstallChrome` | Google Chrome; skipped without a desktop |
-| `InstallRemoteAccess` | `Bootstrap.InstallRemoteAccess` | VPN, RDP and SSH tunnelling clients; GUI parts need a desktop |
-| `NodeVersion` | `Bootstrap.NodeVersion` | any nvm alias |
-| `Resolution` | `Bootstrap.DisplayResolution` | |
-| `ExtraPackages` | `Bootstrap.ExtraAptPackages` | |
-| `DotfilesRepo` | `Bootstrap.DotfilesRepo` | |
-| `EnableMdns` | `Bootstrap.EnableMdns` | |
-| `RebootWhenDone` | `Bootstrap.RebootWhenDone` | |
-| `DbEngine` | `Database.Engine` | `postgres` / `mysql`; blank installs neither |
-| `DbVersion` | `Database.Version` | blank takes the engine default: postgres 17, mysql 8 |
-| `DbClient` | `Database.InstallClient` | the command line client only |
-| `DbServer` | `Database.InstallServer` | the server too; implies the client |
-| `DbPort` | `Database.Port` | 0 takes the engine default: 5432 / 3306 |
-| `DbListenAddress` | `Database.ListenAddress` | `localhost` or `*` |
-| `DbAdminPassword` | `Database.AdminPassword` | put this in the local file only |
-| `DbDatabases` | `Database.Databases` | names to create on first boot |
-| `DbAdminer` | `Database.Adminer.Install` | the single-file database browser; needs `DbEngine` |
-| `DbAdminerPort` | `Database.Adminer.Port` | where Adminer is served, default 3800 |
-| `CopyFrom` | `Files.Source` | a local directory whose contents are copied into the guest |
-| `CopyTo` | `Files.Destination` | where they land; blank means the primary user's home |
-| `PostStart` | `Hooks.PostStart` | commands to run once the VM is provisioned |
-| `PostStartFile` | `Hooks.PostStartFile` | a local script, appended after those commands |
-| `PostStartRunAs` | `Hooks.RunAs` | `user` (default) or `root` |
-| `PostStartEveryBoot` | `Hooks.RunAtEveryBoot` | also run on every subsequent boot |
+| `projectName` | (top level) | names the project; VM and hostname default to `<projectName>-<blueprint>` |
+| `vmName` | `vm.name` | overrides the derived VM name |
+| `vmPath` | `vm.path` | where the VM and its disks live |
+| `cpus` | `vm.cpuCount` | |
+| `memoryGB` | `vm.memoryStartupGB` | |
+| `maxMemoryGB` | `vm.memoryMaximumGB` | dynamic-memory ceiling |
+| `diskGB` | `vm.diskSizeGB` | the **system** disk; others are `vm.dataDisks` |
+| `switch` | `vm.switchName` | |
+| `enhancedSession` | `vm.enhancedSession` | clipboard + resizable desktop |
+| `hostname` | `guest.hostname` | overrides the derived hostname; also `<hostname>.local` |
+| `username` | `guest.primaryUser.username` | |
+| `realName` | `guest.primaryUser.realName` | |
+| `password` | `guest.primaryUser.password` | hashed at build time |
+| `passwordHash` | `guest.primaryUser.passwordHash` | supply your own crypt hash |
+| `timezone` | `guest.timezone` | |
+| `locale` | `guest.locale` | |
+| `keyboardLayout` | `guest.keyboardLayout` | |
+| `gitName` | `git.userName` | |
+| `gitEmail` | `git.userEmail` | |
+| `githubUsername` | `github.username` | your GitHub account name |
+| `githubToken` | `github.cli.token` | put this in the local file only |
+| `githubTokenFile` | `github.cli.tokenFile` | a path on this laptop |
+| `sshKeyMode` | `github.sshKey.mode` | `auto` / `generate` / `copy` / `none` |
+| `repos` | `repos.items` | when given a list |
+| `reposRoot` | `repos.root` | |
+| `osVersion` | `iso.release` | the OS release; blank uses the blueprint's `os.version` |
+| `release` | `iso.release` | synonym for `osVersion` |
+| `ubuntuRelease` | `iso.release` | synonym, kept for older configs |
+| `isoPath` | `iso.path` | use a local .iso |
+| `installDesktop` | `bootstrap.installDesktop` | |
+| `installDocker` | `bootstrap.installDocker` | |
+| `installDdev` | `bootstrap.installDdev` | |
+| `installNode` | `bootstrap.installNode` | |
+| `installPython` | `bootstrap.installPython` | |
+| `installVSCode` | `bootstrap.installVSCode` | |
+| `installChrome` | `bootstrap.installChrome` | Google Chrome; skipped without a desktop |
+| `installRemoteAccess` | `bootstrap.installRemoteAccess` | VPN, RDP and SSH tunnelling clients; GUI parts need a desktop |
+| `nodeVersion` | `bootstrap.nodeVersion` | any nvm alias |
+| `resolution` | `bootstrap.displayResolution` | |
+| `extraPackages` | `bootstrap.extraAptPackages` | |
+| `dotfilesRepo` | `bootstrap.dotfilesRepo` | |
+| `enableMdns` | `bootstrap.enableMdns` | |
+| `rebootWhenDone` | `bootstrap.rebootWhenDone` | |
+| `dbEngine` | `database.engine` | `postgres` / `mysql`; blank installs neither |
+| `dbVersion` | `database.version` | blank takes the engine default: postgres 17, mysql 8 |
+| `dbClient` | `database.installClient` | the command line client only |
+| `dbServer` | `database.installServer` | the server too; implies the client |
+| `dbPort` | `database.port` | 0 takes the engine default: 5432 / 3306 |
+| `dbListenAddress` | `database.listenAddress` | `localhost` or `*` |
+| `dbAdminPassword` | `database.adminPassword` | put this in the local file only |
+| `dbDatabases` | `database.databases` | names to create on first boot |
+| `dbAdminer` | `database.adminer.install` | the single-file database browser; needs `dbEngine` |
+| `dbAdminerPort` | `database.adminer.port` | where Adminer is served, default 3800 |
+| `copyFrom` | `files.source` | a local directory whose contents are copied into the guest |
+| `copyTo` | `files.destination` | where they land; blank means the primary user's home |
+| `postStart` | `hooks.postStart` | commands to run once the VM is provisioned |
+| `postStartFile` | `hooks.postStartFile` | a local script, appended after those commands |
+| `postStartRunAs` | `hooks.runAs` | `user` (default) or `root` |
+| `postStartEveryBoot` | `hooks.runAtEveryBoot` | also run on every subsequent boot |
 
 Anything without a shortcut is written out in full. Both styles can appear in the
 same file - within one file the shortcut wins:
@@ -128,51 +123,51 @@ vm:
       sizeGB: 80
 ```
 
-Shortcuts work inside a `Machines` block too.
+Shortcuts work inside a `machines` block too.
 
-**Names are case-insensitive.** `cpus`, `Cpus`, and `CPUS` are the same setting,
-so YAML can stay lower-case and `.psd1` can stay PascalCase.
+**Names are case-insensitive.** `cpus`, `Cpus`, and `CPUS` are the same setting.
+The example files use camelCase throughout.
 
-**Typos are rejected.** An unrecognised top-level name fails the build with the
-list of valid ones, rather than being silently ignored:
+**Typos are rejected.** An unrecognised top-level name fails the build with a
+suggestion, rather than being silently ignored:
 
 ```
-BUILD FAILED: Unknown setting 'Cpuz' in vm.config.local.yaml.
-Valid top-level settings are: Bootstrap, Cpus, DiskGB, ...
+error: unknown setting 'cpuz' in .vmynt/vm.config.local.yaml. Did you mean 'cpus'?
+Every setting is listed in vm.config.example.yaml beside it.
 ```
 
 ## Naming, and the address you browse to
 
-`ProjectName` names the work rather than the OS. The VM and the guest hostname
-both default to `<ProjectName>-<Blueprint>`:
+`projectName` names the work rather than the OS. The VM and the guest hostname
+both default to `<projectName>-<blueprint>`:
 
-```powershell
-ProjectName = 'acme'
-Blueprint   = 'fedora-workstation'
+```yaml
+projectName: acme
+blueprint:   fedora-workstation
 #  VM name and hostname become: acme-fedora-workstation
 ```
 
-`Bootstrap.EnableMdns` publishes that hostname with avahi, so it is also the
+`bootstrap.enableMdns` publishes that hostname with avahi, so it is also the
 address a browser uses, with no hosts file and no static IP:
 
 ```
 http://acme-fedora-workstation.local
 ```
 
-Change `ProjectName` and every machine in the project is renamed together.
+Change `projectName` and every machine in the project is renamed together.
 
-**Precedence, highest first:** an explicit `VmName` / `Hostname`, then a
-`Machines` key (a machine is named after its key), then
-`<ProjectName>-<Blueprint>`.
+**Precedence, highest first:** an explicit `vmName` / `hostname`, then a
+`machines` key (a machine is named after its key), then
+`<projectName>-<blueprint>`.
 
-The derived name is lower-cased, and both it and an explicit `Hostname` are
+The derived name is lower-cased, and both it and an explicit `hostname` are
 checked as DNS labels, because a name that is not one will not resolve over mDNS
 and the address would be useless:
 
 - letters, digits and hyphens only, not starting or ending with a hyphen
 - 63 characters maximum
 
-`ProjectName` is checked the same way, and rejected if it would produce an
+`projectName` is checked the same way, and rejected if it would produce an
 invalid label. All of these fail at render time, not after a 30-minute build.
 
 ### The name-is-taken check
@@ -182,28 +177,28 @@ different collisions:
 
 | Clash | Detected by | Result |
 | --- | --- | --- |
-| a Hyper-V VM of that name exists | `Get-VM` | fails; `-Force` replaces it |
+| a VM of that name exists | the hypervisor | fails; `vmynt create --force` replaces it |
 | `<hostname>.local` already answers | the OS resolver, which does mDNS | fails |
 
 The second matters because two machines claiming one mDNS name means avahi
 renames the loser to `<hostname>-2.local`, so the address you hand a colleague
-quietly reaches the wrong machine. It is not a Hyper-V question: the name might
-belong to a teammate's laptop on the same switch.
+quietly reaches the wrong machine. It is not a hypervisor question: the name might
+belong to a teammate's laptop on the same network.
 
-`-Force` skips the hostname check when it is replacing a VM of that name, since
-the thing answering is almost certainly the VM being replaced.
+`--force` skips the hostname check, since the thing answering is almost certainly
+the VM being replaced.
 
-`-RenderOnly` reports a taken hostname as a warning rather than a failure, since
-nothing is being created. `-All` additionally refuses two machines that resolve to
-the same VM name or the same hostname.
+`create --render` skips both checks, since nothing is being created.
+`create --all` also refuses two machines that resolve to the same VM name or the
+same hostname.
 
 ## Choosing the OS and its version
 
-`Blueprint` and `OsVersion` sit together at the top of the config because they are
+`blueprint` and `osVersion` sit together at the top of the config because they are
 coupled: `43` is a Fedora release and means nothing to Ubuntu, `24.04` is an
 Ubuntu release and means nothing to Fedora.
 
-| Blueprint | `OsVersion` looks like | Support |
+| Blueprint | `osVersion` looks like | Support |
 | --- | --- | --- |
 | `fedora-workstation` | `43` | about 13 months per release. **Fedora has no LTS**, and a retired release is moved off the mirrors, so a stale value fails on a 404. |
 | `redhat-rocky-workstation` | `9` | RHEL 9 lifecycle: full support to 2027, maintenance to May 2032. |
@@ -227,21 +222,21 @@ Each blueprint declares the shape its versions take, and a mismatch fails at
 render time rather than 404ing on a download:
 
 ```
-BUILD FAILED: OsVersion '43' does not look like a ubuntu-desktop release.
-Its own version is 24.04. Set OsVersion to match the blueprint, or blank it
-to use the blueprint's own.
+error: osVersion '43' does not look like a ubuntu-desktop release. Its own version
+is 24.04. Set osVersion to match the blueprint, or remove it to use the
+blueprint's own.
 ```
 
 **Two ways to run this, and the trade-off is real:**
 
 - **Name the version explicitly** (what ships). Clear at a glance, but every
-  `Machines` entry on a different blueprint has to name its own version too,
-  which is why both Ubuntu machines carry `OsVersion = '24.04'`.
-- **Leave `OsVersion` blank.** Each blueprint then supplies its own
-  (`Os.Version`), so a mixed fleet needs no version keys at all and switching OS
+  `machines` entry on a different blueprint has to name its own version too,
+  which is why both Ubuntu machines carry `osVersion: '24.04'`.
+- **Leave `osVersion` blank.** Each blueprint then supplies its own
+  (`os.version`), so a mixed fleet needs no version keys at all and switching OS
   is genuinely one line. Less explicit, fewer places to keep in step.
 
-To pin a release for the long term, set it in the blueprint's `Os.Version`, not in
+To pin a release for the long term, set it in the blueprint's `os.version`, not in
 config: that way it travels with the OS it belongs to.
 
 ## Precedence
@@ -251,12 +246,12 @@ inherited:
 
 | | Layer | Purpose |
 | --- | --- | --- |
-| 1 | `blueprint.Defaults` | what the OS *suggests* - sizing, nice-to-haves |
-| 2 | `vm.config.*` | the team standard |
-| 3 | `blueprint.Overrides` | what the OS *is* - a server blueprint has no desktop |
-| 4 | `vm.config.local.*` | per-developer |
-| 5 | `Machines.<name>` | the per-machine block, with `-Machine` |
-| 6 | `-Parameter` | one-off, on the command line |
+| 0 | built in | Vmynt's own defaults, some worked out for this computer (paths, time zone) |
+| 1 | the blueprint's `defaults` | what the OS *suggests* - sizing, nice-to-haves |
+| 2 | `vm.config.yaml` | the team standard |
+| 3 | the blueprint's `overrides` | what the OS *is* - a server blueprint has no desktop |
+| 4 | `vm.config.local.yaml` | per-developer |
+| 5 | `machines.<name>` | the per-machine block, when a command names that machine (`vmynt create ubuntu-gui`) |
 
 Layers 1 and 3 both come from the selected blueprint and deliberately sit on
 opposite sides of the team standard - see
@@ -264,69 +259,34 @@ opposite sides of the team standard - see
 
 Quick settings are expanded **per layer, before merging**, so precedence reads
 the way you would expect: `cpus: 8` in your local file beats
-`VM: { CpuCount: 6 }` in the shared file, and vice versa.
+`vm: { cpuCount: 6 }` in the shared file, and vice versa.
 
 Nested settings merge key by key. Lists replace wholesale, so an override can
 shorten a package list rather than only ever growing it.
 
 ## Seeing the result
 
-```powershell
-.\scripts\New-DevVM.ps1 -RenderOnly
+```sh
+vmynt config               # the merged config, every layer applied
+vmynt create --render      # the plan, plus the rendered seed files
 ```
 
-Prints the resolved plan and writes the fully rendered cloud-init plus every
-generated bootstrap file to `build\<vm-name>\`. No elevation, no Hyper-V
-changes - the fastest way to check a config edit did what you meant.
+`create --render` prints the resolved plan and writes the fully rendered seed
+(cloud-init or kickstart) plus every generated bootstrap file to the VM folder's
+`build/` (by default `~/.vmynt/vms/<vm-name>/build/`). No hypervisor changes -
+the fastest way to check a config edit did what you meant.
 
-## The YAML reader
+## YAML notes
 
-Windows PowerShell has no YAML support, and requiring `Install-Module
-powershell-yaml` before anyone can build a VM would defeat the point of a repo
-you clone and run. So `scripts/lib/Common.psm1` carries a small self-contained
-reader for the subset of YAML that config files need. It is verified against
-PyYAML.
+Config files are ordinary YAML. A few things worth knowing:
 
-**Supported:**
-
-```yaml
-key: value                  # mappings, nested by indentation
-list:
-  - one                     # sequences, at or below the key's indent
-  - two
-list2:
-- also fine
-records:
-  - name: a                 # sequences of mappings
-    size: 1
-flow: [a, b, c]             # flow sequences
-empties: []                 # and {}
-text:   plain, 'single', "double with \n and \t"
-numbers: 42, -3, 1.5
-bools:  true false yes no on off      # any case
-nulls:  null, ~, or nothing at all
-# comments, honouring quotes
----                         # a single leading document marker
-```
-
-**Not supported** - rejected with a clear message rather than misread: anchors
-and aliases (`&x` / `*x`), tags (`!!str`), block scalars (`|` and `>`), multiple
-documents in one file, and flow mappings other than `{}`. None of them are needed
-to express a config, and every one of them is a way to write something the next
-person cannot read. A nested mapping goes on its own indented lines.
-
-**Two things worth knowing:**
-
-- `yes`, `no`, `on`, `off` are booleans, as in YAML 1.1 and PyYAML. Quote them
-  (`'no'`) when you mean the string.
-- A number with a leading zero stays a **string**: `007` is far more likely to be
-  an identifier than octal. PyYAML would read it as a number, so this is the one
-  place the reader deliberately differs.
-
-Values that look alarming are fine unquoted, because a colon only separates a key
-when followed by whitespace: `C:\VMs`, `git@github.com:acme/web.git`, `lts/*`,
-`en_US.UTF-8`, `1920x1080`. Quote a release number though - `24.04` unquoted is
-the number 24.04, not the string.
+- Quote a release number: `24.04` unquoted is the number 24.04, not the string.
+- On/off settings also accept `yes`, `no`, `on`, `off` and `1`/`0`. Quote them
+  (`'no'`) where you mean the string.
+- Values that look alarming are fine unquoted, because a colon only separates a
+  key when followed by whitespace: `git@github.com:acme/web.git`, `lts/*`,
+  `en_US.UTF-8`, `1920x1080`. A Windows path with backslashes is fine unquoted
+  or in single quotes, but not in double quotes, where `\` starts an escape.
 
 ## Where the rest is documented
 
@@ -346,13 +306,13 @@ repositories, and needs no account.
 
 | Setting | Quick name | Meaning |
 | --- | --- | --- |
-| `RedHat.ActivationKey` | `RhsmActivationKey` | the key itself. **Local file only** |
-| `RedHat.ActivationKeyFile` | | a path on this laptop holding just the key |
-| `RedHat.OrganizationId` | `RhsmOrgId` | the organization the key belongs to |
-| `RedHat.Username` | `RhsmUsername` | alternative to a key |
-| `RedHat.Password` | `RhsmPassword` | **Local file only** |
-| `RedHat.AutoAttach` | | attach a subscription after registering. Default `true` |
-| `RedHat.PinRelease` | | pin dnf to the minor release in `OsVersion`. Default `true` |
+| `redHat.activationKey` | `rhsmActivationKey` | the key itself. **Local file only** |
+| `redHat.activationKeyFile` | | a path on this laptop holding just the key |
+| `redHat.organizationId` | `rhsmOrgId` | the organization the key belongs to |
+| `redHat.username` | `rhsmUsername` | alternative to a key |
+| `redHat.password` | `rhsmPassword` | **Local file only** |
+| `redHat.autoAttach` | | attach a subscription after registering. Default `true` |
+| `redHat.pinRelease` | | pin dnf to the minor release in `osVersion`. Default `true` |
 
 Get the key and the organization id from console.redhat.com, under Connector then
 Activation Keys. A no-cost Red Hat Developer subscription is enough.
@@ -374,7 +334,7 @@ sudo subscription-manager register --org <id> --activationkey <key> --auto-attac
 sudo vm-bootstrap --only 00-subscription --force
 ```
 
-**`PinRelease` exists because minor releases are the point.** Someone who asks
+**`pinRelease` exists because minor releases are the point.** Someone who asks
 for `9.7` usually needs 9.7, because it matches a server they have to reproduce.
 Without the pin, the full upgrade in `01-base.sh` would walk the machine onto
 whatever minor Red Hat has published since. Clear it inside the guest with

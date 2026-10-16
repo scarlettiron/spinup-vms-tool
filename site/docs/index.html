@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<!--
+  Vmynt
+  Licensed under the MIT License. See the LICENSE file in the project root.
+  Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+  Contributors:
+  Scarlett A. Scott (codescarlett)
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Getting started with Vmynt — projects, init and config</title>
+    <meta name="description" content="Get started with Vmynt: projects, the .vmynt folder, blueprints and config layers, your first project, how vmynt init works, and running several machines from one project." />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="creator" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="publisher" content="codescarlett" />
+    <meta name="theme-color" content="#0c0f0e" />
+    <link rel="author" href="https://codescarlett.com" />
+    <link rel="canonical" href="https://scarlettiron.github.io/vmynt/docs/" />
+
+    <link rel="icon" href="../theme/logo/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../theme/logo/favicon-32.png" />
+    <link rel="apple-touch-icon" href="../theme/logo/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vmynt" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://scarlettiron.github.io/vmynt/docs/" />
+    <meta property="og:title" content="Getting started with Vmynt — projects, init and config" />
+    <meta property="og:description" content="Get started with Vmynt: projects, the .vmynt folder, blueprints and config layers, your first project, how vmynt init works, and running several machines from one project." />
+    <meta property="og:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Getting started with Vmynt — projects, init and config" />
+    <meta name="twitter:description" content="Get started with Vmynt: projects, the .vmynt folder, blueprints and config layers, your first project, how vmynt init works, and running several machines from one project." />
+    <meta name="twitter:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta name="twitter:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Vmynt",
+            "item": "https://scarlettiron.github.io/vmynt/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Docs",
+            "item": "https://scarlettiron.github.io/vmynt/docs/"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Getting started with Vmynt",
+        "description": "Get started with Vmynt: projects, the .vmynt folder, blueprints and config layers, your first project, how vmynt init works, and running several machines from one project.",
+        "url": "https://scarlettiron.github.io/vmynt/docs/",
+        "inLanguage": "en",
+        "dateModified": "2026-10-13",
+        "image": "https://scarlettiron.github.io/vmynt/theme/logo/og-image.png",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        },
+        "publisher": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="../theme/site.css" />
+    <link rel="stylesheet" href="../theme/docs.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site">
+      <a class="brand" href="../" aria-label="Vmynt home">
+        <img src="../theme/logo/wordmark-header.png" alt="Vmynt" width="288" height="96" />
+      </a>
+      <nav class="links" aria-label="Main">
+        <a href="../docs/" aria-current="page">Docs</a>
+        <a class="hide-sm" href="../commands/">Commands</a>
+        <a href="../install/">Install</a>
+        <a class="hide-sm" href="../demo/">Demo</a>
+        <a class="hide-sm" href="../roadmap/">Roadmap</a>
+        <a href="https://github.com/scarlettiron/vmynt">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="layout" id="content">
+      <nav class="side" aria-label="On this page">
+        <div class="group">Start</div>
+        <a href="#overview">Overview</a>
+        <a href="#concepts">Concepts</a>
+        <a href="#first-project">Your first project</a>
+        <div class="group">Guides</div>
+        <a href="#init">How init works</a>
+        <a href="#create">What create does</a>
+        <a href="#ssh-access">Getting into the VM</a>
+        <a href="#custom-blueprint">Create my own blueprint</a>
+        <a href="#passwords">Users and passwords</a>
+        <a href="#scripting">Init without prompts</a>
+        <a href="#machines">Several machines</a>
+        <a href="#targets">Choosing a VM</a>
+        <a href="#folders">Where things live</a>
+        <a href="#migrating">Bringing an existing config</a>
+        <a href="#help">Getting help</a>
+        <div class="group">Reference</div>
+        <a href="../commands/">Commands</a>
+        <a href="../configuration/">Configuration</a>
+        <a href="../blueprints/">Blueprints</a>
+      </nav>
+
+      <main>
+        <section id="overview" aria-labelledby="docs-title">
+          <p class="crumbs"><a href="../">Vmynt</a> / Docs</p>
+          <h1 id="docs-title">Getting started</h1>
+          <p class="lede">Vmynt turns a YAML file in your project into a fully provisioned Linux dev VM,
+            and gives you one CLI to build, start, stop, open and list those VMs on Windows, Linux or
+            macOS.</p>
+          <p>The idea is simple: nobody hand-installs a dev box any more, and nobody ends up with a box
+            that's subtly different from everyone else's. The machine is described in config, the config
+            is committed, and the same command builds the same machine on every laptop.</p>
+          <p class="callout">Three commands get you from an empty folder to a desktop:
+            <code>vmynt init</code>, <code>vmynt create</code>, <code>vmynt open</code>. The same commands
+            work on Hyper-V, KVM through libvirt and Apple Virtualization.</p>
+        </section>
+
+        <section id="concepts" aria-labelledby="concepts-title">
+          <h2 id="concepts-title">Concepts</h2>
+          <h3>Project</h3>
+          <p>Any folder you ran <code>vmynt init</code> in, usually the root of a code repository. A
+            project describes one VM, or <a href="#machines">several</a>.</p>
+          <h3>The <code>.vmynt/</code> folder</h3>
+          <p>Where a project's config lives. Most of it is committed, so the whole team shares it:</p>
+          <div class="code">
+            <div class="bar"><span>your project</span></div>
+            <pre>.vmynt/
+  vm.config.yaml                <span class="tok-c"># shared settings, committed</span>
+  vm.config.local.yaml          <span class="tok-c"># your username and password hash, git-ignored</span>
+  vm.config.example.yaml        <span class="tok-c"># every option, documented</span>
+  vm.config.local.example.yaml
+  ssh_keys/                     <span class="tok-c"># *.pub files here become authorized keys</span>
+  blueprints/                   <span class="tok-c"># only if the project has its own blueprints</span>
+  .gitignore                    <span class="tok-c"># keeps the local file and private keys out of git</span></pre>
+          </div>
+          <p>Every command looks for <code>.vmynt/</code> in the current folder and then each parent, the
+            way git does, so <code>vmynt start</code> works from anywhere inside the project.</p>
+          <h3>Your <code>~/.vmynt</code> folder</h3>
+          <p>Per user, never committed: the downloaded OS installers, the VM disks, and a registry of every
+            project on this machine. It's in the same place on every operating system. Set
+            <code>VMYNT_HOME</code> to move it. <a href="#folders">More below</a>.</p>
+          <h3>Blueprint</h3>
+          <p>One operating system and how to install it unattended: where the installer comes from, the
+            answer file, and the provisioning steps. Your VM is "this blueprint, plus your config", and
+            nothing in the config is tied to one OS. See <a href="../blueprints/">Blueprints</a>.</p>
+          <h3>Config layers</h3>
+          <p>Settings are merged from several layers, each overriding the one before: Vmynt's defaults,
+            the blueprint's defaults, <code>vm.config.yaml</code>, <code>vm.config.local.yaml</code>, the
+            selected machine, and finally command-line options. Your local file only names what you want
+            to differ. See <a href="../configuration/#layers">Configuration</a>.</p>
+        </section>
+
+        <section id="first-project" aria-labelledby="first-title">
+          <h2 id="first-title">Your first project</h2>
+          <ol class="steps">
+            <li><strong>Install and check your machine</strong>
+              <a href="../install/">Install Vmynt</a>, then run <code>vmynt doctor</code>. It checks the
+              hypervisor, your permissions and the tools Vmynt uses, with a fix for anything missing.</li>
+            <li><strong>Set up the project</strong>
+              In your project folder, run <code>vmynt init</code> and answer the questions
+              (<a href="#init">what it asks</a>).</li>
+            <li><strong>Adjust the config</strong>
+              Open <code>.vmynt/vm.config.yaml</code>: CPUs, memory, the repositories to clone, the
+              database. Every option is explained in <code>vm.config.example.yaml</code> next to it.
+              <code>vmynt config --validate</code> checks your changes.</li>
+            <li><strong>Build it</strong>
+              <code>vmynt create</code> downloads and verifies the OS installer, installs it unattended,
+              and provisions the VM on first boot (<a href="#create">what it does</a>).
+              <code>vmynt create --render</code> shows what would be built without touching anything.</li>
+            <li><strong>Use it</strong>
+              <code>vmynt open</code> for the desktop, <code>vmynt ssh</code> for a shell,
+              <code>vmynt status --follow</code> to watch provisioning finish, and <code>vmynt list</code> for
+              every VM on your machine. <code>vmynt stop</code> gives the memory back.</li>
+            <li><strong>Commit the config</strong>
+              Commit <code>.vmynt/</code>. Its own <code>.gitignore</code> keeps your local file and
+              private keys out. A teammate runs <code>vmynt init --import</code> or just creates their own
+              <code>vm.config.local.yaml</code>, then <code>vmynt create</code>.</li>
+          </ol>
+        </section>
+
+        <section id="init" aria-labelledby="init-title">
+          <div class="cmd-head"><h2 id="init-title">How <code>vmynt init</code> works</h2> <span class="badge ok">available</span></div>
+          <p><code>vmynt init</code> runs in the current folder and creates <code>.vmynt/</code> there. It
+            asks, in order:</p>
+          <ol>
+            <li><strong>Project name.</strong> Defaults to the folder name. It becomes part of the VM name
+              and the hostname, so it is checked to be hostname-safe: letters, digits and hyphens.</li>
+            <li><strong>Blueprint.</strong> A list of the <a href="../blueprints/">built-in blueprints</a>,
+              any your project already has, and <strong>Create my own…</strong>
+              (<a href="#custom-blueprint">below</a>).</li>
+            <li><strong>Username, full name and password</strong>, only if needed: if you saved a default
+              user before, init offers to reuse it instead (<a href="#passwords">below</a>).</li>
+          </ol>
+          <p>Then it writes the config files, the <code>ssh_keys/</code> folder and a
+            <code>.gitignore</code>, and registers the project in <code>~/.vmynt/projects.yaml</code> so
+            <code>vmynt list</code> can find it.</p>
+          <p>It refuses to run if <code>.vmynt/</code> already exists. <code>vmynt init --force</code>
+            rewrites only the two example files, and never touches your <code>vm.config.local.yaml</code>.</p>
+          <p><a href="../demo/#init">Watch it in the demo</a>.</p>
+        </section>
+
+        <section id="create" aria-labelledby="create-title">
+          <div class="cmd-head"><h2 id="create-title">What <code>vmynt create</code> does</h2> <span class="badge ok">available</span></div>
+          <ol>
+            <li><strong>Plan.</strong> Loads every config layer and the blueprint, runs every check
+              <code>config --validate</code> runs, and prints what it will build.</li>
+            <li><strong>Check the name.</strong> Stops if a VM with that name exists (use
+              <code>--force</code> to rebuild) or if <code>&lt;hostname&gt;.local</code> already answers on
+              the network.</li>
+            <li><strong>Install media.</strong> Finds the current point release from the vendor's checksum
+              file, downloads it to <code>~/.vmynt/isos/</code> once, and verifies its SHA-256.</li>
+            <li><strong>Seed disk.</strong> Renders the unattended install (a kickstart for Rocky, RHEL and
+              Fedora, cloud-init for Ubuntu) with the whole provisioning tree inside, and writes a small
+              FAT32 disk labelled <code>OEMDRV</code> or <code>CIDATA</code>. No admin rights needed.</li>
+            <li><strong>Define the VM</strong> with the ISO and seed attached.</li>
+            <li><strong>Install.</strong> Boots it and waits for the installer to power it off, printing
+              progress every two minutes. Watch it with <code>vmynt open --console</code>.</li>
+            <li><strong>Finish.</strong> Ejects the ISO, detaches and deletes the seed (it held your
+              password hash), and attaches the data disks.</li>
+            <li><strong>Checkpoint and boot.</strong> Takes a <code>clean-install</code> snapshot of the finished
+              machine before its first boot, so a broken tool install can be rolled back without
+              reinstalling (<code>--no-checkpoint</code> skips it). Then it boots, and provisioning runs inside
+              the guest: <code>vmynt status --follow</code> shows it.</li>
+          </ol>
+          <p>A fresh build takes 15 to 40 minutes, most of it package downloads. A readable copy of
+            everything sent to the guest is kept in the VM's <code>build/</code> folder.</p>
+        </section>
+
+        <section id="ssh-access" aria-labelledby="ssh-access-title">
+          <h2 id="ssh-access-title">Getting into the VM</h2>
+          <p>Vmynt makes its own SSH key in <code>~/.vmynt/ssh/</code> the first time you build, and adds
+            it to every VM, so <code>vmynt ssh</code>, <code>vmynt exec</code>, <code>vmynt logs</code> and
+            <code>vmynt status</code> work with no setup. It keeps its own <code>known_hosts</code> there too,
+            so rebuilding a VM never triggers ssh's "host identification has changed" warning.</p>
+          <p>To log in from other tools, drop your own <code>.pub</code> file into
+            <code>.vmynt/ssh_keys/</code> before building. Each VM is published on your network as
+            <code>&lt;hostname&gt;.local</code>; when that name doesn't resolve, Vmynt uses the address the
+            hypervisor reports.</p>
+        </section>
+
+        <section id="custom-blueprint" aria-labelledby="custom-title">
+          <h2 id="custom-title">Create my own blueprint</h2>
+          <p>Choosing <strong>Create my own…</strong> in init asks for a blueprint to start from and a name
+            for yours, copies the built-in one into <code>.vmynt/blueprints/&lt;name&gt;/</code>, and sets
+            <code>blueprint: &lt;name&gt;</code> in your config. It's the same as running:</p>
+          <div class="code">
+            <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt blueprints new my-rocky --from redhat-rocky-workstation</pre>
+          </div>
+          <p>Edit any file in the copy. Files you don't include fall through to the shared provisioning
+            steps, so a custom blueprint can be as small as one changed file. See
+            <a href="../blueprints/#custom">custom blueprints</a>.</p>
+        </section>
+
+        <section id="passwords" aria-labelledby="passwords-title">
+          <h2 id="passwords-title">Users and passwords</h2>
+          <p>The password you type is hidden, asked twice, and hashed immediately with SHA-512 crypt.
+            Only the hash is written, to <code>vm.config.local.yaml</code> as <code>passwordHash</code>.
+            The plain password is never stored.</p>
+          <p>After the first project, init asks whether to save the user as your default in
+            <code>~/.vmynt/config.yaml</code>. Next time it offers to reuse that user instead of asking
+            again. Skip the questions entirely with <code>--no-user</code> and fill the local file in
+            later.</p>
+          <p>To make a hash yourself, for example to paste into a config by hand:</p>
+          <div class="code">
+            <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt hash</pre>
+          </div>
+          <p class="callout">A plain <code>password</code> key still works, for older configs. Vmynt
+            warns when one appears in the committed <code>vm.config.yaml</code>.</p>
+        </section>
+
+        <section id="scripting" aria-labelledby="scripting-title">
+          <h2 id="scripting-title">Init without prompts</h2>
+          <p>For scripts and CI, give every answer as an option and add <code>--yes</code>:</p>
+          <div class="code">
+            <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt init --name acme --blueprint ubuntu-desktop \
+  --username dev --password-hash '$6$...' --yes</pre>
+          </div>
+          <p>When there is no terminal to ask in, a missing answer is an error rather than a prompt.</p>
+        </section>
+
+        <section id="machines" aria-labelledby="machines-title">
+          <h2 id="machines-title">Several machines in one project</h2>
+          <p>A <code>machines:</code> block describes a small fleet. Each key is a VM, with its own
+            blueprint and any settings that differ. They share a network, so each can reach the others as
+            <code>&lt;hostname&gt;.local</code>.</p>
+          <div class="code">
+            <div class="bar"><span>.vmynt/vm.config.yaml</span><button class="copy" type="button">Copy</button></div>
+            <pre>machines:
+  ubuntu-gui:
+    blueprint: ubuntu-desktop
+    osVersion: <span class="tok-s">'24.04'</span>
+    cpus:      6
+    memoryGB:  12
+  ubuntu-middleware-db:
+    blueprint: ubuntu-server
+    osVersion: <span class="tok-s">'24.04'</span>
+    cpus:      4
+    memoryGB:  12
+    bootstrap:
+      installDesktop:   false
+      extraAptPackages: [postgresql-client, redis-tools]</pre>
+          </div>
+          <p>Inside such a project, <code>create</code>, <code>start</code>, <code>stop</code>,
+            <code>restart</code>, <code>remove</code> and <code>status</code> with no name act on all of its
+            machines. Commands that need one VM (<code>open</code>, <code>ssh</code>, <code>exec</code>,
+            <code>logs</code>, <code>snapshot</code>) ask you to name it: <code>vmynt open ubuntu-gui</code>.</p>
+        </section>
+
+        <section id="targets" aria-labelledby="targets-title">
+          <h2 id="targets-title">Choosing a VM</h2>
+          <ol>
+            <li><code>vmynt &lt;command&gt; &lt;name&gt;</code> acts on the VM, machine or hostname with that
+              name, from any folder: the current project first, then every VM Vmynt built, then every
+              registered project.</li>
+            <li><code>vmynt &lt;command&gt;</code> inside a project acts on that project's VM (or all its
+              machines).</li>
+            <li><code>--all</code> acts on every VM Vmynt built on this computer (on <code>create</code>,
+              every machine of the current project).</li>
+          </ol>
+          <p>Outside a project, with no name and no <code>--all</code>, the command stops and suggests
+            <code>vmynt list</code>.</p>
+        </section>
+
+        <section id="folders" aria-labelledby="folders-title">
+          <h2 id="folders-title">Where things live</h2>
+          <div class="code">
+            <div class="bar"><span>~/.vmynt</span></div>
+            <pre>~/.vmynt/                 <span class="tok-c"># VMYNT_HOME moves it</span>
+  config.yaml             <span class="tok-c"># your saved default user</span>
+  projects.yaml           <span class="tok-c"># the project registry that vmynt list reads</span>
+  isos/                   <span class="tok-c"># downloaded installers (iso.directory)</span>
+  ssh/                    <span class="tok-c"># Vmynt's own key pair and known_hosts</span>
+  blueprints/             <span class="tok-c"># downloaded blueprints (later releases)</span>
+  tmp/                    <span class="tok-c"># scratch files</span>
+  vms/&lt;name&gt;/
+    vm.json               <span class="tok-c"># the VM's record: project, user, hypervisor</span>
+    build/                <span class="tok-c"># what was sent to the guest, for review</span>
+    ...                   <span class="tok-c"># disks (Hyper-V, macOS) and backend state</span></pre>
+          </div>
+          <p>VM disks live here rather than in your project, so cloud sync and backups don't pick up
+            files of 25 GB or more; <code>vm.path</code> puts them somewhere else. On Linux the disks go
+            in a libvirt storage pool instead (<code>/var/lib/libvirt/images</code> by default), because
+            the system QEMU can't read home folders. <code>vmynt clean</code> deletes cached installers
+            and scratch files.</p>
+        </section>
+
+        <section id="migrating" aria-labelledby="migrating-title">
+          <h2 id="migrating-title">Bringing an existing config</h2>
+          <p>To reuse the config files from another project, or from an old checkout of the PowerShell
+            tool Vmynt replaced:</p>
+          <div class="code">
+            <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt init --import path/to/other/folder</pre>
+          </div>
+          <p>It copies <code>vm.config.yaml</code> and <code>vm.config.local.yaml</code> into
+            <code>.vmynt/</code>. Relative paths in the config (<code>copyFrom</code>,
+            <code>postStartFile</code>, token files) are relative to the project folder, the one holding
+            <code>.vmynt/</code>. The PowerShell tool was removed before 1.0 and is still in the
+            repository's git history.</p>
+        </section>
+
+        <section id="help" aria-labelledby="help-title">
+          <h2 id="help-title">Getting help</h2>
+          <ul>
+            <li><code>vmynt help</code>, <code>vmynt -h</code> or just <code>vmynt</code> lists every
+              command. <code>vmynt help &lt;command&gt;</code> or <code>vmynt &lt;command&gt; -h</code>
+              explains one.</li>
+            <li><code>vmynt doctor</code> checks your machine.</li>
+            <li><code>--verbose</code> adds detail and stack traces to errors, which helps in a bug report,
+              along with the output of <code>vmynt --version</code>.</li>
+            <li>Ask or report on <a href="https://github.com/scarlettiron/vmynt/issues">GitHub Issues</a>.</li>
+          </ul>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <div class="sitelinks">
+        <div>
+          <h2>Learn</h2>
+          <ul>
+            <li><a href="../docs/">Getting started</a></li>
+            <li><a href="../commands/">Command reference</a></li>
+            <li><a href="../configuration/">Configuration</a></li>
+            <li><a href="../blueprints/">Blueprints</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Get it</h2>
+          <ul>
+            <li><a href="../install/">Install</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/releases">Releases</a></li>
+            <li><a href="../demo/">Demo</a></li>
+            <li><a href="../roadmap/">Roadmap</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/scarlettiron/vmynt">Source on GitHub</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/issues">Issues</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/LICENSE">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+      <p>Vmynt is free, open source software under the MIT License. Hyper-V, Apple and other names
+        belong to their owners; Vmynt is not affiliated with them.</p>
+      <!--Author signature, always the last thing on the page.-->
+      <a class="made-by" href="https://codescarlett.com" rel="author">
+        <img src="../theme/logo/codescarlett-dragonfly.svg" alt="" width="46" height="31" />
+        <span><strong>Scarlett A. Scott</strong><span class="handle">codescarlett</span></span>
+      </a>
+    </footer>
+    <script src="../theme/site.js"></script>
+  </body>
+</html>

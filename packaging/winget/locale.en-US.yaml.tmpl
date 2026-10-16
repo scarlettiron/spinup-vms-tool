@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.10.0.schema.json
+PackageIdentifier: {{winget_id}}
+PackageVersion: {{version}}
+PackageLocale: en-US
+Publisher: {{winget_publisher}}
+PublisherUrl: https://github.com/{{repo_owner}}
+PublisherSupportUrl: {{repository}}/issues
+Author: {{authors}}
+PackageName: {{display_name}}
+PackageUrl: {{homepage}}
+License: {{license}}
+LicenseUrl: {{repository}}/blob/main/LICENSE
+Copyright: Copyright (c) 2026 {{winget_publisher}}
+ShortDescription: "{{homebrew_desc}}"
+Description: "{{description}} Describe a development VM in a YAML file and run one command to get a fully provisioned Linux desktop. On Windows it uses Hyper-V, which must be enabled."
+Moniker: {{name}}
+Tags:
+  - cli
+  - developer-tools
+  - devtools
+  - hyper-v
+  - virtual-machine
+  - vm
+ReleaseNotesUrl: {{release_page}}
+Documentations:
+  - DocumentLabel: Documentation
+    DocumentUrl: {{site_url}}
+ManifestType: defaultLocale
+ManifestVersion: 1.10.0

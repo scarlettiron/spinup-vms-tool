@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<!--
+  Vmynt
+  Licensed under the MIT License. See the LICENSE file in the project root.
+  Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+  Contributors:
+  Scarlett A. Scott (codescarlett)
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vmynt configuration — YAML files, layers and every setting</title>
+    <meta name="description" content="Configure a Vmynt VM: the shared and local YAML files, how config layers merge, every quick setting, machines, naming and .local addresses, and passwordHash." />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="creator" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="publisher" content="codescarlett" />
+    <meta name="theme-color" content="#0c0f0e" />
+    <link rel="author" href="https://codescarlett.com" />
+    <link rel="canonical" href="https://scarlettiron.github.io/vmynt/configuration/" />
+
+    <link rel="icon" href="../theme/logo/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../theme/logo/favicon-32.png" />
+    <link rel="apple-touch-icon" href="../theme/logo/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vmynt" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://scarlettiron.github.io/vmynt/configuration/" />
+    <meta property="og:title" content="Vmynt configuration — YAML files, layers and every setting" />
+    <meta property="og:description" content="Configure a Vmynt VM: the shared and local YAML files, how config layers merge, every quick setting, machines, naming and .local addresses, and passwordHash." />
+    <meta property="og:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vmynt configuration — YAML files, layers and every setting" />
+    <meta name="twitter:description" content="Configure a Vmynt VM: the shared and local YAML files, how config layers merge, every quick setting, machines, naming and .local addresses, and passwordHash." />
+    <meta name="twitter:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta name="twitter:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Vmynt",
+            "item": "https://scarlettiron.github.io/vmynt/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Configuration",
+            "item": "https://scarlettiron.github.io/vmynt/configuration/"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Vmynt configuration",
+        "description": "Configure a Vmynt VM: the shared and local YAML files, how config layers merge, every quick setting, machines, naming and .local addresses, and passwordHash.",
+        "url": "https://scarlettiron.github.io/vmynt/configuration/",
+        "inLanguage": "en",
+        "dateModified": "2026-10-13",
+        "image": "https://scarlettiron.github.io/vmynt/theme/logo/og-image.png",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        },
+        "publisher": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="../theme/site.css" />
+    <link rel="stylesheet" href="../theme/docs.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site">
+      <a class="brand" href="../" aria-label="Vmynt home">
+        <img src="../theme/logo/wordmark-header.png" alt="Vmynt" width="288" height="96" />
+      </a>
+      <nav class="links" aria-label="Main">
+        <a href="../docs/">Docs</a>
+        <a class="hide-sm" href="../commands/">Commands</a>
+        <a href="../install/">Install</a>
+        <a class="hide-sm" href="../demo/">Demo</a>
+        <a class="hide-sm" href="../roadmap/">Roadmap</a>
+        <a href="https://github.com/scarlettiron/vmynt">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="layout" id="content">
+      <nav class="side" aria-label="On this page">
+        <div class="group">Configuration</div>
+        <a href="#overview">Overview</a>
+        <a href="#files">The files</a>
+        <a href="#layers">How layers merge</a>
+        <a href="#quick">Quick settings</a>
+        <a href="#sections">Full sections</a>
+        <a href="#naming">Names and addresses</a>
+        <a href="#os">Choosing the OS</a>
+        <a href="#machines">Machines</a>
+        <a href="#new-keys">Host and hypervisor</a>
+        <a href="#passwords">password vs passwordHash</a>
+        <a href="#validate">Checking a config</a>
+      </nav>
+
+      <main>
+        <section id="overview" aria-labelledby="config-title">
+          <p class="crumbs"><a href="../">Vmynt</a> / Configuration</p>
+          <h1 id="config-title">Configuration</h1>
+          <p class="lede">A Vmynt VM is described by YAML in your project's <code>.vmynt/</code> folder:
+            a shared file the team commits, and a local file that's yours alone.</p>
+          <p><code>.vmynt/vm.config.example.yaml</code>, written by <code>vmynt init</code>,
+            explains every option in place.</p>
+        </section>
+
+        <section id="files" aria-labelledby="files-title">
+          <h2 id="files-title">The files</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">File</th><th scope="col">Holds</th><th scope="col">Committed?</th></tr></thead>
+              <tbody>
+                <tr><td><code>.vmynt/vm.config.yaml</code></td><td>The team standard: blueprint, resources, toolchain, repos, database</td><td>Yes</td></tr>
+                <tr><td><code>.vmynt/vm.config.local.yaml</code></td><td>Your own overrides: username, password hash, keys, tokens, paths</td><td>No, git-ignored</td></tr>
+                <tr><td><code>.vmynt/vm.config.example.yaml</code></td><td>Every option with its explanation</td><td>Yes</td></tr>
+                <tr><td><code>.vmynt/vm.config.local.example.yaml</code></td><td>Every option you might override locally, commented out</td><td>Yes</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Your local file only names what you want to differ; everything else falls through to
+            <code>vm.config.yaml</code>. Keep tokens and passwords in the local file only.</p>
+          <p>Sections are tagged <code>@user-editable</code> (change freely) or <code>@advanced</code> (the
+            default is right for almost everyone, and the comment says what changing it costs). Search for
+            the tag when you're looking for somewhere to change something.</p>
+        </section>
+
+        <section id="layers" aria-labelledby="layers-title">
+          <h2 id="layers-title">How layers merge</h2>
+          <p>Lowest to highest. Each layer overrides the ones above it:</p>
+          <ol>
+            <li>Vmynt's built-in defaults</li>
+            <li>the blueprint's defaults</li>
+            <li><code>.vmynt/vm.config.yaml</code></li>
+            <li>the blueprint's overrides (what the OS <em>is</em>: a headless blueprint turns the desktop off even if the shared file asks for one)</li>
+            <li><code>.vmynt/vm.config.local.yaml</code></li>
+            <li>the selected entry in <code>machines:</code>, if any</li>
+            <li>command-line options</li>
+          </ol>
+          <p><code>vmynt config</code> prints the result, so you can see exactly what a build would use.</p>
+          <p>Relative paths in the config (<code>copyFrom</code>, <code>hooks.postStartFile</code>,
+            <code>githubTokenFile</code>, <code>isoPath</code> and so on) are relative to the project
+            folder, the one holding <code>.vmynt/</code>. They may also start with <code>~/</code> or use
+            environment variables (<code>$HOME</code>, <code>%USERPROFILE%</code>).</p>
+        </section>
+
+        <section id="quick" aria-labelledby="quick-title">
+          <h2 id="quick-title">Quick settings</h2>
+          <p>The settings people actually change have flat names, so they can sit in one block at the top
+            of the file instead of nested several levels deep. Each is a shortcut for exactly one full
+            setting. Names are case-insensitive (<code>cpus</code>, <code>Cpus</code> and <code>CPUS</code>
+            are the same), and an unknown name is an error, not silently ignored.</p>
+          <div class="code">
+            <div class="bar"><span>.vmynt/vm.config.yaml</span><button class="copy" type="button">Copy</button></div>
+            <pre>blueprint:      ubuntu-desktop
+osVersion:      <span class="tok-s">'24.04'</span>
+projectName:    acme
+
+cpus:           6
+memoryGB:       12
+diskGB:         25
+
+timezone:       America/New_York
+repos:          [git@github.com:acme/web.git]
+reposRoot:      src
+
+dbEngine:       postgres
+dbVersion:      <span class="tok-s">'17'</span>
+dbServer:       true
+dbAdminer:      true</pre>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Quick setting</th><th scope="col">Is really</th><th scope="col">Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>`ProjectName`</code></td><td>(top level)</td><td>names the project; VM and hostname default to <code>&lt;ProjectName&gt;-&lt;Blueprint&gt;</code></td></tr>
+                <tr><td><code>`VmName`</code></td><td><code>VM.Name</code></td><td>overrides the derived VM name</td></tr>
+                <tr><td><code>`VmPath`</code></td><td><code>VM.Path</code></td><td>where the VM and its disks live</td></tr>
+                <tr><td><code>`Cpus`</code></td><td><code>VM.CpuCount</code></td><td></td></tr>
+                <tr><td><code>`MemoryGB`</code></td><td><code>VM.MemoryStartupGB</code></td><td></td></tr>
+                <tr><td><code>`MaxMemoryGB`</code></td><td><code>VM.MemoryMaximumGB</code></td><td>dynamic-memory ceiling</td></tr>
+                <tr><td><code>`DiskGB`</code></td><td><code>VM.DiskSizeGB</code></td><td>the <strong>system</strong> disk; others are <code>VM.DataDisks</code></td></tr>
+                <tr><td><code>`Switch`</code></td><td><code>VM.SwitchName</code></td><td></td></tr>
+                <tr><td><code>`EnhancedSession`</code></td><td><code>VM.EnhancedSession</code></td><td>clipboard + resizable desktop</td></tr>
+                <tr><td><code>`Hostname`</code></td><td><code>Guest.Hostname</code></td><td>overrides the derived hostname; also <code>&lt;hostname&gt;.local</code></td></tr>
+                <tr><td><code>`Username`</code></td><td><code>Guest.PrimaryUser.Username</code></td><td></td></tr>
+                <tr><td><code>`RealName`</code></td><td><code>Guest.PrimaryUser.RealName</code></td><td></td></tr>
+                <tr><td><code>`Password`</code></td><td><code>Guest.PrimaryUser.Password</code></td><td>hashed at build time</td></tr>
+                <tr><td><code>`PasswordHash`</code></td><td><code>Guest.PrimaryUser.PasswordHash</code></td><td>supply your own crypt hash</td></tr>
+                <tr><td><code>`Timezone`</code></td><td><code>Guest.Timezone</code></td><td></td></tr>
+                <tr><td><code>`Locale`</code></td><td><code>Guest.Locale</code></td><td></td></tr>
+                <tr><td><code>`KeyboardLayout`</code></td><td><code>Guest.KeyboardLayout</code></td><td></td></tr>
+                <tr><td><code>`GitName`</code></td><td><code>Git.UserName</code></td><td></td></tr>
+                <tr><td><code>`GitEmail`</code></td><td><code>Git.UserEmail</code></td><td></td></tr>
+                <tr><td><code>`GithubUsername`</code></td><td><code>GitHub.Username</code></td><td>your GitHub account name</td></tr>
+                <tr><td><code>`GithubToken`</code></td><td><code>GitHub.Cli.Token</code></td><td>put this in the local file only</td></tr>
+                <tr><td><code>`GithubTokenFile`</code></td><td><code>GitHub.Cli.TokenFile</code></td><td>a path on this laptop</td></tr>
+                <tr><td><code>`SshKeyMode`</code></td><td><code>GitHub.SshKey.Mode</code></td><td><code>auto</code> / <code>generate</code> / <code>copy</code> / <code>none</code></td></tr>
+                <tr><td><code>`Repos`</code></td><td><code>Repos.Items</code></td><td>when given a list</td></tr>
+                <tr><td><code>`ReposRoot`</code></td><td><code>Repos.Root</code></td><td></td></tr>
+                <tr><td><code>`OsVersion`</code></td><td><code>Iso.Release</code></td><td>the OS release; blank uses the blueprint's <code>Os.Version</code></td></tr>
+                <tr><td><code>`Release`</code></td><td><code>Iso.Release</code></td><td>synonym for <code>OsVersion</code></td></tr>
+                <tr><td><code>`UbuntuRelease`</code></td><td><code>Iso.Release</code></td><td>synonym, kept for older configs</td></tr>
+                <tr><td><code>`IsoPath`</code></td><td><code>Iso.Path</code></td><td>use a local .iso</td></tr>
+                <tr><td><code>`InstallDesktop`</code></td><td><code>Bootstrap.InstallDesktop</code></td><td></td></tr>
+                <tr><td><code>`InstallDocker`</code></td><td><code>Bootstrap.InstallDocker</code></td><td></td></tr>
+                <tr><td><code>`InstallDdev`</code></td><td><code>Bootstrap.InstallDdev</code></td><td></td></tr>
+                <tr><td><code>`InstallNode`</code></td><td><code>Bootstrap.InstallNode</code></td><td></td></tr>
+                <tr><td><code>`InstallPython`</code></td><td><code>Bootstrap.InstallPython</code></td><td></td></tr>
+                <tr><td><code>`InstallVSCode`</code></td><td><code>Bootstrap.InstallVSCode</code></td><td></td></tr>
+                <tr><td><code>`InstallChrome`</code></td><td><code>Bootstrap.InstallChrome</code></td><td>Google Chrome; skipped without a desktop</td></tr>
+                <tr><td><code>`InstallRemoteAccess`</code></td><td><code>Bootstrap.InstallRemoteAccess</code></td><td>VPN, RDP and SSH tunnelling clients; GUI parts need a desktop</td></tr>
+                <tr><td><code>`NodeVersion`</code></td><td><code>Bootstrap.NodeVersion</code></td><td>any nvm alias</td></tr>
+                <tr><td><code>`Resolution`</code></td><td><code>Bootstrap.DisplayResolution</code></td><td></td></tr>
+                <tr><td><code>`ExtraPackages`</code></td><td><code>Bootstrap.ExtraAptPackages</code></td><td></td></tr>
+                <tr><td><code>`DotfilesRepo`</code></td><td><code>Bootstrap.DotfilesRepo</code></td><td></td></tr>
+                <tr><td><code>`EnableMdns`</code></td><td><code>Bootstrap.EnableMdns</code></td><td></td></tr>
+                <tr><td><code>`RebootWhenDone`</code></td><td><code>Bootstrap.RebootWhenDone</code></td><td></td></tr>
+                <tr><td><code>`DbEngine`</code></td><td><code>Database.Engine</code></td><td><code>postgres</code> / <code>mysql</code>; blank installs neither</td></tr>
+                <tr><td><code>`DbVersion`</code></td><td><code>Database.Version</code></td><td>blank takes the engine default: postgres 17, mysql 8</td></tr>
+                <tr><td><code>`DbClient`</code></td><td><code>Database.InstallClient</code></td><td>the command line client only</td></tr>
+                <tr><td><code>`DbServer`</code></td><td><code>Database.InstallServer</code></td><td>the server too; implies the client</td></tr>
+                <tr><td><code>`DbPort`</code></td><td><code>Database.Port</code></td><td>0 takes the engine default: 5432 / 3306</td></tr>
+                <tr><td><code>`DbListenAddress`</code></td><td><code>Database.ListenAddress</code></td><td><code>localhost</code> or <code>*</code></td></tr>
+                <tr><td><code>`DbAdminPassword`</code></td><td><code>Database.AdminPassword</code></td><td>put this in the local file only</td></tr>
+                <tr><td><code>`DbDatabases`</code></td><td><code>Database.Databases</code></td><td>names to create on first boot</td></tr>
+                <tr><td><code>`DbAdminer`</code></td><td><code>Database.Adminer.Install</code></td><td>the single-file database browser; needs <code>DbEngine</code></td></tr>
+                <tr><td><code>`DbAdminerPort`</code></td><td><code>Database.Adminer.Port</code></td><td>where Adminer is served, default 3800</td></tr>
+                <tr><td><code>`CopyFrom`</code></td><td><code>Files.Source</code></td><td>a local directory whose contents are copied into the guest</td></tr>
+                <tr><td><code>`CopyTo`</code></td><td><code>Files.Destination</code></td><td>where they land; blank means the primary user's home</td></tr>
+                <tr><td><code>`PostStart`</code></td><td><code>Hooks.PostStart</code></td><td>commands to run once the VM is provisioned</td></tr>
+                <tr><td><code>`PostStartFile`</code></td><td><code>Hooks.PostStartFile</code></td><td>a local script, appended after those commands</td></tr>
+                <tr><td><code>`PostStartRunAs`</code></td><td><code>Hooks.RunAs</code></td><td><code>user</code> (default) or <code>root</code></td></tr>
+                <tr><td><code>`PostStartEveryBoot`</code></td><td><code>Hooks.RunAtEveryBoot</code></td><td>also run on every subsequent boot</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Anything without a shortcut is written out in full. Both styles can sit in the same file; within
+            one file the shortcut wins.</p>
+        </section>
+
+        <section id="sections" aria-labelledby="sections-title">
+          <h2 id="sections-title">Full sections</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Section</th><th scope="col">Covers</th></tr></thead>
+              <tbody>
+                <tr><td><code>vm</code></td><td>Name, path, CPUs, memory (dynamic, minimum, maximum), system and data disks, network switch, Secure Boot, nested virtualization, Enhanced Session, checkpoints</td></tr>
+                <tr><td><code>guest</code></td><td>Hostname, timezone, locale, keyboard, the primary user and extra users, authorized keys, the SSH server</td></tr>
+                <tr><td><code>bootstrap</code></td><td>What to install: desktop, Docker, ddev, Node and its version, Python, VS Code and extensions, Chrome, Postman, remote access tools, extra packages, dotfiles, mDNS, resolution</td></tr>
+                <tr><td><code>database</code></td><td>Postgres or MySQL, version, client and server, port, listen address, admin password, databases to create, Adminer</td></tr>
+                <tr><td><code>git</code>, <code>github</code></td><td>Commit identity, the GitHub SSH key (generate, copy or none), the <code>gh</code> CLI token, known hosts</td></tr>
+                <tr><td><code>repos</code></td><td>Repositories cloned on first boot, and where</td></tr>
+                <tr><td><code>files</code>, <code>hooks</code></td><td>A folder copied into the guest, and commands run once provisioning finishes (or at every boot)</td></tr>
+                <tr><td><code>iso</code></td><td>The OS release, or a local installer to use instead of downloading one</td></tr>
+                <tr><td><code>machines</code></td><td>Several VMs in one project (<a href="#machines">below</a>)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Every key, with its default and an explanation, is in <code>vm.config.example.yaml</code>.</p>
+        </section>
+
+        <section id="naming" aria-labelledby="naming-title">
+          <h2 id="naming-title">Names and addresses</h2>
+          <p><code>projectName</code> names the work rather than the OS. The VM name and the hostname both
+            default to <code>&lt;projectName&gt;-&lt;blueprint&gt;</code>:</p>
+          <div class="code">
+            <div class="bar"><span>yaml</span></div>
+            <pre>projectName: acme
+blueprint:   ubuntu-desktop
+<span class="tok-c"># VM name and hostname: acme-ubuntu-desktop</span>
+<span class="tok-c"># address:              http://acme-ubuntu-desktop.local</span></pre>
+          </div>
+          <p>With <code>enableMdns</code> on (the default), the VM announces that name on the network, so it
+            is also the address you browse to, with no hosts file and no static IP. An explicit
+            <code>vmName</code> or <code>hostname</code> wins, then a <code>machines</code> key, then the
+            derived name. Names are checked as DNS labels (letters, digits and hyphens, at most 63
+            characters) before anything is built, and a build refuses a name that is already taken on the
+            network.</p>
+        </section>
+
+        <section id="os" aria-labelledby="os-title">
+          <h2 id="os-title">Choosing the OS</h2>
+          <p><code>blueprint</code> picks the OS and <code>osVersion</code> its release. The version must
+            match the blueprint, and the build refuses a mismatch rather than downloading a release that
+            doesn't exist. Leave <code>osVersion</code> blank to use the blueprint's own. Quote Ubuntu
+            versions (<code>'24.04'</code>), or YAML reads them as numbers. See
+            <a href="../blueprints/">Blueprints</a>.</p>
+        </section>
+
+        <section id="machines" aria-labelledby="machines-title">
+          <h2 id="machines-title">Machines</h2>
+          <p>Each key under <code>machines:</code> is one VM, named after the key unless it sets its own name.
+            Quick settings work inside it. Every machine shares one network, so they reach each other as
+            <code>&lt;hostname&gt;.local</code>.</p>
+          <div class="code">
+            <div class="bar"><span>.vmynt/vm.config.yaml</span><button class="copy" type="button">Copy</button></div>
+            <pre>machines:
+  web:
+    blueprint: ubuntu-desktop
+    osVersion: <span class="tok-s">'24.04'</span>
+  db:
+    blueprint: ubuntu-server
+    osVersion: <span class="tok-s">'24.04'</span>
+    dbEngine:  postgres
+    dbServer:  true</pre>
+          </div>
+          <p>Each machine names its own blueprint and version, because a version at the top of the file only
+            means something to one OS.</p>
+        </section>
+
+        <section id="new-keys" aria-labelledby="new-title">
+          <h2 id="new-title">Host and hypervisor</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Key</th><th scope="col">Default</th><th scope="col">Means</th></tr></thead>
+              <tbody>
+                <tr><td><code>hypervisor</code></td><td><code>auto</code></td><td>Which backend runs the VM: <code>hyperv</code> on Windows, <code>libvirt</code> on Linux, <code>vfkit</code> on macOS. Only the computer's own is accepted in 1.0.</td></tr>
+                <tr><td><code>arch</code></td><td><code>auto</code></td><td>The guest's CPU architecture, <code>x86_64</code> or <code>arm64</code>, the same as the host's by default. Must match the host on macOS.</td></tr>
+                <tr><td><code>vm.path</code></td><td><code>~/.vmynt/vms</code></td><td>Where each VM's folder lives: disks on Windows and macOS, build files and state everywhere.</td></tr>
+                <tr><td><code>vm.network</code></td><td><code>default</code></td><td>Linux: the libvirt network the VM joins.</td></tr>
+                <tr><td><code>vm.storagePool</code></td><td><code>default</code></td><td>Linux: the libvirt storage pool for the disks, seed and installer (<code>/var/lib/libvirt/images</code>, created if missing). The system QEMU can't read home folders, so disks don't go in <code>vm.path</code> on Linux.</td></tr>
+                <tr><td><code>iso.directory</code></td><td><code>~/.vmynt/isos</code></td><td>Where downloaded installers are cached.</td></tr>
+                <tr><td><code>timezone</code></td><td>this computer's</td><td>Read from the computer on Linux and macOS; <code>UTC</code> on Windows unless set.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="passwords" aria-labelledby="passwords-title">
+          <h2 id="passwords-title"><code>password</code> vs <code>passwordHash</code></h2>
+          <p><code>vmynt init</code> only ever writes <code>passwordHash</code>, a SHA-512 crypt hash, into
+            the git-ignored local file. Make one yourself with <code>vmynt hash</code>.</p>
+          <p>A plain <code>password</code> is still accepted, for older configs, and is hashed at build time.
+            Vmynt warns when it finds one in the committed <code>vm.config.yaml</code>, because anyone who
+            can read the repository can read it.</p>
+          <p>During a build, the hash travels to the VM on a small seed disk. Once the OS is installed,
+            Vmynt detaches the seed disk and deletes it, and the provisioning steps shred any secrets
+            inside the guest once they're done with them.</p>
+        </section>
+
+        <section id="validate" aria-labelledby="validate-title">
+          <h2 id="validate-title">Checking a config</h2>
+          <div class="code">
+            <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt config --validate     <span class="tok-c"># every check create runs</span>
+vmynt config                <span class="tok-c"># print the merged result</span>
+vmynt config --json         <span class="tok-c"># the same, for scripts</span></pre>
+          </div>
+          <p>Validation runs every check <code>vmynt create</code> runs: unknown keys (with "did you mean"
+            suggestions), ranges, the blueprint and OS version, data disks, the database, files to copy,
+            hooks, repositories and SSH keys. Warnings are all shown together; a missing user is a
+            warning here and an error for <code>create</code>. <code>vmynt create --render</code> goes one
+            step further and writes the exact files the installer will receive.</p>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <div class="sitelinks">
+        <div>
+          <h2>Learn</h2>
+          <ul>
+            <li><a href="../docs/">Getting started</a></li>
+            <li><a href="../commands/">Command reference</a></li>
+            <li><a href="../configuration/">Configuration</a></li>
+            <li><a href="../blueprints/">Blueprints</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Get it</h2>
+          <ul>
+            <li><a href="../install/">Install</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/releases">Releases</a></li>
+            <li><a href="../demo/">Demo</a></li>
+            <li><a href="../roadmap/">Roadmap</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/scarlettiron/vmynt">Source on GitHub</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/issues">Issues</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/LICENSE">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+      <p>Vmynt is free, open source software under the MIT License. Hyper-V, Apple and other names
+        belong to their owners; Vmynt is not affiliated with them.</p>
+      <!--Author signature, always the last thing on the page.-->
+      <a class="made-by" href="https://codescarlett.com" rel="author">
+        <img src="../theme/logo/codescarlett-dragonfly.svg" alt="" width="46" height="31" />
+        <span><strong>Scarlett A. Scott</strong><span class="handle">codescarlett</span></span>
+      </a>
+    </footer>
+    <script src="../theme/site.js"></script>
+  </body>
+</html>

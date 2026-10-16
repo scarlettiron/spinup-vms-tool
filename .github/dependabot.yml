@@ -1,0 +1,42 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+#Dependabot opens pull requests when a dependency has a new version. Updates
+#are grouped into one pull request per ecosystem per week, so they arrive as a
+#single thing to review rather than a dozen. CI runs on each one like any
+#other pull request.
+version: 2
+updates:
+  #Rust crates in Cargo.toml / Cargo.lock.
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: deps
+    groups:
+      #Patch and minor updates together; a major update gets its own pull
+      #request, because it is the kind that needs code changes.
+      cargo-minor:
+        update-types: [minor, patch]
+    labels: [dependencies]
+
+  #The actions used by the workflows in .github/workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]
+    labels: [dependencies]

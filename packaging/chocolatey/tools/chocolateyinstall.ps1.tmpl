@@ -1,0 +1,36 @@
+#{{display_name}}
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+#Chocolatey runs this when someone installs the package. It downloads the zip
+#from the GitHub Release, checks its sha256, and unzips it into this folder.
+#Chocolatey then puts a shim for {{name}}.exe on the PATH by itself, so there is
+#nothing else to do here. Uninstalling removes this folder and the shim.
+
+$ErrorActionPreference = 'Stop'
+$toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+
+#Windows on ARM gets the native ARM64 build. Everything else gets x64.
+$isArm64 = $env:PROCESSOR_ARCHITECTURE -eq 'ARM64' -or $env:PROCESSOR_ARCHITEW6432 -eq 'ARM64'
+
+if ($isArm64) {
+    $url = '{{url_aarch64_pc_windows_msvc}}'
+    $checksum = '{{sha256_aarch64_pc_windows_msvc}}'
+}
+else {
+    $url = '{{url_x86_64_pc_windows_msvc}}'
+    $checksum = '{{sha256_x86_64_pc_windows_msvc}}'
+}
+
+$packageArgs = @{
+    packageName    = $env:ChocolateyPackageName
+    unzipLocation  = $toolsDir
+    url64bit       = $url
+    checksum64     = $checksum
+    checksumType64 = 'sha256'
+}
+
+Install-ChocolateyZipPackage @packageArgs

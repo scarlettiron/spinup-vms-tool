@@ -1,0 +1,58 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: Blueprint request
+description: Ask for a new operating system or flavour to be supported.
+labels: [blueprint]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A blueprint is one operating system and how to install it unattended. Before asking, note that you can
+        make your own today with `vmynt blueprints new <name> --from <existing>`. If you get one working,
+        a pull request is the fastest way to get it shipped (see CONTRIBUTING.md, "Adding a blueprint").
+
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution and version
+      placeholder: e.g. Debian 13 with KDE, AlmaLinux 10, openSUSE Tumbleweed
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why this one
+      description: What do you develop against that the existing blueprints don't match?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: arch
+    attributes:
+      label: Architectures needed
+      options:
+        - label: x86_64
+        - label: arm64 (needed on Apple Silicon Macs)
+
+  - type: textarea
+    id: install
+    attributes:
+      label: Unattended install
+      description: |
+        Does the distribution publish an installer ISO with checksums, and does it support kickstart, cloud-init,
+        preseed, or autoinstall? Links help a lot.
+
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to build it?
+      options:
+        - "No"
+        - Yes, with some guidance
+        - Yes, I can open a pull request

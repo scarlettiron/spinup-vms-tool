@@ -1,0 +1,97 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+#The built-in defaults: the lowest config layer, under the blueprint's own
+#defaults and every config file. A project's vm.config.yaml only has to say
+#what differs from these. vm.config.example.yaml documents every key.
+#
+#Two defaults depend on the computer and are filled in by the program instead:
+#  VM.Path        ~/.vmynt/vms
+#  Iso.Directory  ~/.vmynt/isos
+#  Guest.Timezone this computer's time zone, or UTC
+
+Hypervisor: auto
+Arch: auto
+
+VM:
+  CpuCount: 4
+  MemoryStartupGB: 8
+  MemoryMinimumGB: 2
+  MemoryMaximumGB: 16
+  DynamicMemory: true
+  DiskSizeGB: 40
+  SwitchName: Default Switch
+  SecureBoot: true
+  NestedVirtualization: false
+  EnhancedSession: true
+  CheckpointAfterInstall: true
+  AutomaticCheckpoints: false
+  DataDisks: []
+
+Guest:
+  Locale: en_US.UTF-8
+  KeyboardLayout: us
+  PrimaryUser:
+    AuthorizedKeys: []
+  AdditionalUsers: []
+  Ssh:
+    InstallServer: true
+    AllowPasswordAuth: true
+
+Bootstrap:
+  EnableMdns: true
+  InstallDesktop: true
+  DisplayResolution: 1920x1080
+  InstallDocker: true
+  InstallDdev: true
+  InstallNode: true
+  NodeVersion: lts/*
+  NvmVersion: v0.40.1
+  InstallPython: true
+  PythonVersion: '3.14'
+  InstallVSCode: true
+  InstallChrome: true
+  InstallPostman: false
+  InstallRemoteAccess: true
+  VSCodeExtensions: []
+  ExtraVSCodeExtensions: []
+  ExtraAptPackages: []
+  DotfilesRepo: ''
+  RebootWhenDone: true
+
+Database:
+  ListenAddress: localhost
+  Databases: []
+  Adminer:
+    Install: false
+    Port: 3800
+    Version: 4.8.1
+
+Hooks:
+  RunAs: user
+  RunAtEveryBoot: false
+
+Git:
+  DefaultBranch: main
+  PullRebase: true
+
+GitHub:
+  SshKey:
+    Mode: auto
+    Type: ed25519
+  Cli:
+    Install: true
+    Protocol: ssh
+  UploadSshKey: true
+  KnownHosts: true
+  ShredSecretsAfterUse: true
+
+Repos:
+  Root: src
+
+Iso:
+  VerifyChecksum: true

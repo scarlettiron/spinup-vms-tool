@@ -14,7 +14,7 @@ case "$PKG_MANAGER" in
         codename="$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")"
         add_apt_repo docker \
             'https://download.docker.com/linux/ubuntu/gpg' \
-            "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${codename} stable"
+            "deb [arch=${GUEST_DEB_ARCH} signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu ${codename} stable"
         ;;
     dnf|yum)
         # Docker builds per distro, not per package manager: Fedora and RHEL get

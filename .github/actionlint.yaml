@@ -1,0 +1,13 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+#Settings for actionlint, which CI runs over .github/workflows.
+self-hosted-runner:
+  #GitHub's hosted Windows on Arm runner. It is a real hosted label, newer
+  #than actionlint's built-in list.
+  labels:
+    - windows-11-arm

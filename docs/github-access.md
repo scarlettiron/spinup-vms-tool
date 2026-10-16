@@ -1,20 +1,30 @@
 # GitHub access
 
 Everything here is optional - a VM builds and works with all of it turned off.
-Configured in the `Git` and `GitHub` blocks of `vm.config.yaml`, and applied by
+Configured in the `git` and `github` blocks of `.vmynt/vm.config.yaml` (or the
+`gitName`, `gitEmail` and `githubUsername` quick settings), and applied by
 bootstrap steps [52-git.sh](../blueprints/bootstrap/52-git.sh) and
 [55-github.sh](../blueprints/bootstrap/55-github.sh).
 
 ## The drop directory
 
-Copy your key files into `ssh_keys/` and there is nothing to configure:
+Copy your key files into the project's `.vmynt/ssh_keys/` and there is nothing to
+configure:
 
-```powershell
-Copy-Item $HOME\.ssh\id_ed25519     .\ssh_keys\
-Copy-Item $HOME\.ssh\id_ed25519.pub .\ssh_keys\
+```sh
+cp ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub .vmynt/ssh_keys/
 ```
 
-`Mode` defaults to `auto`: a private key in there becomes the guest's identity,
+or on Windows:
+
+```powershell
+Copy-Item $HOME\.ssh\id_ed25519, $HOME\.ssh\id_ed25519.pub .\.vmynt\ssh_keys\
+```
+
+Nothing in that folder except its README is committed; `vmynt init` writes a
+`.gitignore` that makes sure of it.
+
+`sshKey.mode` defaults to `auto`: a private key in there becomes the guest's identity,
 and if the directory has none the guest generates its own. A standalone `.pub`
 (no private half) goes to the guest's `authorized_keys` instead, so SSH from this
 laptop needs no password.
@@ -26,18 +36,19 @@ laptop needs no password.
 | a private key + its `.pub` | same, and the `.pub` is used as-is |
 | a private key with no `.pub` | `.pub` derived with `ssh-keygen -y` |
 | a standalone `.pub` | added to the guest's `authorized_keys` |
-| several private keys | set `GitHub.SshKey.Name`, or name one `id_ed25519` |
+| several private keys | set `github.sshKey.name`, or name one `id_ed25519` |
 
-Full notes, including PuTTY keys and passphrases:
-[../ssh_keys/README.md](../ssh_keys/README.md).
+Vmynt also adds its own public key (`~/.vmynt/ssh/id_ed25519.pub`) to every
+guest's `authorized_keys`, so `vmynt ssh`, `exec`, `logs` and `status` work
+without any of this.
 
 ## Your GitHub username
 
 Optional, and nothing depends on it: `gh` gets the account from the token, and an
 SSH key does not need a username at all. It earns its place in two smaller ways.
 
-```powershell
-GithubUsername = 'scottscarlett'      # or GitHub.Username long-hand
+```yaml
+githubUsername: adalovelace     # or github.username long-hand
 ```
 
 - **`git config --global github.user`** in the guest, which `hub` and some editor
@@ -47,14 +58,14 @@ GithubUsername = 'scottscarlett'      # or GitHub.Username long-hand
   `ssh -T git@github.com` and compares the greeting to the configured name:
 
   ```
-  [12:04:31] github ssh auth ok as 'scottscarlett'
+  [12:04:31] github ssh auth ok as 'adalovelace'
   ```
 
   If they differ you get a warning, which is the useful case: it means the key in
-  `ssh_keys/` belongs to a different account than you thought.
+  `.vmynt/ssh_keys/` belongs to a different account than you thought.
 
   ```
-  ! GitHub greeted 'olduser' but GitHub.Username says 'scottscarlett'
+  ! GitHub greeted 'olduser' but GitHub.Username says 'adalovelace'
   !   the key belongs to a different account than you configured
   ```
 
@@ -66,18 +77,17 @@ rather than treated as a failure.
 
 ## Keeping the private key off the seed disk
 
-Leave `ssh_keys/` empty (or set `Mode = 'generate'`) and put your identity in
+Leave `.vmynt/ssh_keys/` empty (or set `mode: generate`) and put your identity in
 config instead:
 
-```powershell
-Git = @{
-    UserName  = 'Scott Scarlett'
-    UserEmail = 'scott@example.com'
-}
-GitHub = @{
-    SshKey = @{ Mode = 'generate' }
-    Cli    = @{ Install = $true }
-}
+```yaml
+gitName:  Ada Lovelace
+gitEmail: ada@example.com
+github:
+  sshKey:
+    mode: generate
+  cli:
+    install: true
 ```
 
 The guest generates its own ed25519 keypair on first boot. **No private key is
@@ -96,67 +106,55 @@ Supply a personal access token with the `admin:public_key` scope and the key is
 uploaded automatically, so a fresh VM can clone private repos with no manual
 step at all:
 
-```powershell
-GitHub = @{
-    SshKey       = @{ Mode = 'generate' }
-    Cli          = @{ Install = $true; TokenFile = 'C:\Users\you\.secrets\gh-token' }
-    UploadSshKey = $true
-}
+```yaml
+github:
+  sshKey:
+    mode: generate
+  cli:
+    install:   true
+    tokenFile: ~/.secrets/gh-token
+  uploadSshKey: true
 ```
 
-`TokenFile` reads the token from a path on your laptop **at build time**, which
-keeps it out of the repo entirely. `Cli.Token` takes one inline instead - only
-put that in `vm.config.local.yaml`, which is git-ignored.
+`tokenFile` reads the token from a path on your laptop **at build time**, which
+keeps it out of the repo entirely. `~/` and `%VAR%`/`$VAR` work in it, and a
+relative path is relative to the project folder. `cli.token` takes one inline
+instead - only put that in `vm.config.local.yaml`, which is git-ignored.
 
 The token is also used for `gh auth login`, so `gh` is signed in when you first
 open a terminal. `gh auth setup-git` runs too, so HTTPS remotes work.
 
 ## Bringing your own key
 
-Drop it into `ssh_keys/` as above, or point at a path if you would rather not
-copy it into the repo directory at all:
+Drop it into `.vmynt/ssh_keys/` as above, or point at a path if you would rather
+not copy it into the project at all:
 
-```powershell
-GitHub = @{
-    SshKey = @{
-        Mode           = 'copy'
-        PrivateKeyPath = 'C:\Users\you\.ssh\id_ed25519'
-        # PublicKeyPath defaults to <PrivateKeyPath>.pub
-    }
-}
+```yaml
+github:
+  sshKey:
+    mode:           copy
+    privateKeyPath: ~/.ssh/id_ed25519
+    # publicKeyPath defaults to <privateKeyPath>.pub
 ```
 
-`Mode = 'copy'` differs from `'auto'` only in failing loudly when no key can be
+`mode: copy` differs from `auto` only in failing loudly when no key can be
 found, rather than quietly generating one. Either route is the right choice if
 you want one key across several VMs. Be aware of the trade-off, which the build
 warns about:
 
 ```
-! embedding a secret in the seed disk: private SSH key from C:\Users\you\.ssh\id_ed25519
-! the seed disk holds it in plain text until bootstrap shreds it
+warning: embedding a secret in the seed disk: private SSH key from /home/ada/.ssh/id_ed25519
 ```
 
-The key travels on the CIDATA volume in plain text. Step 55 installs it to
-`~/.ssh/`, then `shred`s the staged copy (`GitHub.ShredSecretsAfterUse`). What
-remains is cloud-init's own record of the payload - the seed VHDX itself, and
-`/var/lib/cloud/instance/user-data.txt` in the guest (root-readable only).
+The key travels on the seed disk in plain text. Step 55 installs it to
+`~/.ssh/`, then `shred`s the staged copy (`github.shredSecretsAfterUse`).
+Vmynt detaches the seed disk and deletes its file once the install has finished,
+so it does not linger on the host. What remains is the installer's own record of
+the payload in the guest, such as `/var/lib/cloud/instance/user-data.txt` on
+Ubuntu (root-readable only), and the review copy `vmynt create` keeps in the VM's
+`build/` folder on the host (private permissions).
 
-To clear the last of it after bootstrap has finished:
-
-```powershell
-Stop-VM fedora-dev
-$seed = Get-VMHardDiskDrive -VMName fedora-dev | Where-Object Path -Like '*-seed.vhdx'
-Remove-VMHardDiskDrive -VMHardDiskDrive $seed
-Remove-Item $seed.Path
-Start-VM fedora-dev
-```
-
-The seed disk is only needed during install and first boot, so the VM runs fine
-without it. Note that removing it also removes the plain copy of the bootstrap
-tree from the CIDATA volume; the copy in `/usr/local/lib/vm-bootstrap` stays, so
-`sudo vm-bootstrap` still works.
-
-If any of that is uncomfortable, use `Mode = 'generate'` - it has none of these
+If any of that is uncomfortable, use `mode: generate` - it has none of these
 properties because there is no secret to move.
 
 ## Passphrases
@@ -177,11 +175,14 @@ the first of those. The build warns in both cases.
   `IdentitiesOnly yes`, so ssh offers the right key even when the agent holds
   several.
 - **`known_hosts`** is seeded with `ssh-keyscan github.com`, so the first clone
-  does not stop to ask you to confirm a host key. Set `KnownHosts = $false` to
-  skip it.
-- **Git config** from the `Git` block, including arbitrary pairs:
-  ```powershell
-  Git = @{ Extra = @{ 'push.autoSetupRemote' = 'true'; 'rerere.enabled' = 'true' } }
+  does not stop to ask you to confirm a host key. Set `github.knownHosts: false`
+  to skip it.
+- **Git config** from the `git` block, including arbitrary pairs:
+  ```yaml
+  git:
+    extra:
+      push.autoSetupRemote: 'true'
+      rerere.enabled: 'true'
   ```
 
 ## Verifying, in the guest

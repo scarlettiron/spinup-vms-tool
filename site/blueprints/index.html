@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<!--
+  Vmynt
+  Licensed under the MIT License. See the LICENSE file in the project root.
+  Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+  Contributors:
+  Scarlett A. Scott (codescarlett)
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vmynt blueprints — Rocky, RHEL, Fedora and Ubuntu dev VMs</title>
+    <meta name="description" content="Vmynt's built-in Linux blueprints: Rocky Linux, RHEL, Fedora, Ubuntu Desktop and Ubuntu Server. How blueprints are found, making your own, the provisioning steps, and arm64." />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="creator" content="Scarlett A. Scott (codescarlett)" />
+    <meta name="publisher" content="codescarlett" />
+    <meta name="theme-color" content="#0c0f0e" />
+    <link rel="author" href="https://codescarlett.com" />
+    <link rel="canonical" href="https://scarlettiron.github.io/vmynt/blueprints/" />
+
+    <link rel="icon" href="../theme/logo/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../theme/logo/favicon-32.png" />
+    <link rel="apple-touch-icon" href="../theme/logo/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Vmynt" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://scarlettiron.github.io/vmynt/blueprints/" />
+    <meta property="og:title" content="Vmynt blueprints — Rocky, RHEL, Fedora and Ubuntu dev VMs" />
+    <meta property="og:description" content="Vmynt's built-in Linux blueprints: Rocky Linux, RHEL, Fedora, Ubuntu Desktop and Ubuntu Server. How blueprints are found, making your own, the provisioning steps, and arm64." />
+    <meta property="og:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Vmynt blueprints — Rocky, RHEL, Fedora and Ubuntu dev VMs" />
+    <meta name="twitter:description" content="Vmynt's built-in Linux blueprints: Rocky Linux, RHEL, Fedora, Ubuntu Desktop and Ubuntu Server. How blueprints are found, making your own, the provisioning steps, and arm64." />
+    <meta name="twitter:image" content="https://scarlettiron.github.io/vmynt/theme/logo/og-image.png" />
+    <meta name="twitter:image:alt" content="Vmynt: reproducible dev VMs from one YAML file" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Vmynt",
+            "item": "https://scarlettiron.github.io/vmynt/"
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "Blueprints",
+            "item": "https://scarlettiron.github.io/vmynt/blueprints/"
+          }
+        ]
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Vmynt blueprints",
+        "description": "Vmynt's built-in Linux blueprints: Rocky Linux, RHEL, Fedora, Ubuntu Desktop and Ubuntu Server. How blueprints are found, making your own, the provisioning steps, and arm64.",
+        "url": "https://scarlettiron.github.io/vmynt/blueprints/",
+        "inLanguage": "en",
+        "dateModified": "2026-10-13",
+        "image": "https://scarlettiron.github.io/vmynt/theme/logo/og-image.png",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "Vmynt",
+          "url": "https://scarlettiron.github.io/vmynt/"
+        },
+        "author": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        },
+        "publisher": {
+          "@type": "Person",
+          "name": "Scarlett A. Scott",
+          "alternateName": [
+            "codescarlett",
+            "scarlettiron"
+          ],
+          "url": "https://codescarlett.com",
+          "sameAs": [
+            "https://github.com/scarlettiron",
+            "https://www.linkedin.com/in/scarlett-scott-9980a5bb"
+          ]
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="../theme/site.css" />
+    <link rel="stylesheet" href="../theme/docs.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header class="site">
+      <a class="brand" href="../" aria-label="Vmynt home">
+        <img src="../theme/logo/wordmark-header.png" alt="Vmynt" width="288" height="96" />
+      </a>
+      <nav class="links" aria-label="Main">
+        <a href="../docs/">Docs</a>
+        <a class="hide-sm" href="../commands/">Commands</a>
+        <a href="../install/">Install</a>
+        <a class="hide-sm" href="../demo/">Demo</a>
+        <a class="hide-sm" href="../roadmap/">Roadmap</a>
+        <a href="https://github.com/scarlettiron/vmynt">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="layout" id="content">
+      <nav class="side" aria-label="On this page">
+        <div class="group">Blueprints</div>
+        <a href="#overview">Overview</a>
+        <a href="#built-in">Built-in blueprints</a>
+        <a href="#anatomy">What's in a blueprint</a>
+        <a href="#steps">Provisioning steps</a>
+        <a href="#resolution">How a blueprint is found</a>
+        <a href="#custom">Your own blueprints</a>
+        <a href="#arm64">arm64 and Apple Silicon</a>
+        <a href="#future">Downloadable blueprints</a>
+      </nav>
+
+      <main>
+        <section id="overview" aria-labelledby="bp-title">
+          <p class="crumbs"><a href="../">Vmynt</a> / Blueprints</p>
+          <h1 id="bp-title">Blueprints</h1>
+          <p class="lede">A blueprint is one operating system and how to install it unattended. The VM you
+            get is "this blueprint, plus your config", and the same config on a different blueprint gives
+            you the same dev environment on a different OS.</p>
+          <p>Every guest is Linux. List what's available from where you are with
+            <code>vmynt blueprints</code>.</p>
+        </section>
+
+        <section id="built-in" aria-labelledby="builtin-title">
+          <h2 id="builtin-title">Built-in blueprints</h2>
+          <p>The name says the family first, then the distribution: <code>redhat-rocky</code> is compatible
+            with Red Hat and installs Rocky.</p>
+          <div class="cards">
+          <div class="card" id="bp-redhat-rocky-workstation">
+            <h3><code>redhat-rocky-workstation</code></h3>
+            <p><strong>Rocky Linux 9 + GNOME.</strong> Rocky Linux with the GNOME Workstation environment. A binary-compatible rebuild of Red Hat Enterprise Linux with public installers and repositories, so it downloads and verifies like anything else. The machine to use if you deploy to RHEL servers. Supported to 2032. <span class="badge">Kickstart</span></p>
+          </div>
+          <div class="card" id="bp-redhat-rhel-workstation">
+            <h3><code>redhat-rhel-workstation</code></h3>
+            <p><strong>Red Hat Enterprise Linux + GNOME.</strong> The real RHEL. Its installers are behind a Red Hat account, so you supply your own ISO, and the VM registers with your subscription (an activation key or a username and password) before it can install packages. <span class="badge">Kickstart</span></p>
+          </div>
+          <div class="card" id="bp-fedora-workstation">
+            <h3><code>fedora-workstation</code></h3>
+            <p><strong>Fedora + GNOME.</strong> Fedora Workstation: the newest GNOME and toolchain. No long-term support; each release lasts about 13 months. <span class="badge">Kickstart</span></p>
+          </div>
+          <div class="card" id="bp-ubuntu-desktop">
+            <h3><code>ubuntu-desktop</code></h3>
+            <p><strong>Ubuntu LTS + GNOME.</strong> Ubuntu 24.04 LTS with the GNOME desktop, supported to April 2029. <span class="badge">cloud-init</span></p>
+          </div>
+          <div class="card" id="bp-ubuntu-server">
+            <h3><code>ubuntu-server</code></h3>
+            <p><strong>Ubuntu LTS, headless.</strong> The same Ubuntu release and the same dev toolchain, without a desktop. Good for databases and services alongside a desktop VM. <span class="badge">cloud-init</span></p>
+          </div>
+          </div>
+          <p><strong>Kickstart</strong> blueprints are installed by Anaconda from a seed disk labelled
+            <code>OEMDRV</code>; <strong>cloud-init</strong> blueprints read theirs from a disk labelled
+            <code>CIDATA</code>. Either way the install needs no clicks.</p>
+        </section>
+
+        <section id="anatomy" aria-labelledby="anatomy-title">
+          <h2 id="anatomy-title">What's in a blueprint</h2>
+          <div class="code">
+            <div class="bar"><span>blueprints/redhat-rocky-workstation/</span></div>
+            <pre>blueprint.yaml          <span class="tok-c"># the OS, where its installer comes from, how to seed it; an arm64 block for arm64</span>
+seed/ks.cfg.tmpl        <span class="tok-c"># the unattended install answers, with {{PLACEHOLDERS}}</span>
+bootstrap/              <span class="tok-c"># steps and files only this OS needs</span>
+  assets/xrdp-startwm.sh
+  assets/45-allow-colord.rules</pre>
+          </div>
+          <p>The installer is downloaded once, checked against the distribution's published checksum, and
+            cached in <code>~/.vmynt/isos</code>. The answer file is filled in from your config:
+            hostname, user, password hash, locale, keyboard, timezone, packages.</p>
+          <p><code>blueprint.yaml</code> uses camelCase keys, like the config files:
+            <code>os</code> (the distribution and which versions it accepts), <code>media</code> (where the
+            installer and its checksum file are), <code>provisioning</code> (the seed template, the disk
+            label, the bootstrap folders), <code>firmware</code>, <code>packages</code>, and
+            <code>defaults</code> and <code>overrides</code> for config values. A blueprint can
+            <code>inherits:</code> another and state only the difference.</p>
+          <div class="code">
+            <div class="bar"><span>blueprint.yaml (part)</span></div>
+            <pre>name: 'redhat-rocky-workstation'
+description: 'Rocky Linux + GNOME Workstation, provisioned as a dev workstation'
+os:
+  vendor: 'rocky'
+  version: '9'
+media:
+  isoBaseUrl: 'https://download.rockylinux.org/pub/rocky/{Release}/isos/x86_64/'
+  checksumFile: 'Rocky-*-latest-x86_64-boot.iso.CHECKSUM'
+provisioning:
+  method: 'kickstart-oemdrv'
+  seedTemplate: 'seed/ks.cfg.tmpl'
+  hyperVPackages: ['hyperv-daemons']   <span class="tok-c"># added to packages on Hyper-V only</span>
+packages:
+  - '@^workstation-product-environment'
+  - 'openssh-server'</pre>
+          </div>
+          <p><code>provisioning.hyperVPackages</code> lists the Hyper-V guest tools. They are added to
+            <code>packages</code> only when the VM runs on Hyper-V; anywhere else they would hold up
+            every boot waiting for a Hyper-V device.</p>
+        </section>
+
+        <section id="steps" aria-labelledby="steps-title">
+          <h2 id="steps-title">Provisioning steps</h2>
+          <p>After the OS installs, the VM runs a shared set of numbered bash steps on first boot, in order.
+            Every blueprint uses them, and each step skips itself when your config turns it off.
+            <code>vmynt status</code> shows the progress, and <code>vmynt logs</code> the detail.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Step</th><th scope="col">Does</th></tr></thead>
+              <tbody>
+                <tr><td><code>00-disks</code></td><td>Formats, labels and mounts the extra data disks</td></tr>
+                <tr><td><code>01-base</code></td><td>Base packages, locale, timezone and a full upgrade (EPEL first on Rocky and RHEL)</td></tr>
+                <tr><td><code>05-users</code></td><td>Extra users and authorized keys</td></tr>
+                <tr><td><code>06-files</code></td><td>Copies in your <code>files</code> folder</td></tr>
+                <tr><td><code>10-desktop</code></td><td>The GNOME desktop</td></tr>
+                <tr><td><code>15-mdns</code></td><td>avahi, so the VM is <code>&lt;hostname&gt;.local</code></td></tr>
+                <tr><td><code>20-guest-tools</code></td><td>The hypervisor's guest tools and the remote desktop: Hyper-V daemons and Enhanced Session over hv_sock on Hyper-V; <code>qemu-guest-agent</code> and xrdp on port 3389 on libvirt; xrdp on port 3389 on macOS</td></tr>
+                <tr><td><code>30-node</code></td><td>nvm and Node</td></tr>
+                <tr><td><code>31-python</code></td><td>Python and pipx</td></tr>
+                <tr><td><code>32-docker</code></td><td>Docker Engine</td></tr>
+                <tr><td><code>33-ddev</code></td><td>ddev and mkcert</td></tr>
+                <tr><td><code>35-database</code></td><td>Postgres or MySQL, and your databases</td></tr>
+                <tr><td><code>36-adminer</code></td><td>Adminer, the browser-based database tool</td></tr>
+                <tr><td><code>40-vscode</code></td><td>VS Code and its extensions</td></tr>
+                <tr><td><code>41-chrome</code></td><td>Google Chrome</td></tr>
+                <tr><td><code>42-postman</code></td><td>Postman (off by default)</td></tr>
+                <tr><td><code>44-remote-access</code></td><td>VPN, RDP and SSH tunnelling clients</td></tr>
+                <tr><td><code>52-git</code></td><td>Your git identity</td></tr>
+                <tr><td><code>55-github</code></td><td>The GitHub SSH key, known hosts and the gh CLI; then shreds the staged secrets</td></tr>
+                <tr><td><code>60-dotfiles</code></td><td>Your dotfiles repository</td></tr>
+                <tr><td><code>70-repos</code></td><td>Clones your repositories</td></tr>
+                <tr><td><code>80-hooks</code></td><td>Your post-start commands</td></tr>
+                <tr><td><code>99-finalize</code></td><td>Tidies up, records what was built, and reboots into the desktop</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="resolution" aria-labelledby="resolution-title">
+          <h2 id="resolution-title">How a blueprint is found</h2>
+          <p>Vmynt only ever asks for a blueprint by name, and takes the first match:</p>
+          <ol>
+            <li><code>&lt;project&gt;/.vmynt/blueprints/&lt;name&gt;/</code>: your project's own, committed with it</li>
+            <li><code>~/.vmynt/blueprints/&lt;name&gt;/&lt;version&gt;/</code>: downloaded blueprints (empty for now)</li>
+            <li>built into Vmynt</li>
+          </ol>
+          <p>So a project can override a built-in blueprint by giving its copy the same name.</p>
+        </section>
+
+        <section id="custom" aria-labelledby="custom-title">
+          <h2 id="custom-title">Your own blueprints</h2>
+          <div class="code">
+            <div class="bar"><span>terminal</span><button class="copy" type="button">Copy</button></div>
+            <pre>vmynt blueprints new my-rocky --from redhat-rocky-workstation</pre>
+          </div>
+          <p>This copies the built-in blueprint into <code>.vmynt/blueprints/my-rocky/</code>. Set
+            <code>blueprint: my-rocky</code> in your config (<code>vmynt init</code>'s
+            <strong>Create my own…</strong> option does both for you) and change whatever you need: the
+            package list in the answer file, an extra provisioning step, a different installer. Anything
+            your copy doesn't contain falls through to the shared steps.</p>
+        </section>
+
+        <section id="arm64" aria-labelledby="arm64-title">
+          <h2 id="arm64-title">arm64 and Apple Silicon</h2>
+          <p>Macs with Apple Silicon run arm64 guests only, and arm Linux hosts can too. The guest's
+            architecture follows the computer's unless you set <code>arch:</code> in the config. Each
+            blueprint has an <code>arm64</code> block naming its arm64 installer, laid over the rest of
+            the blueprint when the guest is arm64: blocks merge key by key and lists replace. It also sets
+            <code>provisioning.hyperVPackages: []</code>, since there are no Hyper-V guest tools for arm64.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Part</th><th scope="col">On arm64</th></tr></thead>
+              <tbody>
+                <tr><td>Rocky, Fedora, Ubuntu</td><td>arm64 installers are published</td></tr>
+                <tr><td>RHEL</td><td>arm64 exists, behind a subscription, as on x86_64</td></tr>
+                <tr><td>Google Chrome</td><td>No Linux arm64 build; Chromium is installed instead (the snap on Ubuntu, the package on Fedora and the RHEL family), and <code>vmynt status</code> says which browser you got</td></tr>
+                <tr><td>VS Code, Node, Python, Docker, ddev, Postgres, MySQL</td><td>Available for arm64</td></tr>
+                <tr><td>Postman, mkcert, direnv</td><td>The arm64 build is picked automatically</td></tr>
+                <tr><td>PostgreSQL on Fedora</td><td>The PostgreSQL project has no Fedora arm64 repository, so Fedora's own package is used, with a warning if its version differs</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>A custom blueprint without an <code>arm64</code> block refuses to build an arm64 guest and says so.</p>
+        </section>
+
+        <section id="future" aria-labelledby="future-title">
+          <h2 id="future-title">Downloadable blueprints</h2>
+          <p>All blueprints are built into Vmynt for now; together they are about 350 KB of text. The big
+            downloads are the OS installers, and those are only fetched for the blueprint you use. A later
+            release will let blueprints be downloaded on their own, into
+            <code>~/.vmynt/blueprints</code>, without changing how you name them.</p>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <div class="sitelinks">
+        <div>
+          <h2>Learn</h2>
+          <ul>
+            <li><a href="../docs/">Getting started</a></li>
+            <li><a href="../commands/">Command reference</a></li>
+            <li><a href="../configuration/">Configuration</a></li>
+            <li><a href="../blueprints/">Blueprints</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Get it</h2>
+          <ul>
+            <li><a href="../install/">Install</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/releases">Releases</a></li>
+            <li><a href="../demo/">Demo</a></li>
+            <li><a href="../roadmap/">Roadmap</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/scarlettiron/vmynt">Source on GitHub</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/issues">Issues</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/scarlettiron/vmynt/blob/main/LICENSE">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+      <p>Vmynt is free, open source software under the MIT License. Hyper-V, Apple and other names
+        belong to their owners; Vmynt is not affiliated with them.</p>
+      <!--Author signature, always the last thing on the page.-->
+      <a class="made-by" href="https://codescarlett.com" rel="author">
+        <img src="../theme/logo/codescarlett-dragonfly.svg" alt="" width="46" height="31" />
+        <span><strong>Scarlett A. Scott</strong><span class="handle">codescarlett</span></span>
+      </a>
+    </footer>
+    <script src="../theme/site.js"></script>
+  </body>
+</html>

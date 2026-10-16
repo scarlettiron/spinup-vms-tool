@@ -1,0 +1,121 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: Deploy site and apt repository to GitHub Pages
+
+# GitHub Pages serves two things from one deployment:
+#
+#   /        the static website in site/
+#   /apt/    the signed apt repository, rebuilt from the .deb files attached to
+#            every published (non prerelease) GitHub Release
+#
+# A Pages deployment replaces the whole site, so both are rebuilt every time.
+# The apt repository is never stored in git; the releases are its source of truth.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'packaging/apt/**'
+      - 'packaging/brand.py'
+      - 'Cargo.toml'
+      - '.github/workflows/pages.yml'
+  # release.yml starts this after each release, and it can be run by hand from
+  # the Actions tab.
+  workflow_dispatch:
+  # Lets another workflow run this one directly. Note the github-pages
+  # environment only accepts deployments from main unless you add a rule for
+  # tags, which is why release.yml dispatches instead.
+  workflow_call:
+    secrets:
+      APT_GPG_PRIVATE_KEY:
+        required: false
+      APT_GPG_PASSPHRASE:
+        required: false
+
+# The permissions the deploy-pages action needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two Pages deployments at once, and let an in progress one finish.
+# Two overlapping deployments are a common cause of "Deployment failed".
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The site is plain files, so "building" it is a copy. .nojekyll stops
+      # GitHub from running Jekyll over it, which would hide _folders.
+      - name: Copy the site
+        run: |
+          mkdir -p _site
+          cp -R site/. _site/
+          touch _site/.nojekyll
+
+      # Skipped, with a notice, when there is no signing key yet or no release
+      # has a .deb yet. The site still deploys either way.
+      - name: Build the apt repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+        run: |
+          if [ -z "$APT_GPG_PRIVATE_KEY" ]; then
+            echo "::notice::APT_GPG_PRIVATE_KEY is not set, so the apt repository was skipped. See docs/releasing.md."
+            exit 0
+          fi
+
+          mkdir -p debs
+          # Every published release that is not a prerelease. Releases without
+          # a .deb (none should exist, but just in case) are skipped.
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases \
+                         --limit 1000 --json tagName --jq '.[].tagName'); do
+            gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern '*.deb' --dir debs || true
+          done
+
+          if ! ls debs/*.deb > /dev/null 2>&1; then
+            echo "::notice::No release has a .deb yet, so the apt repository was skipped."
+            exit 0
+          fi
+          ls -la debs
+
+          # A private keyring just for this step, so the key never touches
+          # anything else on the runner.
+          GNUPGHOME="$(mktemp -d)"
+          export GNUPGHOME
+          chmod 700 "$GNUPGHOME"
+          printf '%s\n' "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+
+          bash packaging/apt/build-repo.sh debs _site/apt
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

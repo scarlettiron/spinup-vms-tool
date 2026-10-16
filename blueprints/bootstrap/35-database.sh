@@ -35,7 +35,7 @@ install -d /var/lib/vm-bootstrap
 MYSQL_DEFAULTS=''
 MYSQL_ROOT_OPTS='-uroot'
 
-# Recorded for the login banner and for Get-DevVMStatus.ps1, so the state of the
+# Recorded for the login banner and for `vmynt status`, so the state of the
 # database is visible without anyone having to know the engine's own commands.
 # Written even on failure, which is the case where it matters most.
 write_state() {
@@ -65,12 +65,12 @@ install_postgres() {
             case "$OS_FAMILY" in
                 el)
                     pgdg_pkg=pgdg-redhat-repo
-                    pgdg_url="https://download.postgresql.org/pub/repos/yum/reporpms/EL-${OS_MAJOR}-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+                    pgdg_url="https://download.postgresql.org/pub/repos/yum/reporpms/EL-${OS_MAJOR}-${GUEST_ARCH}/pgdg-redhat-repo-latest.noarch.rpm"
                     pgdg_for="${OS_ID} ${OS_MAJOR}"
                     ;;
                 *)
                     pgdg_pkg=pgdg-fedora-repo
-                    pgdg_url="https://download.postgresql.org/pub/repos/yum/reporpms/F-${OS_VERSION_ID}-x86_64/pgdg-fedora-repo-latest.noarch.rpm"
+                    pgdg_url="https://download.postgresql.org/pub/repos/yum/reporpms/F-${OS_VERSION_ID}-${GUEST_ARCH}/pgdg-fedora-repo-latest.noarch.rpm"
                     pgdg_for="Fedora ${OS_VERSION_ID}"
                     ;;
             esac

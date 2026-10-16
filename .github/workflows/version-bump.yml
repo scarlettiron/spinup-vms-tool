@@ -1,0 +1,164 @@
+#Vmynt
+#Licensed under the MIT License. See the LICENSE file in the project root.
+#Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+#
+#Contributors:
+#Scarlett A. Scott (codescarlett)
+
+name: Version bump
+
+#The one button that cuts a release. From the Actions tab, pick "Version bump",
+#choose the branch (main, or a release/x.y branch for a hotfix) and the kind of
+#bump, and it:
+#
+#  1. changes the version in Cargo.toml (packaging/version.py bump)
+#  2. updates Cargo.lock's copy of it
+#  3. moves the "## [Unreleased]" notes in CHANGELOG.md under the new version
+#  4. commits "release: vX.Y.Z" and tags it vX.Y.Z
+#  5. pushes both, and starts release.yml on the tag
+#
+#Tick "dry run" to see the new version and changelog in the log without
+#committing anything.
+#
+#About step 5: a tag pushed with the built-in GITHUB_TOKEN deliberately does not
+#start other workflows (GitHub's guard against loops). So:
+#  - with a RELEASE_TOKEN secret (a fine-grained token with Contents: write and
+#    Actions: write on this repository), the push is made with it, and the tag
+#    push starts release.yml by itself, as a hand-pushed tag would
+#  - without one, the push uses GITHUB_TOKEN and this workflow starts
+#    release.yml on the tag explicitly with `gh workflow run`
+#Either way the release runs exactly once. RELEASE_TOKEN is also what lets the
+#commit through if main has branch protection; see docs/releasing.md.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "What to bump"
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+          - prerelease
+          - release
+      pre:
+        description: "Prerelease label (makes patch/minor/major a prerelease; picks the label for prerelease)"
+        required: false
+        type: choice
+        default: none
+        options:
+          - none
+          - alpha
+          - beta
+          - rc
+      dry_run:
+        description: "Dry run: show the result, commit and push nothing"
+        required: false
+        type: boolean
+        default: false
+
+#Two bumps at once would both read the same old version.
+concurrency:
+  group: version-bump
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  bump:
+    name: Bump, tag and release
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          #The whole history, so the tag check below sees every existing tag.
+          fetch-depth: 0
+          #The token the push at the end uses (see the note at the top).
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Bump the version
+        id: version
+        env:
+          BUMP: ${{ inputs.bump }}
+          PRE: ${{ inputs.pre }}
+        run: |
+          old="$(python packaging/version.py current)"
+          if [ "$PRE" != "none" ] && [ -n "$PRE" ]; then
+            new="$(python packaging/version.py bump "$BUMP" --pre "$PRE")"
+          else
+            new="$(python packaging/version.py bump "$BUMP")"
+          fi
+          if git rev-parse -q --verify "refs/tags/v$new" > /dev/null; then
+            echo "::error::Tag v$new already exists. Pick a different bump."
+            exit 1
+          fi
+          echo "$old -> $new"
+          echo "old=$old" >> "$GITHUB_OUTPUT"
+          echo "new=$new" >> "$GITHUB_OUTPUT"
+          echo "### $old → $new" >> "$GITHUB_STEP_SUMMARY"
+
+      #`cargo update --workspace` rewrites only this crate's own entry in
+      #Cargo.lock (its version), not any dependency.
+      - name: Update Cargo.lock
+        run: |
+          cargo update --workspace
+          git diff --stat
+
+      #Prereleases keep collecting notes under Unreleased until the real
+      #release, so an rc does not split the changelog into fragments.
+      - name: Update CHANGELOG.md
+        if: ${{ !contains(steps.version.outputs.new, '-') }}
+        env:
+          NEW: ${{ steps.version.outputs.new }}
+        run: |
+          python packaging/version.py changelog "$NEW"
+          {
+            echo ""
+            echo "#### Release notes"
+            echo ""
+            python packaging/version.py notes "$NEW"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show the changes
+        run: git --no-pager diff
+
+      - name: Commit, tag and push
+        if: ${{ !inputs.dry_run }}
+        env:
+          NEW: ${{ steps.version.outputs.new }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock CHANGELOG.md
+          git commit -m "release: v$NEW"
+          git tag -a "v$NEW" -m "v$NEW"
+          #Branch and tag in one push, so neither lands without the other.
+          git push --atomic origin "HEAD:refs/heads/$BRANCH" "refs/tags/v$NEW"
+          echo "pushed v$NEW to $BRANCH" >> "$GITHUB_STEP_SUMMARY"
+
+      #Only needed when the push used GITHUB_TOKEN; with RELEASE_TOKEN the tag
+      #push has already started release.yml.
+      - name: Start the release
+        if: ${{ !inputs.dry_run && env.RELEASE_TOKEN == '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW: ${{ steps.version.outputs.new }}
+        run: |
+          gh workflow run release.yml --ref "v$NEW" --repo "$GITHUB_REPOSITORY"
+          echo "started release.yml on v$NEW" >> "$GITHUB_STEP_SUMMARY"

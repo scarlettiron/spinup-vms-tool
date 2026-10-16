@@ -1,0 +1,139 @@
+/*Vmynt
+  Licensed under the MIT License. See the LICENSE file in the project root.
+  Copyright (c) 2026 Scarlett A. Scott (codescarlett)
+
+  Contributors:
+  Scarlett A. Scott (codescarlett)*/
+
+/*The animated terminal. site.js types out the command, then shows the output.
+  Without JavaScript, or with reduced motion turned on, the finished terminal is
+  shown as is, so the markup has to read well on its own. Loaded after site.css.*/
+
+.term {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  max-width: 46rem;
+  margin: 1rem 0;
+}
+
+/*The title bar with the three window dots and the replay button.*/
+.term .term-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.term .dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: #3a423e;
+}
+
+.term .dot:nth-child(1) {
+  background: #ff5f57;
+}
+.term .dot:nth-child(2) {
+  background: #febc2e;
+}
+.term .dot:nth-child(3) {
+  background: #28c840;
+}
+
+.term .term-title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.term .replay {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  padding: 0.15rem 0.5rem;
+}
+
+.term .replay:hover {
+  color: var(--text);
+}
+
+.term pre {
+  margin: 0;
+  padding: 1rem 1.1rem 1.2rem;
+  min-height: 12rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #d5ded9;
+  white-space: pre;
+}
+
+/*The "$ " in front of a command.*/
+.term .prompt {
+  color: var(--primary);
+  user-select: none;
+}
+
+.term .cmd {
+  color: var(--text);
+}
+
+/*Colors for the output lines.*/
+.term .ok {
+  color: var(--primary);
+}
+.term .dim {
+  color: var(--muted);
+}
+.term .warn {
+  color: var(--warning);
+}
+.term .err {
+  color: var(--danger);
+}
+.term .hl {
+  color: #82aaff;
+}
+
+/*The blinking block cursor while a command is being typed.*/
+.term .cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  background: var(--primary);
+  animation: term-blink 1s steps(1) infinite;
+}
+
+@keyframes term-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term .cursor {
+    animation: none;
+  }
+}
+
+/*A caption under a terminal, saying what it demonstrates.*/
+.term-caption {
+  max-width: 46rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: -0.4rem 0 1.5rem;
+}

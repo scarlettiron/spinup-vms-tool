@@ -1,31 +1,47 @@
 # Adding or changing an OS
 
-A blueprint is a directory under `blueprints/` holding everything OS-specific:
-install media, the unattended-install template, and the provisioning scripts.
-Nothing outside `blueprints/` knows which OS is being built, so a new target is a
-new directory rather than a change to the tooling.
+A blueprint is a folder holding everything OS-specific: install media, the
+unattended-install template, and the provisioning scripts. Nothing outside the
+blueprint knows which OS is being built, so a new target is a new folder rather
+than a change to the tooling.
+
+Blueprints live in two places:
+
+- **Built in**: `blueprints/<name>/` in this repository, embedded into the
+  binary at build time. Adding one here means rebuilding Vmynt.
+- **In a project**: `.vmynt/blueprints/<name>/`, committed with the project.
+  `vmynt blueprints new <name> --from <base>` copies a built-in one there to edit.
+  A project blueprint wins over a built-in one with the same name, and any file
+  it doesn't have falls through to the built-in copy.
+
+Each folder has a `blueprint.yaml`, a `seed/` template, and optionally its own
+`bootstrap/` steps.
 
 ## The three cheap cases
 
 ### Switch Ubuntu release
 
-One key. `Iso.Release` is substituted into the blueprint's `Media.IsoBaseUrl`, and
-the exact point release and its checksum come from the vendor's `SHA256SUMS`:
+One key. `osVersion` is substituted for `{Release}` in the blueprint's
+`media.isoBaseUrl`, and the exact point release and its checksum come from the
+vendor's `SHA256SUMS`:
 
-```powershell
-Iso = @{ Release = '26.04' }
+```yaml
+osVersion: '26.04'
 ```
 
-Nothing is pinned to a filename, so this keeps working across point releases.
+Quote it, or YAML reads `26.04` as a number. Nothing is pinned to a filename, so
+this keeps working across point releases.
 
 ### Headless instead of desktop
 
 Use the `ubuntu-server` blueprint, or just turn the desktop off:
 
-```powershell
-Blueprint   = 'ubuntu-server'
+```yaml
+blueprint: ubuntu-server
 # or
-Bootstrap = @{ InstallDesktop = $false; InstallVSCode = $false }
+bootstrap:
+  installDesktop: false
+  installVSCode:  false
 ```
 
 ### A different toolchain
@@ -38,9 +54,9 @@ run in order, shared by every blueprint; see the contract below.
 Every bootstrap step is shared, so adding a distro is mostly about the installer,
 not the toolchain. Three things to do:
 
-1. **Create `blueprints/<name>/`** with a `blueprint.psd1` and a `seed/` template.
-   Copy `blueprints/ubuntu-desktop` as a starting point. The keys that matter are
-   below.
+1. **Create the blueprint folder** with a `blueprint.yaml` and a `seed/`
+   template. `vmynt blueprints new <name> --from ubuntu-desktop` makes a copy to
+   start from. The keys that matter are below.
 2. **Teach `_lib.sh` its package manager**, if it is not apt or dnf. `pkg_install`
    and friends dispatch on `$PKG_MANAGER`, which `detect_pkg_manager` sets.
 3. **Add a `case` arm** to each shared step that names packages, wherever the new
@@ -75,65 +91,97 @@ blueprint can still override it: drop a file of the same name in
 `blueprints/<name>/bootstrap/` and it wins, because later directories win when the
 trees are layered.
 
-The keys that matter in `blueprint.psd1`:
+The keys that matter in `blueprint.yaml`. Keys are camelCase, like the config
+files (matching ignores case):
 
-```powershell
-@{
-    Media = @{
-        # Either resolve the current release from a published checksum file...
-        IsoBaseUrl     = 'https://releases.example.org/{Release}/'
-        IsoNamePattern = '*-amd64.iso'
-        ChecksumFile   = 'SHA256SUMS'
-        # ...or pin one exactly:
-        # IsoUrl    = 'https://.../fedora-42.iso'
-        # IsoSha256 = 'ABCD...'
-    }
-    Provisioning = @{
-        Method       = 'cloud-init-nocloud'   # FAT32 disk labelled CIDATA
-        SeedTemplate = 'seed/user-data.tmpl'
-        MetaTemplate = 'seed/meta-data.tmpl'
-        BootstrapDir = 'bootstrap'
-        SourceId     = 'ubuntu-server'        # autoinstall source.id
-        PowerOffAfterInstall  = $true
-        InstallTimeoutMinutes = 60
-    }
-    Firmware = @{
-        Generation         = 2
-        SecureBootTemplate = 'MicrosoftUEFICertificateAuthority'
-        EnableTpm          = $false           # $true for a Windows guest
-    }
-    Packages = @( 'openssh-server', 'curl' )  # laid down by the installer
-}
+```yaml
+name: 'my-new-os'
+description: 'My OS + GNOME, provisioned as a dev workstation'
+
+os:
+  family: 'linux'
+  vendor: 'example'
+  version: '24.04'                  # used when osVersion is blank
+  versionPattern: '^\d{2}\.\d{2}$'  # osVersion must match, or the build stops
+
+media:
+  # Either resolve the current release from a published checksum file...
+  isoBaseUrl: 'https://releases.example.org/{Release}/'
+  isoNamePattern: '*-amd64.iso'
+  checksumFile: 'SHA256SUMS'
+  # ...or pin one exactly:
+  # isoUrl: 'https://.../example-24.04.iso'
+  # isoSha256: 'ABCD...'
+
+provisioning:
+  method: 'cloud-init-nocloud'      # FAT32 disk labelled CIDATA; or kickstart-oemdrv
+  seedLabel: 'CIDATA'
+  seedFileName: 'user-data'
+  seedTemplate: 'seed/user-data.tmpl'
+  metaTemplate: 'seed/meta-data.tmpl'
+  bootstrapDirs: ['../bootstrap', 'bootstrap']   # later folders win
+  bootstrapRoot: '/usr/local/lib/vm-bootstrap'
+  sourceId: 'ubuntu-server'         # autoinstall source.id
+  powerOffAfterInstall: true
+  # Added to packages only on Hyper-V. Anywhere else these wait for a
+  # Hyper-V device that never appears and hold up every boot.
+  hyperVPackages: ['linux-tools-virtual', 'linux-cloud-tools-virtual']
+  installTimeoutMinutes: 60
+
+firmware:
+  generation: 2
+  secureBootTemplate: 'MicrosoftUEFICertificateAuthority'
+  enableTpm: false                  # true for a Windows guest
+
+packages:                           # laid down by the installer
+  - 'openssh-server'
+  - 'curl'
+
+# Applied over everything above when the guest is arm64 (every guest on an
+# Apple Silicon Mac). Blocks merge key by key; lists replace outright.
+arm64:
+  media:
+    isoBaseUrl: 'https://cdimage.example.org/releases/{Release}/'
+    isoNamePattern: '*-arm64.iso'
+  provisioning:
+    hyperVPackages: []
 ```
 
-Any distro whose installer reads cloud-init NoCloud (Ubuntu, Debian, Fedora
-kickstart via a seed disk, most cloud images) works with the existing seed
-mechanism - only the template changes. Something with a different unattended
-format (a Windows `Autounattend.xml`, say) needs a new `Method` branch in
-`scripts/lib/Seed.psm1`; the disk-building function `New-SeedDisk`
-still applies, since Windows setup also reads config from an attached volume.
+A blueprint without an `arm64` block refuses arm64 guests with a message.
+
+Any distro whose installer reads cloud-init NoCloud (Ubuntu, Debian, most cloud
+images) or a kickstart from an `OEMDRV` disk (Fedora, RHEL and its rebuilds) works
+with the existing seed mechanism - only the template changes. Something with a
+different unattended format (a Windows `Autounattend.xml`, say) needs a new
+`method` branch in `render` in [src/seed/mod.rs](../src/seed/mod.rs); the disk
+builder in [src/seed/disk.rs](../src/seed/disk.rs) still applies, since Windows
+setup also reads config from an attached volume.
 
 ### Inheriting
 
 A blueprint can name a parent and override only the difference. `ubuntu-server`
 is the whole example:
 
-```powershell
-@{
-    Name     = 'ubuntu-server'
-    Inherits = 'ubuntu-desktop'
+```yaml
+name: 'ubuntu-server'
+description: 'Ubuntu LTS, headless, same dev toolchain'
+inherits: 'ubuntu-desktop'
 
-    # What this OS *is*. Above vm.config.yaml, so it holds.
-    Overrides = @{
-        VM        = @{ EnhancedSession = $false }
-        Bootstrap = @{ InstallDesktop = $false; InstallVSCode = $false }
-    }
+# What this OS *is*. Above vm.config.yaml, so it holds.
+overrides:
+  vm:
+    enhancedSession: false
+  bootstrap:
+    installDesktop: false
+    installVSCode: false
+    installChrome: false
 
-    # What this OS *suggests*. Below vm.config.yaml, so the team can retune it.
-    Defaults = @{
-        VM = @{ CpuCount = 4; MemoryStartupGB = 8; DiskSizeGB = 80 }
-    }
-}
+# What this OS *suggests*. Below vm.config.yaml, so the team can retune it.
+defaults:
+  vm:
+    cpuCount: 4
+    memoryStartupGB: 8
+    diskSizeGB: 80
 ```
 
 Templates and the bootstrap directory resolve along the inheritance chain,
@@ -142,21 +190,21 @@ child first, so a child blueprint only ships the files it actually replaces.
 Choosing between the two blocks is the one judgement call when writing a
 blueprint. Ask whether a shared `vm.config.yaml` setting the same key should win:
 
-- **`Defaults`** for anything a team might legitimately retune - vCPUs, RAM,
+- **`defaults`** for anything a team might legitimately retune - vCPUs, RAM,
   disk size, whether to reboot at the end.
-- **`Overrides`** for anything that would make the blueprint a lie if overridden -
+- **`overrides`** for anything that would make the blueprint a lie if overridden -
   a headless blueprint installing a desktop, or Enhanced Session on a machine with
   no GNOME to connect to.
 
-Put a key in `Defaults` and a shared config that names it will silently win; put
-too much in `Overrides` and the blueprint becomes rigid. Neither block can beat a
-developer's own `vm.config.local.yaml`, a `Machines` block, or a command-line
-parameter - an explicit human request always wins.
+Put a key in `defaults` and a shared config that names it will silently win; put
+too much in `overrides` and the blueprint becomes rigid. Neither block can beat a
+developer's own `vm.config.local.yaml` or a `machines` entry - an explicit human
+request always wins.
 
 ## The bootstrap step contract
 
 Files in `blueprints/bootstrap/`, plus anything a blueprint adds in its own
-`blueprints/<name>/bootstrap/`. The two trees are merged, later winning, so a
+`bootstrap/` folder (`provisioning.bootstrapDirs` lists them). The two trees are merged, later winning, so a
 blueprint can add files or replace shared ones by name:
 
 | Name | Role |
@@ -172,7 +220,7 @@ for files whose *content* differs per distro rather than their name.
 `xrdp-startwm.sh` is the example: same path, same purpose, different locale file
 and session mode on each OS.
 
-Everything lands under `Provisioning.BootstrapRoot`, which is
+Everything lands under `provisioning.bootstrapRoot`, which is
 `/usr/local/lib/vm-bootstrap` and deliberately **not** `/opt` - `/opt` is
 available as a data-disk mount point, and remounting it out from under the
 running bootstrap tree would fail provisioning halfway through.
@@ -192,8 +240,8 @@ Rules that keep steps composable:
   `exit` would close your session.
 - **Read config from `$VM_*` environment variables**, never hardcode. They come
   from `/etc/vm-bootstrap.env`, generated from `vm.config.yaml`. Adding a knob
-  means adding one line to `New-BootstrapEnv` in `scripts/lib/Seed.psm1` and
-  reading it in the step.
+  means adding one line to `bootstrap_env` in [src/seed/mod.rs](../src/seed/mod.rs)
+  and reading it in the step.
 - **Gate on a flag** so a step can be turned off:
   `if ! is_true "${VM_INSTALL_DOCKER:-true}"; then ... fi`
 - **Be idempotent.** Steps stamp themselves in `/var/lib/vm-bootstrap`, but
@@ -208,10 +256,15 @@ Helpers available from `_lib.sh`: `log`, `warn`, `die`, `have_cmd`, `is_true`,
 
 ## Verifying a change without building
 
-```powershell
-.\scripts\New-DevVM.ps1 -RenderOnly -Blueprint my-new-os
+Point a project at the blueprint (`blueprint: my-new-os` in
+`.vmynt/vm.config.yaml`), then:
+
+```sh
+vmynt config --validate
+vmynt create --render
 ```
 
-Renders the seed into `build\<vm>\` and touches no Hyper-V state. Read the
-generated `user-data`, confirm your step was embedded and your variables are
+`--render` writes the seed files into the VM folder's `build/` (by default
+`~/.vmynt/vms/<name>/build/`) and touches no hypervisor. Read the generated
+`user-data` or `ks.cfg`, confirm your step was embedded and your variables are
 set in `vm-bootstrap.env`, then build for real.

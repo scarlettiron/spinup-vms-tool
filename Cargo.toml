@@ -80,7 +80,7 @@ assets = [
 ]
 
 [dependencies]
-anstream = "0.6"
+anstream = "1.0"
 anstyle = "1"
 anyhow = "1"
 base64 = "0.22"

@@ -27,6 +27,7 @@ use crate::config::{
 };
 use crate::constants::files;
 use crate::errors::{AppError, AppResult};
+use crate::host_setup;
 use crate::passwd;
 use crate::registry::Registry;
 use crate::utilities::{files as file_utils, names, paths, template::render_with_brand, ui::Ui};
@@ -83,7 +84,8 @@ pub fn run(args: InitArgs, ui: Ui) -> AppResult<()> {
     }
 
     if let Some(source) = &args.import {
-        return import(source, &cwd, ui);
+        import(source, &cwd, ui)?;
+        return offer_host_setup(ui);
     }
 
     //Prompts only when a person is there to answer and --yes was not given.
@@ -157,7 +159,57 @@ pub fn run(args: InitArgs, ui: Ui) -> AppResult<()> {
         identity.identity.is_none(),
         ui,
     );
-    Ok(())
+    offer_host_setup(ui)
+}
+
+//A new project usually means a computer about to build its first VM, so this
+//is the moment to set the computer up, before `create` has to stop and ask.
+//Only asked when someone is there to answer: installing system software is
+//never a side effect of `init -y` or a script.
+fn offer_host_setup(ui: Ui) -> AppResult<()> {
+    let app = brand::NAME;
+    //What can't be fixed (no /dev/kvm, Windows Home) is for `doctor` to explain;
+    //the project itself was made fine.
+    let steps = match host_setup::plan() {
+        Ok(steps) => steps,
+        Err(error) => {
+            ui.warn(&format!("{error:#}"));
+            return Ok(());
+        }
+    };
+    if steps.is_empty() {
+        return Ok(());
+    }
+    if !ui.interactive() || ui.assume_yes {
+        ui.hint(&format!(
+            "This computer isn't set up to run VMs yet. Run `{app} doctor --fix` to set it up."
+        ));
+        return Ok(());
+    }
+    if !ui.quiet {
+        println!();
+    }
+    match host_setup::set_up(ui, None, &steps) {
+        Ok(host_setup::Outcome::NothingToDo | host_setup::Outcome::Ready) => Ok(()),
+        Ok(host_setup::Outcome::NewGroup(group)) => {
+            ui.hint(&format!(
+                "You're in the {group} group now. {app} commands use it straight away; other programs \
+                 get it the next time you log in."
+            ));
+            Ok(())
+        }
+        Ok(host_setup::Outcome::Restart(message)) => {
+            ui.warn(&message);
+            Ok(())
+        }
+        Err(AppError::Cancelled) => {
+            ui.hint(&format!(
+                "Skipped. Run `{app} doctor --fix` when you want it."
+            ));
+            Ok(())
+        }
+        Err(error) => Err(error),
+    }
 }
 
 fn choose_project_name(args: &InitArgs, cwd: &Path, ask: bool) -> AppResult<String> {

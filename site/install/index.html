@@ -249,8 +249,10 @@ Select-String vmseed- .\SHA256SUMS</pre>
             <pre>vmseed --version
 vmseed doctor</pre>
           </div>
-          <p><code>vmseed doctor</code> checks your hypervisor, permissions and tools, and prints a fix for
-            anything that's missing. Then head to <a href="../docs/#first-project">your first project</a>.</p>
+          <p><code>vmseed doctor</code> checks your hypervisor, permissions and tools. There is nothing to
+            install by hand: if something is missing, your first <code>vmseed init</code> offers to set it up,
+            and <code>vmseed doctor --fix</code> does it any time. It lists the steps and asks first. Then head
+            to <a href="../docs/#first-project">your first project</a>.</p>
         </section>
 
         <section id="completion" aria-labelledby="completion-title">
@@ -274,22 +276,24 @@ vmseed completion fish &gt; ~/.config/fish/completions/vmseed.fish</pre>
 
         <section id="requirements" aria-labelledby="req-title">
           <h2 id="req-title">Host requirements</h2>
-          <p>What each kind of host needs to run VMs. <code>vmseed doctor</code> checks all of it.</p>
+          <p>What each kind of host needs to run VMs. <code>vmseed doctor</code> checks all of it, and
+            <code>vmseed init</code> or <code>vmseed doctor --fix</code> sets up everything that a command can
+            (<a href="https://github.com/scarlettiron/vmseed/blob/main/docs/troubleshooting.md#setting-up-by-hand">or do it by hand</a>).</p>
           <div class="table-wrap">
             <table>
               <thead><tr><th scope="col">Host</th><th scope="col">Needs</th><th scope="col">Notes</th></tr></thead>
               <tbody>
                 <tr>
                   <td>Windows 10/11 Pro, Enterprise or Education; Windows Server</td>
-                  <td>Hyper-V turned on, and you are an administrator or in the <strong>Hyper-V Administrators</strong> group:
-                    <code>Add-LocalGroupMember -Group 'Hyper-V Administrators' -Member $env:USERNAME</code>, then sign out and back in</td>
+                  <td>Hyper-V turned on, and you are an administrator or in the <strong>Hyper-V Administrators</strong> group.
+                    Vmseed sets up both after asking: Windows asks once for administrator rights, then needs a restart</td>
                   <td>Windows Home has no Hyper-V. <code>vmconnect.exe</code> (the Hyper-V management tools) opens the console and the Enhanced Session desktop.</td>
                 </tr>
                 <tr>
                   <td>Linux</td>
-                  <td><code>/dev/kvm</code>, libvirt with QEMU and OVMF, and your user in the <code>libvirt</code> group:
-                    <code>sudo apt install qemu-system libvirt-daemon-system ovmf</code> or
-                    <code>sudo dnf install @virtualization</code>, then <code>sudo usermod -aG libvirt $USER</code> and log in again</td>
+                  <td><code>/dev/kvm</code>, which means virtualization (VT-x or AMD-V) turned on in the firmware settings.
+                    Vmseed sets up the rest after asking, with <code>sudo</code>: QEMU, libvirt and OVMF from apt or dnf,
+                    the libvirt service, and your user in the <code>libvirt</code> group, with no need to log out</td>
                   <td>Vmseed uses <code>qemu:///system</code>, libvirt's <code>default</code> network and the <code>default</code> storage pool (it starts or creates them).
                     <code>virt-viewer</code> for the console (optional); FreeRDP or Remmina for the desktop.</td>
                 </tr>

@@ -10,7 +10,8 @@
 //about 300 ms.
 //
 //Never elevates itself. Hyper-V needs the user to be an administrator or in
-//the "Hyper-V Administrators" group, and the error says how to fix that.
+//the "Hyper-V Administrators" group; the error points at `doctor --fix`
+//(host_setup.rs), which asks before doing that.
 
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -34,6 +35,13 @@ pub fn quote(text: &str) -> String {
     format!("'{}'", text.replace('\'', "''"))
 }
 
+//A script for powershell.exe -EncodedCommand (base64 of UTF-16LE), which needs
+//no quoting however the script is written.
+pub fn encode_command(script: &str) -> String {
+    let utf16: Vec<u8> = script.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    base64::engine::general_purpose::STANDARD.encode(utf16)
+}
+
 //Runs a script and returns what it printed. Errors come back as the cmdlet's
 //own message.
 pub fn powershell(script: &str) -> Result<String> {
@@ -42,8 +50,7 @@ pub fn powershell(script: &str) -> Result<String> {
          try {{ Import-Module Hyper-V -ErrorAction Stop }} catch {{ [Console]::Error.WriteLine('HYPERV_MODULE_MISSING'); exit 3 }}\n\
          try {{\n{script}\n}} catch {{ [Console]::Error.WriteLine($_.Exception.Message); exit 1 }}\n"
     );
-    let utf16: Vec<u8> = full.encode_utf16().flat_map(u16::to_le_bytes).collect();
-    let encoded = base64::engine::general_purpose::STANDARD.encode(utf16);
+    let encoded = encode_command(&full);
     let output = Command::new("powershell.exe")
         .args([
             "-NoProfile",
@@ -60,8 +67,8 @@ pub fn powershell(script: &str) -> Result<String> {
     if !output.status.success() {
         if stderr.contains("HYPERV_MODULE_MISSING") {
             bail!(
-                "the Hyper-V PowerShell module is not installed. In an administrator PowerShell run:\n    \
-                 Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-All -All\nthen restart."
+                "the Hyper-V PowerShell module is not installed, so Hyper-V is off. Run `{} doctor --fix` to turn it on.",
+                crate::brand::NAME
             );
         }
         if stderr.contains("required permission")
@@ -69,8 +76,9 @@ pub fn powershell(script: &str) -> Result<String> {
             || stderr.contains("Access is denied")
         {
             bail!(
-                "Hyper-V refused: you are not allowed to manage VMs. In an administrator PowerShell run:\n    \
-                 Add-LocalGroupMember -Group 'Hyper-V Administrators' -Member $env:USERNAME\nthen sign out and back in.\n({stderr})"
+                "Hyper-V refused: you are not allowed to manage VMs. Run `{} doctor --fix` to add you to the \
+                 Hyper-V Administrators group.\n({stderr})",
+                crate::brand::NAME
             );
         }
         bail!(
@@ -384,8 +392,9 @@ impl Hypervisor for HyperV {
     fn open_console(&self, name: &str) -> Result<()> {
         let Some(vmconnect) = crate::utilities::paths::find_program("vmconnect") else {
             bail!(
-                "vmconnect.exe is not installed. The Hyper-V management tools are a separate Windows feature:\n    \
-                 Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V-Management-Clients -All"
+                "vmconnect.exe is not installed. It comes with the Hyper-V management tools: run `{} doctor --fix` \
+                 to turn them on.",
+                crate::brand::NAME
             );
         };
         spawn_detached(&vmconnect, &["localhost".to_string(), name.to_string()])

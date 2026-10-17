@@ -23,21 +23,82 @@ name (`vmseed create <machine>`). Add `--verbose` for the full chain of causes.
 Run `vmseed doctor` first if the error is about the hypervisor itself: it checks
 the same things `create` does before touching anything, and says how to fix each.
 
+### "This computer isn't set up to run VMs yet"
+
+`vmseed init`, `vmseed create` and `vmseed doctor --fix` all say this when the
+hypervisor is missing or you aren't allowed to use it. They list what they would do
+and ask. Say yes, and Vmseed prints each command before it runs it:
+
+| Host | What it does | How it gets the rights |
+| --- | --- | --- |
+| Linux | installs QEMU, libvirt and the UEFI firmware (`apt-get` on Debian and Ubuntu, `dnf` on Fedora, RHEL and Rocky), starts the libvirt service and starts it at boot, adds you to the `libvirt` group | `sudo`, which may ask for your password |
+| Windows | turns on Hyper-V with its PowerShell module and `vmconnect`, adds you to **Hyper-V Administrators** | Windows asks once for administrator rights |
+| macOS | nothing: Homebrew installs vfkit with Vmseed | |
+
+On Linux there is no need to log out: until your next login, Vmseed runs itself
+through `sg libvirt` to pick up the new group. On Windows, restart afterwards (or,
+if only the group changed, sign out and back in), then run `vmseed doctor` to check.
+
+Without a terminal (a script, CI) nothing is installed: `create` stops with the
+hint, and `init` prints it and finishes. `vmseed doctor --fix --yes` sets up
+without asking.
+
+What no command can fix:
+
+- **"/dev/kvm is missing"** (Linux). Virtualization is turned off in the firmware
+  settings (VT-x or AMD-V), or, inside a VM, nested virtualization is off.
+- **"this Windows has no Hyper-V"**. Windows Home doesn't include Hyper-V.
+- **"Hyper-V is turned on, but Windows hasn't restarted since"**. Restart Windows.
+- **"this Linux has neither apt nor dnf"**. Set it up by hand, below.
+
+### Setting up by hand
+
+The same setup, if you'd rather run it yourself.
+
+**Debian and Ubuntu.** On arm64, use `qemu-system-arm` and `qemu-efi-aarch64` in
+place of `qemu-system-x86` and `ovmf`.
+
+```bash
+sudo apt-get update
+sudo apt-get install -y qemu-system-x86 qemu-utils libvirt-daemon-system libvirt-clients ovmf
+sudo systemctl enable --now libvirtd.service
+sudo usermod -aG libvirt "$USER"     # then log out and back in
+```
+
+**Fedora, RHEL and Rocky.** On arm64, use `edk2-aarch64` in place of `edk2-ovmf`.
+
+```bash
+sudo dnf install -y qemu-kvm qemu-img libvirt edk2-ovmf
+sudo systemctl enable --now virtqemud.socket virtnetworkd.socket virtstoraged.socket
+sudo usermod -aG libvirt "$USER"     # then log out and back in
+```
+
+You don't need the `kvm` group: libvirt's own QEMU is what opens `/dev/kvm`.
+
+**Windows**, in an administrator PowerShell, then restart:
+
+```powershell
+Enable-WindowsOptionalFeature -Online -All -FeatureName Microsoft-Hyper-V, Microsoft-Hyper-V-Management-PowerShell, Microsoft-Hyper-V-Management-Clients
+Add-LocalGroupMember -SID S-1-5-32-578 -Member "$env:USERDOMAIN\$env:USERNAME"
+```
+
+`S-1-5-32-578` is Hyper-V Administrators in every language of Windows. If Windows
+asked you to sign in as a different administrator to open that PowerShell, put your
+own account (`COMPUTER\you`) after `-Member`.
+
 ### "Hyper-V refused: you are not allowed to manage VMs"
 
 On Windows, managing VMs needs Administrator or membership of the
-**Hyper-V Administrators** group. Vmseed never elevates itself. Join the group
-once, from an administrator PowerShell, then sign out and back in:
-
-```powershell
-Add-LocalGroupMember -Group 'Hyper-V Administrators' -Member $env:USERNAME
-```
-
-After that every command works from an ordinary terminal. `vmseed doctor` checks
-this. `vmseed create --render` touches no hypervisor, so it works without it.
+**Hyper-V Administrators** group. Vmseed's VM commands never elevate themselves.
+`vmseed doctor --fix` adds you to the group after asking (Windows asks once for
+administrator rights); then sign out and back in. After that every command works
+from an ordinary terminal. `vmseed create --render` touches no hypervisor, so it
+works without it.
 
 If the error says the Hyper-V PowerShell module is not installed, Hyper-V
-itself is off; the message gives the `Enable-WindowsOptionalFeature` line to run.
+itself is off; `vmseed doctor --fix` turns it on. See
+[above](#this-computer-isnt-set-up-to-run-vms-yet) for both, or
+[Setting up by hand](#setting-up-by-hand).
 
 ### "Virtual switch 'Default Switch' does not exist"
 

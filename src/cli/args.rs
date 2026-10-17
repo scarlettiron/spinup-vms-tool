@@ -127,8 +127,8 @@ pub enum Command {
     /// Make a password hash for the config
     Hash(HashArgs),
 
-    /// Check this computer is ready to run VMs
-    Doctor,
+    /// Check this computer is ready to run VMs; --fix sets it up
+    Doctor(DoctorArgs),
 
     /// Delete cached ISOs and leftover build files
     Clean(CleanArgs),
@@ -366,6 +366,14 @@ pub struct HashArgs {
     /// Read the password from standard input instead of prompting
     #[arg(long)]
     pub stdin: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct DoctorArgs {
+    /// Set up what is missing, after asking (Linux: QEMU, libvirt, UEFI firmware, the libvirt group;
+    /// Windows: Hyper-V and the Hyper-V Administrators group)
+    #[arg(long)]
+    pub fix: bool,
 }
 
 #[derive(Debug, Args)]

@@ -52,22 +52,26 @@ sudo apt update && sudo apt install vmseed
 `gh attestation verify <file> --repo scarlettiron/vmseed` confirms it was built by this
 repository's release workflow.
 
-Then run `vmseed doctor` to check your machine is ready.
+There is nothing else to install by hand. The first `vmseed init` (below) checks whether this
+computer can run VMs and, if it can't yet, lists what's missing and offers to set it up.
+`vmseed doctor` checks it any time, and `vmseed doctor --fix` sets it up on demand.
 
 ## Requirements
 
 | Host | You need |
 | --- | --- |
-| Windows 10/11 **Pro, Enterprise or Education** | Hyper-V turned on, and your account in the **Hyper-V Administrators** group (`Add-LocalGroupMember -Group 'Hyper-V Administrators' -Member $env:USERNAME`, then sign out and in). Windows Home has no Hyper-V. |
-| Linux | `/dev/kvm`, libvirt, QEMU and OVMF (`sudo apt install qemu-system libvirt-daemon-system ovmf`, or `sudo dnf install @virtualization`), and your user in the `libvirt` group. Optional: `virt-viewer` for the console, FreeRDP or Remmina for the desktop. |
+| Windows 10/11 **Pro, Enterprise or Education**, or Windows Server | Hyper-V, and your account in the **Hyper-V Administrators** group. Vmseed sets up both after asking: Windows asks once for administrator rights, then needs a restart. Windows Home has no Hyper-V. |
+| Linux (x86_64 or arm64) | `/dev/kvm`, which means virtualization (VT-x / AMD-V) turned on in the firmware settings. Vmseed sets up the rest after asking, with `sudo`: QEMU, libvirt and the UEFI firmware from apt or dnf, the libvirt service, and your user in the `libvirt` group, with no need to log out. Without apt or dnf, install QEMU, libvirt and OVMF yourself. Optional: `virt-viewer` for the console, FreeRDP or Remmina for the desktop. |
 | macOS 13+ (Apple Silicon or Intel) | `brew install vfkit` (Homebrew installs it with Vmseed), and Microsoft's **Windows App** from the App Store to open the desktop. Apple Silicon runs arm64 guests. |
 | All | `ssh` (built into Windows 10+, macOS and Linux). |
+
+To set it up by hand instead, see [Setting up by hand](docs/troubleshooting.md#setting-up-by-hand).
 
 ## Quick start
 
 ```bash
 cd ~/work/my-project
-vmseed init       # project name, blueprint, your user and password
+vmseed init       # project name, blueprint, your user and password; sets up this computer if needed
 vmseed create     # download the ISO, install unattended, provision (15-40 minutes)
 vmseed open       # start it if needed and open the desktop
 ```

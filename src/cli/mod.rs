@@ -52,7 +52,7 @@ pub fn run(command: Command, ui: Ui) -> AppResult<()> {
         Command::Snapshot(args) => snapshot::run(args, ui),
         Command::Blueprints(args) => blueprints::run(args, ui),
         Command::Hash(args) => hash::run(args, ui),
-        Command::Doctor => doctor::run(ui),
+        Command::Doctor(args) => doctor::run(args, ui),
         Command::Clean(args) => clean::run(args, ui),
         Command::Completion(args) => completion::run(args),
         Command::Version => version::run(ui),

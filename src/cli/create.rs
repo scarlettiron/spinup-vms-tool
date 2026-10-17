@@ -30,6 +30,7 @@ use crate::brand;
 use crate::config::effective::Effective;
 use crate::errors::{AppError, AppResult};
 use crate::guest::{self, keys};
+use crate::host_setup;
 use crate::hypervisor::{self, DataDiskSpec, Hypervisor, VmSpec, VmState};
 use crate::media;
 use crate::plans;
@@ -226,7 +227,14 @@ fn build(
     }
 
     ui.step(2, total, "Checking the name is free");
-    hv.preflight()?;
+    //On a Linux computer without libvirt yet, offer to set it up rather than
+    //failing with a list of install steps.
+    if let Err(error) = hv.preflight() {
+        if !host_setup::offer(ui, Some(&format!("{error:#}")))? {
+            return Err(error.into());
+        }
+        hv.preflight()?;
+    }
     let existing = hv.state(&name)?;
     if existing != VmState::Missing {
         if !args.force {

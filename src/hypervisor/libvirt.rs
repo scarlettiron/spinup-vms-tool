@@ -195,14 +195,13 @@ fn explain(error: anyhow::Error, uri: &str) -> anyhow::Error {
         || text.contains("access denied")
     {
         anyhow::anyhow!(
-            "libvirt refused the connection to {uri}. Add yourself to the libvirt group, then log out and back in:\n    \
-             sudo usermod -aG libvirt $USER\n({text})"
+            "libvirt refused the connection to {uri}. Run `{app} doctor --fix` to add you to the libvirt group.\n({text})",
+            app = crate::brand::NAME
         )
     } else if text.contains("could not run virsh") {
         anyhow::anyhow!(
-            "virsh is not installed. Install libvirt and QEMU, for example:\n    \
-             sudo apt install qemu-system libvirt-daemon-system ovmf      (Debian, Ubuntu)\n    \
-             sudo dnf install @virtualization                            (Fedora, RHEL)"
+            "libvirt is not installed. Run `{app} doctor --fix` to install QEMU, libvirt and the UEFI firmware.",
+            app = crate::brand::NAME
         )
     } else {
         error

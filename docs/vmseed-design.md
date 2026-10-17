@@ -136,14 +136,37 @@ Hand-written GitHub Actions workflows in `.github/workflows/` (no `dist`):
 
 | Host | Needs | Notes |
 |---|---|---|
-| Windows 10/11 Pro, Enterprise, Education; Server | Hyper-V enabled; user is admin or in **Hyper-V Administrators** | Windows **Home has no Hyper-V** — doctor says so plainly. `vmconnect.exe` (Hyper-V management tools) shows both the console and the Enhanced Session desktop. |
-| Linux | `/dev/kvm`, libvirt + QEMU + OVMF, user in the `libvirt` group, libvirt's `default` network and a storage pool | `virt-viewer` for the console (optional); FreeRDP (`xfreerdp3`/`xfreerdp`) or Remmina for the desktop. |
+| Windows 10/11 Pro, Enterprise, Education; Server | Hyper-V enabled (with its PowerShell module); user is admin or in **Hyper-V Administrators** | Windows **Home has no Hyper-V** — doctor says so plainly. `vmconnect.exe` (Hyper-V management tools) shows both the console and the Enhanced Session desktop. |
+| Linux | `/dev/kvm`, libvirt + QEMU + OVMF, the libvirt service running, user in the `libvirt` group (not `kvm`: the system connection's QEMU opens `/dev/kvm`), libvirt's `default` network and a storage pool | `virt-viewer` for the console (optional); FreeRDP (`xfreerdp3`/`xfreerdp`) or Remmina for the desktop. |
 | macOS 13+ (Apple Silicon or Intel) | `vfkit` (`brew install vfkit`; the Homebrew formula depends on it) | Desktop through Microsoft's *Windows App* (an `.rdp` file is opened); console only for a VM started with a window. |
 | All | `ssh` on PATH; `ssh-keygen` recommended | `ssh-keygen` makes Vmseed's own key (§11.5). |
 
 `doctor` prints one line per check with a fix for each failure and exits non-zero if anything
 required is missing. Its last check calls the backend's `preflight()` — the same call `create`
 makes before touching anything.
+
+**Setting the computer up** (`src/host_setup.rs`). Nobody follows install steps by hand: what
+can be fixed, Vmseed fixes after asking. `init` offers it at the end of a new project, `create`
+when `preflight()` fails, and `doctor --fix` on demand. It lists the steps, asks (`--yes`
+answers; without a terminal `create` stops and `init` only prints the hint, so installing
+system software is never a side effect of a script), and prints each command as it runs.
+
+- **Linux**: `apt-get` or `dnf` installs QEMU, libvirt and the firmware for this architecture;
+  the libvirt service is started and enabled (modular `virtqemud` sockets where enabled,
+  otherwise `libvirtd`); `usermod -aG libvirt`. Each runs with `sudo`. A group added this way
+  reaches only later logins, so Vmseed re-executes itself through `sg libvirt` (guarded by
+  `VMSEED_REGROUPED`) — at startup too, so every later command works without a logout.
+- **Windows**: `Enable-WindowsOptionalFeature` for `Microsoft-Hyper-V`, its PowerShell module and
+  management clients (only those that are off), and `Add-LocalGroupMember -SID S-1-5-32-578`,
+  in one `Start-Process -Verb RunAs` PowerShell, so UAC asks once. A restart (or a sign-out,
+  for the group alone) is unavoidable, so the command ends there and says so.
+- **macOS**: nothing; the Homebrew formula depends on vfkit.
+- **Not fixable**: no `/dev/kvm`, a Windows edition without Hyper-V, a pending restart, a Linux
+  without apt or dnf. These are explained instead.
+
+The install packages (apt, Homebrew, winget, Chocolatey) run no setup of their own: most can't,
+and the one that could (Chocolatey's admin install script) would change Windows and force a
+restart without the person deciding to.
 
 ## 5. Architecture
 
@@ -191,6 +214,7 @@ src/
     libvirt.rs            virsh + generated domain XML
     vfkit.rs              detached vfkit + REST over a unix socket
     fake.rs               in-memory backend for tests (debug builds only)
+  host_setup.rs           sets this computer up to run VMs, after asking (§4)
   vms.rs                  VM records and "which VM does this command mean" (§12.2)
   registry.rs             ~/.vmseed/projects.yaml (§13)
   passwd.rs               SHA-512 crypt
@@ -293,8 +317,8 @@ The tag text is `vmseed:<machine>:<project folder>` on every backend.
 - Ported from the PowerShell tool's `HyperV.psm1` cmdlet for cmdlet: same switch check, memory rules
   (nested virtualisation forces static memory), explicit SCSI locations, boot order, integration
   services, `EnhancedSessionTransportType HvSocket`.
-- Elevation: never self-elevates. Permission errors become the exact `Add-LocalGroupMember`
-  line to run; a missing module becomes the `Enable-WindowsOptionalFeature` line.
+- Elevation: the backend never self-elevates. Permission errors, a missing module and a missing
+  `vmconnect` point at `doctor --fix`, which asks and then elevates once (§4).
 - Not yet run against real Hyper-V (see §17).
 
 ### 6.3 libvirt notes
@@ -604,7 +628,7 @@ Snapshots:
 Tools:
   blueprints  List blueprints, or make your own with `blueprints new`
   hash        Make a password hash for the config
-  doctor      Check this computer is ready to run VMs
+  doctor      Check this computer is ready to run VMs; --fix sets it up
   clean       Delete cached ISOs and leftover build files
   completion  Print shell completion for bash, zsh, fish, PowerShell or elvish
   version     Print the version

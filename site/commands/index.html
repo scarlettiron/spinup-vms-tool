@@ -230,7 +230,9 @@
         <section id="init" aria-labelledby="cmd-init">
           <div class="cmd-head"><h2 id="cmd-init">vmseed init</h2> <span class="badge ok">available</span></div>
           
-          <p>Create the <code>.vmseed/</code> config in the current folder.</p>
+          <p>Create the <code>.vmseed/</code> config in the current folder. If this computer can't run VMs yet,
+            it then lists what's missing and offers to set it up (only when you're at a terminal; with
+            <code>-y</code> or in a script it just says to run <code>vmseed doctor --fix</code>).</p>
           <div class="code">
             <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
             <pre>vmseed init [--name &lt;name&gt;] [--blueprint &lt;name&gt;] [options]</pre>
@@ -515,8 +517,14 @@ vmseed blueprints new &lt;name&gt; --from &lt;blueprint&gt;</pre>
           <p>Check this computer is ready: hypervisor, permissions, <code>ssh</code>, desktop client. The last check connects to the hypervisor exactly as <code>create</code> will. Prints a fix for each failure and exits non-zero if something required is missing.</p>
           <div class="code">
             <div class="bar"><span>usage</span><button class="copy" type="button">Copy</button></div>
-            <pre>vmseed doctor</pre>
+            <pre>vmseed doctor [--fix] [-y]</pre>
           </div>
+          <dl class="flags">
+            <dt>--fix</dt>
+            <dd>Set up what is missing first, after listing the steps and asking. Linux: QEMU, libvirt and OVMF from apt or dnf, the libvirt service, and the <code>libvirt</code> group, with <code>sudo</code> and no need to log out. Windows: Hyper-V and the Hyper-V Administrators group, with one administrator prompt, then a restart. macOS has nothing to set up.</dd>
+            <dt>-y</dt>
+            <dd>With <code>--fix</code>: set up without asking, for scripts.</dd>
+          </dl>
           
           
         </section>

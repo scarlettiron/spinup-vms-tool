@@ -207,8 +207,9 @@
           <h2 id="first-title">Your first project</h2>
           <ol class="steps">
             <li><strong>Install and check your machine</strong>
-              <a href="../install/">Install Vmseed</a>, then run <code>vmseed doctor</code>. It checks the
-              hypervisor, your permissions and the tools Vmseed uses, with a fix for anything missing.</li>
+              <a href="../install/">Install Vmseed</a>. Nothing else to install: if this computer can't run
+              VMs yet, <code>vmseed init</code> offers to set it up in the next step. <code>vmseed doctor</code>
+              checks it any time, and <code>vmseed doctor --fix</code> sets it up on demand.</li>
             <li><strong>Set up the project</strong>
               In your project folder, run <code>vmseed init</code> and answer the questions
               (<a href="#init">what it asks</a>).</li>
@@ -247,6 +248,11 @@
           <p>Then it writes the config files, the <code>ssh_keys/</code> folder and a
             <code>.gitignore</code>, and registers the project in <code>~/.vmseed/projects.yaml</code> so
             <code>vmseed list</code> can find it.</p>
+          <p>Last, it checks this computer can run VMs. If it can't yet, init lists what it would do and asks:
+            on Linux, install QEMU, libvirt and the UEFI firmware, start libvirt and add you to the
+            <code>libvirt</code> group; on Windows, turn on Hyper-V and add you to Hyper-V Administrators, then
+            restart. Say no, or run init from a script, and it only tells you to run
+            <code>vmseed doctor --fix</code> later.</p>
           <p>It refuses to run if <code>.vmseed/</code> already exists. <code>vmseed init --force</code>
             rewrites only the two example files, and never touches your <code>vm.config.local.yaml</code>.</p>
           <p><a href="../demo/#init">Watch it in the demo</a>.</p>

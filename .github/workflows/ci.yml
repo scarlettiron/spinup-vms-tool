@@ -76,8 +76,10 @@ jobs:
       - name: Clippy
         run: cargo clippy --all-targets --locked -- -D warnings
 
+      #--no-fail-fast runs every test binary even after one fails, so a failing
+      #unit test can't hide a failing integration test on the same OS.
       - name: Test
-        run: cargo test --locked
+        run: cargo test --locked --no-fail-fast
 
       #The same commands the package managers run after installing, so a
       #broken --version or completion command fails here rather than in a
@@ -86,13 +88,124 @@ jobs:
         shell: bash
         run: |
           #The binary's name comes from Cargo.toml (jq is on every runner image).
-          name="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name')"
+          #jq on Windows ends its output with \r\n, so the \r is stripped, and
+          #the binary there is name.exe.
+          name="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].name' | tr -d '\r')"
           bin="target/debug/$name"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then bin="$bin.exe"; fi
           "$bin" --version
           "$bin" --help > /dev/null
           for shell in bash zsh fish powershell; do
             "$bin" completion "$shell" > /dev/null
           done
+
+  #`doctor --fix` on Linux computers that have never had QEMU or libvirt, run the
+  #way a new user runs it: as an ordinary user with sudo. It must install the
+  #packages, start libvirt and add the user to the libvirt group, and then a
+  #plain `doctor` in a new process (which has to pick the new group up by
+  #itself) must pass every required check.
+  #
+  #Ubuntu is the runner itself. Debian and Fedora run in throwaway containers
+  #with systemd as PID 1, because setup starts the libvirt service. Those
+  #containers are privileged, so systemd and libvirt inside them act on the
+  #host's kernel: fine on a disposable runner, never on your own computer.
+  host-setup:
+    name: host setup (${{ matrix.distro }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: ubuntu-24.04
+          - distro: debian-13
+            image: debian:13
+            prepare: apt-get update && apt-get install -y --no-install-recommends systemd systemd-sysv dbus sudo login passwd
+          - distro: fedora
+            image: fedora:latest
+            prepare: dnf install -y systemd sudo shadow-utils util-linux procps-ng
+    env:
+      IMAGE: ${{ matrix.image }}
+      PREPARE: ${{ matrix.prepare }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: |
+          cargo build --locked
+          name="$(python3 packaging/brand.py --get name)"
+          #On the PATH as the plain command name, like an installed copy.
+          mkdir -p "$RUNNER_TEMP/bin"
+          cp "target/debug/$name" "$RUNNER_TEMP/bin/"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          echo "APP=$name" >> "$GITHUB_ENV"
+
+      #A user "dev" with passwordless sudo, like the runner's own user, and
+      #nothing else: no QEMU, no libvirt.
+      - name: Start a clean ${{ matrix.distro }} container
+        if: matrix.image
+        run: |
+          docker build -t host-setup - <<EOF
+          FROM $IMAGE
+          RUN $PREPARE \
+           && useradd -m -s /bin/bash dev \
+           && echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev
+          CMD ["/sbin/init"]
+          EOF
+          docker run -d --name host-setup --privileged --tmpfs /run --tmpfs /run/lock host-setup
+          docker exec host-setup timeout 90 systemctl is-system-running --wait || true
+          docker cp "$RUNNER_TEMP/bin/$APP" "host-setup:/usr/local/bin/$APP"
+
+      #Without a terminal init must not install anything, only say how.
+      - name: init on a clean computer
+        shell: bash
+        run: |
+          run() {
+            if [[ -n "$IMAGE" ]]; then docker exec -u dev -w /home/dev host-setup bash -lc "$1"; else bash -c "$1"; fi
+          }
+          run "mkdir -p ~/project && cd ~/project && hash=\$(echo devpass | $APP hash --stdin) && \
+               $APP init --name setupcheck --blueprint ubuntu-server --username dev --password-hash \"\$hash\" -y" 2>&1 | tee init.log
+          grep -q "isn't set up to run VMs yet. Run \`$APP doctor --fix\`" init.log
+          if run "command -v virsh"; then
+            echo "::error::init installed libvirt without being asked"
+            exit 1
+          fi
+
+      #Each step is a new process from a session that started before the user
+      #joined the libvirt group, like a terminal left open after setup.
+      - name: doctor --fix
+        shell: bash
+        run: |
+          run() {
+            if [[ -n "$IMAGE" ]]; then docker exec -u dev -w /home/dev host-setup bash -lc "$1"; else bash -c "$1"; fi
+          }
+          run "$APP doctor --fix --yes" 2>&1 | tee fix.log
+          #A clean computer always has something to set up. Without this line
+          #the test would pass while proving nothing.
+          grep -q 'this computer is set up to run VMs' fix.log
+
+      - name: doctor, in a new process
+        shell: bash
+        run: |
+          run() {
+            if [[ -n "$IMAGE" ]]; then docker exec -u dev -w /home/dev host-setup bash -lc "$1"; else bash -c "$1"; fi
+          }
+          run "$APP doctor"
+          #create needs libvirt's default network; the packages must bring it.
+          run "sudo virsh -c qemu:///system net-info default"
+          #Running setup again finds nothing left to do.
+          run "$APP doctor --fix --yes" 2>&1 | tee again.log
+          if grep -q "isn't set up to run VMs yet" again.log; then
+            echo "::error::doctor --fix wanted to set up again after a successful setup"
+            exit 1
+          fi
 
   #The oldest Rust the crate promises to build with (rust-version in
   #Cargo.toml). Read from the file, so raising it there is the only edit.

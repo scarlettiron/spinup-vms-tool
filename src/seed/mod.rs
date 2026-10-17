@@ -95,7 +95,7 @@ fn shell_bool(value: bool) -> &'static str {
     if value { "true" } else { "false" }
 }
 
-fn shell_quote(value: &str) -> String {
+pub(crate) fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', r"'\''"))
 }
 
@@ -1049,7 +1049,13 @@ mod tests {
 
     #[test]
     fn cloud_init_seeds_render_and_carry_the_env() {
-        let (config, root) = config("blueprint: ubuntu-server\nusername: dev\npassword: secret\n");
+        //arch is pinned: left on auto it follows the computer running the
+        //tests, and an Apple Silicon Mac would test the arm64 package list.
+        //hypervisor is fake because the Mac's own one (vfkit) refuses a guest
+        //of another architecture; the seed is still rendered for Hyper-V.
+        let (config, root) = config(
+            "blueprint: ubuntu-server\narch: x86_64\nhypervisor: fake\nusername: dev\npassword: secret\n",
+        );
         let seed = render(&config, &target(HypervisorKind::HyperV), None).unwrap();
         assert_eq!(seed.label, "CIDATA");
         assert_eq!(seed.seed_files.len(), 2);
@@ -1073,6 +1079,22 @@ mod tests {
         assert!(env.contains("VM_HYPERVISOR='hyperv'\n"));
         assert!(env.contains("VM_INSTALL_DESKTOP='false'\n"));
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    //Ubuntu builds linux-cloud-tools for amd64 only.
+    #[test]
+    fn arm64_hyper_v_guests_get_no_cloud_tools() {
+        let (arm, arm_root) = config(
+            "blueprint: ubuntu-server\narch: arm64\nhypervisor: fake\nusername: dev\npassword: secret\n",
+        );
+        let arm_seed = render(&arm, &target(HypervisorKind::HyperV), None).unwrap();
+        assert!(
+            !arm_seed.seed_files[0]
+                .1
+                .contains("linux-cloud-tools-virtual"),
+            "arm64 has no Hyper-V guest tools package"
+        );
+        std::fs::remove_dir_all(arm_root).unwrap();
     }
 
     #[test]

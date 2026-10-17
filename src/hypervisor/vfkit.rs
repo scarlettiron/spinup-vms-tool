@@ -602,7 +602,10 @@ mod tests {
         assert!(args.contains("virtio-blk,path=/v/disk.img,deviceId=system"));
         assert!(args.contains("usb-mass-storage,path=/i/u.iso,readonly"));
         assert!(args.contains(&format!("virtio-net,nat,mac={}", mac_for("acme"))));
-        assert!(args.contains("--restful-uri unix:///v/vfkit.sock"));
+        //Joined the way the code joins it, so the test also passes on Windows,
+        //where the separator is a backslash.
+        let socket = Path::new("/v").join("vfkit.sock");
+        assert!(args.contains(&format!("--restful-uri unix://{}", socket.display())));
         assert!(!args.contains("--gui"));
         assert!(
             arguments(Path::new("/v"), "acme", &machine(), true)

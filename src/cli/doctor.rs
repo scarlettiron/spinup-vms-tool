@@ -7,14 +7,17 @@
 
 //`vmseed doctor`: checks this computer can run VMs, and says how to fix what it
 //can't. Each check is one line. A failed required check makes the command exit
-//with 1, so scripts and CI can use it.
+//with 1, so scripts and CI can use it. `--fix` first sets up what it can (see
+//host_setup.rs).
 
 use std::process::Command;
 
 use anstream::println;
 
 use crate::brand;
+use crate::cli::args::DoctorArgs;
 use crate::errors::{AppError, AppResult};
+use crate::host_setup;
 use crate::utilities::{
     paths,
     ui::{self, Ui},
@@ -82,7 +85,16 @@ fn check_hypervisor() -> Check {
     }
 }
 
-pub fn run(ui: Ui) -> AppResult<()> {
+pub fn run(args: DoctorArgs, ui: Ui) -> AppResult<()> {
+    if args.fix && !host_setup::offer(ui, None)? {
+        if cfg!(target_os = "macos") {
+            ui.warn("--fix has nothing to set up on macOS (Homebrew installs vfkit). Follow the hints below.");
+        } else if std::env::var_os(brand::env_var("REGROUPED")).is_none() {
+            //Unless this is the run again right after setting up.
+            ui.done("nothing to set up");
+        }
+    }
+
     let mut checks = vec![check_ssh(), check_user_folder()];
     checks.extend(platform_checks());
     checks.push(check_hypervisor());
@@ -185,9 +197,13 @@ fn platform_checks() -> Vec<Check> {
         Some(_) => Check::fail(
             "Hyper-V",
             "not enabled",
-            "Run as administrator: Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -All, then restart. Windows Home has no Hyper-V.",
+            fix_hint("turn on Hyper-V (Windows Home has none)"),
         ),
-        None => Check::fail("Hyper-V", "could not run powershell.exe to check", "Make sure Windows PowerShell is installed."),
+        None => Check::fail(
+            "Hyper-V",
+            "could not run powershell.exe to check",
+            "Make sure Windows PowerShell is installed.",
+        ),
     });
 
     //S-1-5-32-578 is Hyper-V Administrators; S-1-16-12288 means this shell is
@@ -201,7 +217,7 @@ fn platform_checks() -> Vec<Check> {
         Check::fail(
             "permission",
             "not a Hyper-V Administrator",
-            "Run as administrator once: Add-LocalGroupMember -SID S-1-5-32-578 -Member $env:USERNAME, then sign out and back in.",
+            fix_hint("add you to Hyper-V Administrators"),
         )
     });
 
@@ -216,6 +232,12 @@ fn platform_checks() -> Vec<Check> {
     checks
 }
 
+//"Run `vmseed doctor --fix` to <what>."
+#[cfg(any(target_os = "linux", windows))]
+fn fix_hint(what: &str) -> String {
+    format!("Run `{} doctor --fix` to {what}.", brand::NAME)
+}
+
 #[cfg(target_os = "linux")]
 fn platform_checks() -> Vec<Check> {
     use std::path::Path;
@@ -223,12 +245,15 @@ fn platform_checks() -> Vec<Check> {
     let mut checks = Vec::new();
 
     let kvm = Path::new("/dev/kvm");
-    checks.push(if !kvm.exists() {
-        Check::fail("KVM", "/dev/kvm is missing", "Turn on virtualization (VT-x / AMD-V) in the firmware settings, and load the kvm module.")
-    } else if std::fs::OpenOptions::new().read(true).write(true).open(kvm).is_err() {
-        Check::fail("KVM", "/dev/kvm is not usable by you", "Add yourself to the kvm group: sudo usermod -aG kvm $USER, then log in again.")
-    } else {
+    //Only libvirt's own QEMU opens /dev/kvm, so it only has to exist.
+    checks.push(if kvm.exists() {
         Check::ok("KVM", "/dev/kvm")
+    } else {
+        Check::fail(
+            "KVM",
+            "/dev/kvm is missing",
+            "Turn on virtualization (VT-x / AMD-V) in the firmware settings, and load the kvm module.",
+        )
     });
 
     checks.push(match paths::find_program("virsh") {
@@ -236,7 +261,7 @@ fn platform_checks() -> Vec<Check> {
         None => Check::fail(
             "libvirt",
             "virsh not found",
-            "Install libvirt and QEMU, e.g. sudo apt install libvirt-daemon-system qemu-system ovmf",
+            fix_hint("install QEMU and libvirt"),
         ),
     });
 
@@ -248,25 +273,24 @@ fn platform_checks() -> Vec<Check> {
             Check::warn(
                 "permission",
                 "not in the libvirt group",
-                "sudo usermod -aG libvirt $USER, then log in again.",
+                fix_hint("add you to the libvirt group"),
             )
         },
     );
 
-    let firmware = [
-        "/usr/share/OVMF",
-        "/usr/share/edk2",
-        "/usr/share/qemu/firmware",
-        "/usr/share/edk2-ovmf",
-    ];
-    checks.push(match firmware.iter().find(|dir| Path::new(dir).exists()) {
-        Some(dir) => Check::ok("UEFI firmware", *dir),
-        None => Check::fail(
-            "UEFI firmware",
-            "OVMF not found",
-            "Install OVMF, e.g. sudo apt install ovmf",
-        ),
-    });
+    checks.push(
+        match host_setup::FIRMWARE_DIRS
+            .iter()
+            .find(|dir| Path::new(dir).exists())
+        {
+            Some(dir) => Check::ok("UEFI firmware", *dir),
+            None => Check::fail(
+                "UEFI firmware",
+                "OVMF not found",
+                fix_hint("install the UEFI firmware (OVMF)"),
+            ),
+        },
+    );
 
     let rdp = ["xfreerdp3", "xfreerdp", "remmina"]
         .iter()

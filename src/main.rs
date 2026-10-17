@@ -15,6 +15,7 @@ mod config;
 mod constants;
 mod errors;
 mod guest;
+mod host_setup;
 mod hypervisor;
 mod media;
 mod passwd;
@@ -57,6 +58,10 @@ fn main() {
         verbose: parsed.global.verbose,
         assume_yes: parsed.global.yes,
     };
+
+    //Right after setup added the user to the libvirt group, this login doesn't
+    //have it yet; this runs the command again with it (Linux only).
+    host_setup::rerun_with_new_group();
 
     let code = match cli::run(parsed.command, ui) {
         Ok(()) => exit_codes::SUCCESS,

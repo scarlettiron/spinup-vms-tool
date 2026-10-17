@@ -67,8 +67,9 @@ prints every template placeholder.
 
 ```
 .github/workflows/ci.yml           fmt, clippy, build and tests on Linux/Windows/macOS, the minimum
-                                   Rust version, packaging/test.sh, version.py, CHANGELOG.md,
-                                   actionlint, shellcheck and the website's links
+                                   Rust version, `init` and `doctor --fix` on clean Ubuntu 24.04,
+                                   Debian 13 and Fedora, packaging/test.sh, version.py,
+                                   CHANGELOG.md, actionlint, shellcheck and the website's links
 .github/workflows/version-bump.yml the "cut a release" button: bump, changelog, commit, tag
 .github/workflows/release.yml      the release (on a v* tag, or started by version-bump.yml)
 .github/workflows/pages.yml        site/ + the apt repository to GitHub Pages
@@ -433,13 +434,18 @@ choice). On a Linux runner with KVM it installs libvirt, builds `vmseed`, and ru
 a console screenshot and the guest's bootstrap report as an artifact. Look at its
 latest run before cutting a release.
 
+Linux host setup (`init` and `doctor --fix` on a computer that has never had
+libvirt) runs in CI on every pull request, in the **host setup** jobs.
+
 Hyper-V and Apple Virtualization can't run on GitHub's runners (no nested
 virtualization), so before a release that touches them, run the same sequence by
-hand on Windows and on a Mac:
+hand on Windows and on a Mac. On Windows, use a computer (or VM with nested
+virtualization) where Hyper-V is off, so `init` gets to set it up: say yes and
+restart before going on.
 
 ```text
+vmseed init --name relcheck --blueprint ubuntu-server   # Windows: offers setup; restart after
 vmseed doctor
-vmseed init --name relcheck --blueprint ubuntu-server
 vmseed create
 vmseed status --follow         # until bootstrap: complete
 vmseed open                    # the desktop opens (desktop blueprints)

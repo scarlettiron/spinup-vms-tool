@@ -10,6 +10,15 @@ version bump (0.1 → 0.2) may include breaking changes to the CLI or config for
 
 ### Added
 
+- **Computer setup**: `vmseed init` ends by offering to set the computer up when it can't
+  run VMs yet, `create` offers the same when it can't reach the hypervisor, and
+  `vmseed doctor --fix` does it on demand. On Linux it installs QEMU, libvirt and the UEFI
+  firmware with apt or dnf, starts libvirt, and adds you to the `libvirt` group, with no need
+  to log out. On Windows it turns on Hyper-V and adds you to Hyper-V Administrators, with one
+  administrator prompt and then a restart. It always lists the steps and asks first; without a
+  terminal it only says what to run.
+- **CI tests that setup** on clean Ubuntu 24.04, Debian 13 and Fedora machines.
+
 - **Versioning**: `packaging/version.py` reads and bumps the version in `Cargo.toml`
   (the single source of truth), checks release tags against it, and moves the
   `## [Unreleased]` notes in this file under each new version.
@@ -66,6 +75,10 @@ version bump (0.1 → 0.2) may include breaking changes to the CLI or config for
 
 ### Changed
 
+- Setup hints in `doctor` and in hypervisor errors now point at `vmseed doctor --fix`
+  instead of listing commands. The commands are in
+  [docs/troubleshooting.md](docs/troubleshooting.md#setting-up-by-hand).
+- `doctor` on Linux no longer asks for the `kvm` group: libvirt's own QEMU opens `/dev/kvm`.
 - **Renamed from Vmynt to Vmseed.** The command is `vmseed`, the folders are `.vmseed/` and
   `~/.vmseed/`, and the environment variables start with `VMSEED_`. No version under the
   old name was ever published, so there is nothing to migrate.

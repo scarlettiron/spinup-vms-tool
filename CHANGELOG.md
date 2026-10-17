@@ -13,8 +13,8 @@ version bump (0.1 → 0.2) may include breaking changes to the CLI or config for
 - **Computer setup**: `vmseed init` ends by offering to set the computer up when it can't
   run VMs yet, `create` offers the same when it can't reach the hypervisor, and
   `vmseed doctor --fix` does it on demand. On Linux it installs QEMU, libvirt and the UEFI
-  firmware with apt or dnf, starts libvirt, and adds you to the `libvirt` group, with no need
-  to log out. On Windows it turns on Hyper-V and adds you to Hyper-V Administrators, with one
+  firmware with apt or dnf (and the OpenSSH client if it is missing), starts libvirt, and adds
+  you to the `libvirt` group, with no need to log out. On Windows it turns on Hyper-V and adds you to Hyper-V Administrators, with one
   administrator prompt and then a restart. It always lists the steps and asks first; without a
   terminal it only says what to run.
 - **CI tests that setup** on clean Ubuntu 24.04, Debian 13 and Fedora machines.

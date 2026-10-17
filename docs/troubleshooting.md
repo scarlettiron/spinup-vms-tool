@@ -31,7 +31,7 @@ and ask. Say yes, and Vmseed prints each command before it runs it:
 
 | Host | What it does | How it gets the rights |
 | --- | --- | --- |
-| Linux | installs QEMU, libvirt and the UEFI firmware (`apt-get` on Debian and Ubuntu, `dnf` on Fedora, RHEL and Rocky), starts the libvirt service and starts it at boot, adds you to the `libvirt` group | `sudo`, which may ask for your password |
+| Linux | installs QEMU, libvirt and the UEFI firmware (`apt-get` on Debian and Ubuntu, `dnf` on Fedora, RHEL and Rocky), starts the libvirt service and starts it at boot, adds you to the `libvirt` group, and installs the OpenSSH client if it is missing | `sudo`, which may ask for your password |
 | Windows | turns on Hyper-V with its PowerShell module and `vmconnect`, adds you to **Hyper-V Administrators** | Windows asks once for administrator rights |
 | macOS | nothing: Homebrew installs vfkit with Vmseed | |
 

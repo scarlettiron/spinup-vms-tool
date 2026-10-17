@@ -148,15 +148,22 @@ jobs:
           echo "APP=$name" >> "$GITHUB_ENV"
 
       #A user "dev" with passwordless sudo, like the runner's own user, and
-      #nothing else: no QEMU, no libvirt.
+      #nothing else: no QEMU, no libvirt, no ssh client. sudo skips PAM's
+      #account check for it: Fedora's PAM asks sssd, which a bare container
+      #doesn't run, and that check is about the container, not setup. Docker's
+      #Debian image has a policy-rc.d that stops package scripts from starting
+      #or reloading services, which a real system doesn't: with it, D-Bus never
+      #loads polkit's policy, so polkit loses its bus name and libvirt can't
+      #ask it about the libvirt group.
       - name: Start a clean ${{ matrix.distro }} container
         if: matrix.image
         run: |
           docker build -t host-setup - <<EOF
           FROM $IMAGE
           RUN $PREPARE \
+           && rm -f /usr/sbin/policy-rc.d \
            && useradd -m -s /bin/bash dev \
-           && echo 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev
+           && printf '%s\n' 'Defaults:dev !pam_acct_mgmt' 'dev ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/dev
           CMD ["/sbin/init"]
           EOF
           docker run -d --name host-setup --privileged --tmpfs /run --tmpfs /run/lock host-setup
@@ -197,7 +204,7 @@ jobs:
           run() {
             if [[ -n "$IMAGE" ]]; then docker exec -u dev -w /home/dev host-setup bash -lc "$1"; else bash -c "$1"; fi
           }
-          run "$APP doctor"
+          run "$APP doctor" 2>&1 | tee doctor.log
           #create needs libvirt's default network; the packages must bring it.
           run "sudo virsh -c qemu:///system net-info default"
           #Running setup again finds nothing left to do.
@@ -206,6 +213,33 @@ jobs:
             echo "::error::doctor --fix wanted to set up again after a successful setup"
             exit 1
           fi
+
+      #Job logs need repo admin to read, but annotations are public, so the end
+      #of each log, and in a container what systemd and libvirt said, goes into
+      #one.
+      - name: Report the failure
+        if: failure()
+        shell: bash
+        run: |
+          {
+            #Annotations are cut off past a few kilobytes, so the services
+            #come first and every log is short.
+            if [[ -n "$IMAGE" ]]; then
+              echo "== systemd: $(docker exec host-setup systemctl is-system-running 2>&1)"
+              docker exec host-setup systemctl --failed --no-legend --plain 2>&1 || true
+              #libvirt asks polkit whether the libvirt group may connect.
+              for unit in polkit libvirtd virtqemud; do
+                echo "== journal: $unit"
+                docker exec host-setup journalctl -b -u "$unit" -o cat --no-pager -n 12 2>&1 || true
+              done
+            fi
+            for log in fix.log doctor.log again.log init.log; do
+              if [[ -f "$log" ]]; then echo "== $log"; tail -n 15 "$log"; fi
+            done
+          } > report.txt
+          #Annotations are one line; %0A is a line break in them.
+          body="$(sed 's/%/%25/g; s/\r//g' report.txt | awk '{printf "%s%%0A", $0}')"
+          echo "::error title=host setup (${{ matrix.distro }})::$body"
 
   #The oldest Rust the crate promises to build with (rust-version in
   #Cargo.toml). Read from the file, so raising it there is the only edit.

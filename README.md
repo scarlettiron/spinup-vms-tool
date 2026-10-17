@@ -61,7 +61,7 @@ computer can run VMs and, if it can't yet, lists what's missing and offers to se
 | Host | You need |
 | --- | --- |
 | Windows 10/11 **Pro, Enterprise or Education**, or Windows Server | Hyper-V, and your account in the **Hyper-V Administrators** group. Vmseed sets up both after asking: Windows asks once for administrator rights, then needs a restart. Windows Home has no Hyper-V. |
-| Linux (x86_64 or arm64) | `/dev/kvm`, which means virtualization (VT-x / AMD-V) turned on in the firmware settings. Vmseed sets up the rest after asking, with `sudo`: QEMU, libvirt and the UEFI firmware from apt or dnf, the libvirt service, and your user in the `libvirt` group, with no need to log out. Without apt or dnf, install QEMU, libvirt and OVMF yourself. Optional: `virt-viewer` for the console, FreeRDP or Remmina for the desktop. |
+| Linux (x86_64 or arm64) | `/dev/kvm`, which means virtualization (VT-x / AMD-V) turned on in the firmware settings. Vmseed sets up the rest after asking, with `sudo`: QEMU, libvirt and the UEFI firmware from apt or dnf, the libvirt service, your user in the `libvirt` group (with no need to log out), and the OpenSSH client if it is missing. Without apt or dnf, install QEMU, libvirt and OVMF yourself. Optional: `virt-viewer` for the console, FreeRDP or Remmina for the desktop. |
 | macOS 13+ (Apple Silicon or Intel) | `brew install vfkit` (Homebrew installs it with Vmseed), and Microsoft's **Windows App** from the App Store to open the desktop. Apple Silicon runs arm64 guests. |
 | All | `ssh` (built into Windows 10+, macOS and Linux). |
 

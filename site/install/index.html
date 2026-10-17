@@ -293,7 +293,7 @@ vmseed completion fish &gt; ~/.config/fish/completions/vmseed.fish</pre>
                   <td>Linux</td>
                   <td><code>/dev/kvm</code>, which means virtualization (VT-x or AMD-V) turned on in the firmware settings.
                     Vmseed sets up the rest after asking, with <code>sudo</code>: QEMU, libvirt and OVMF from apt or dnf,
-                    the libvirt service, and your user in the <code>libvirt</code> group, with no need to log out</td>
+                    the libvirt service, your user in the <code>libvirt</code> group (with no need to log out), and the OpenSSH client if it is missing</td>
                   <td>Vmseed uses <code>qemu:///system</code>, libvirt's <code>default</code> network and the <code>default</code> storage pool (it starts or creates them).
                     <code>virt-viewer</code> for the console (optional); FreeRDP or Remmina for the desktop.</td>
                 </tr>

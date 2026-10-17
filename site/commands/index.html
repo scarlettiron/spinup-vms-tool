@@ -521,7 +521,7 @@ vmseed blueprints new &lt;name&gt; --from &lt;blueprint&gt;</pre>
           </div>
           <dl class="flags">
             <dt>--fix</dt>
-            <dd>Set up what is missing first, after listing the steps and asking. Linux: QEMU, libvirt and OVMF from apt or dnf, the libvirt service, and the <code>libvirt</code> group, with <code>sudo</code> and no need to log out. Windows: Hyper-V and the Hyper-V Administrators group, with one administrator prompt, then a restart. macOS has nothing to set up.</dd>
+            <dd>Set up what is missing first, after listing the steps and asking. Linux: QEMU, libvirt and OVMF from apt or dnf, the libvirt service, the <code>libvirt</code> group and, if missing, the OpenSSH client, with <code>sudo</code> and no need to log out. Windows: Hyper-V and the Hyper-V Administrators group, with one administrator prompt, then a restart. macOS has nothing to set up.</dd>
             <dt>-y</dt>
             <dd>With <code>--fix</code>: set up without asking, for scripts.</dd>
           </dl>

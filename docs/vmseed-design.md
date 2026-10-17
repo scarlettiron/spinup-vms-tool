@@ -151,7 +151,8 @@ when `preflight()` fails, and `doctor --fix` on demand. It lists the steps, asks
 answers; without a terminal `create` stops and `init` only prints the hint, so installing
 system software is never a side effect of a script), and prints each command as it runs.
 
-- **Linux**: `apt-get` or `dnf` installs QEMU, libvirt and the firmware for this architecture;
+- **Linux**: `apt-get` or `dnf` installs QEMU, libvirt and the firmware for this architecture
+  (and the OpenSSH client when `ssh` is missing);
   the libvirt service is started and enabled (modular `virtqemud` sockets where enabled,
   otherwise `libvirtd`); `usermod -aG libvirt`. Each runs with `sudo`. A group added this way
   reaches only later logins, so Vmseed re-executes itself through `sg libvirt` (guarded by

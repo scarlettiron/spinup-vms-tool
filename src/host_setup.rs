@@ -182,6 +182,16 @@ fn packages(manager: &str, arm: bool) -> Vec<&'static str> {
 }
 
 #[cfg(target_os = "linux")]
+//The package with the `ssh` command.
+fn ssh_package(manager: &str) -> &'static str {
+    if manager == "apt-get" {
+        "openssh-client"
+    } else {
+        "openssh-clients"
+    }
+}
+
+#[cfg(target_os = "linux")]
 //A command as a person would type it, for showing before it runs.
 fn display(command: &[String]) -> String {
     command
@@ -204,7 +214,7 @@ mod platform {
 
     use anyhow::{Context, Result, bail};
 
-    use super::{FIRMWARE_DIRS, LIBVIRT_GROUP, Outcome, Step, display, packages};
+    use super::{FIRMWARE_DIRS, LIBVIRT_GROUP, Outcome, Step, display, packages, ssh_package};
     use crate::brand;
     use crate::utilities::{paths, ui::Ui};
 
@@ -225,18 +235,21 @@ mod platform {
         }
 
         let mut steps = Vec::new();
-        let missing_packages = paths::find_program("virsh").is_none()
+        let missing_hypervisor = paths::find_program("virsh").is_none()
             || !qemu_installed()
             || !FIRMWARE_DIRS.iter().any(|dir| Path::new(dir).exists());
-        if missing_packages {
+        //status, ssh, exec and logs all need the client; minimal installs and
+        //containers can lack it.
+        let missing_ssh = paths::find_program("ssh").is_none();
+        if missing_hypervisor || missing_ssh {
             let Some(manager) = ["apt-get", "dnf"]
                 .into_iter()
                 .find(|manager| paths::find_program(manager).is_some())
             else {
                 bail!(
-                    "QEMU, libvirt or the UEFI firmware is missing, and this Linux has neither apt nor dnf, \
-                     so {} can't install them. Install QEMU, libvirt and OVMF (edk2) with your package \
-                     manager, then run this again.",
+                    "QEMU, libvirt, the UEFI firmware or the OpenSSH client is missing, and this Linux has \
+                     neither apt nor dnf, so {} can't install them. Install them with your package manager, \
+                     then run this again.",
                     brand::DISPLAY_NAME
                 );
             };
@@ -247,14 +260,22 @@ mod platform {
                 ));
             }
             let mut install = vec![manager, "install", "-y"];
-            install.extend(packages(manager, cfg!(target_arch = "aarch64")));
-            steps.push(Step::new(
-                "install QEMU, libvirt and the UEFI firmware",
-                &install,
-            ));
+            if missing_hypervisor {
+                install.extend(packages(manager, cfg!(target_arch = "aarch64")));
+            }
+            if missing_ssh {
+                install.push(ssh_package(manager));
+            }
+            let why = match (missing_hypervisor, missing_ssh) {
+                (true, true) => "install QEMU, libvirt, the UEFI firmware and the OpenSSH client",
+                (true, false) => "install QEMU, libvirt and the UEFI firmware",
+                (false, _) => "install the OpenSSH client",
+            };
+            steps.push(Step::new(why, &install));
         }
 
-        if (missing_packages || !service_running()) && paths::find_program("systemctl").is_some() {
+        if (missing_hypervisor || !service_running()) && paths::find_program("systemctl").is_some()
+        {
             steps.push(Step::new(
                 "start the libvirt service, and start it at boot",
                 &["sh", "-c", START_SERVICE],
@@ -732,6 +753,8 @@ mod tests {
                 "{manager} {arm}"
             );
         }
+        assert_eq!(ssh_package("apt-get"), "openssh-client");
+        assert_eq!(ssh_package("dnf"), "openssh-clients");
     }
 
     #[cfg(target_os = "linux")]

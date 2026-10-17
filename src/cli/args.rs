@@ -370,7 +370,7 @@ pub struct HashArgs {
 
 #[derive(Debug, Args)]
 pub struct DoctorArgs {
-    /// Set up what is missing, after asking (Linux: QEMU, libvirt, UEFI firmware, the libvirt group;
+    /// Set up what is missing, after asking (Linux: QEMU, libvirt, UEFI firmware, the libvirt group, ssh;
     /// Windows: Hyper-V and the Hyper-V Administrators group)
     #[arg(long)]
     pub fix: bool,

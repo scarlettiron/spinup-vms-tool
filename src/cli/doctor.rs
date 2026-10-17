@@ -141,7 +141,14 @@ fn check_ssh() -> Check {
         None => Check::fail(
             "ssh",
             "not on the PATH",
-            "Install OpenSSH. It is needed for status, ssh, exec and logs.",
+            if cfg!(target_os = "linux") {
+                format!(
+                    "Run `{} doctor --fix` to install the OpenSSH client. It is needed for status, ssh, exec and logs.",
+                    brand::NAME
+                )
+            } else {
+                "Install OpenSSH. It is needed for status, ssh, exec and logs.".to_string()
+            },
         ),
     }
 }
